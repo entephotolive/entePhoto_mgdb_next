@@ -1,9 +1,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "danger";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "outline" | "danger" | string;
+type ButtonSize = "default" | "sm" | "lg" | "icon" | "icon-sm" | string;
 
-const variantStyles: Record<ButtonVariant, string> = {
+const variantStyles: Record<string, string> = {
   primary:
     "bg-white text-slate-950 hover:bg-slate-100 shadow-sm",
   secondary:
@@ -16,18 +17,28 @@ const variantStyles: Record<ButtonVariant, string> = {
     "bg-rose-500 text-white hover:bg-rose-600",
 };
 
+const sizeStyles: Record<string, string> = {
+  default: "h-10 px-4 py-2",
+  sm: "h-9 rounded-lg px-3 text-xs",
+  lg: "h-11 px-6 text-sm",
+  icon: "h-10 w-10 p-0",
+  "icon-sm": "h-8 w-8 p-0",
+};
+
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
+  size?: ButtonSize;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", type = "button", ...props }, ref) => (
+  ({ className, variant = "primary", size = "default", type = "button", ...props }, ref) => (
     <button
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b] disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0b] disabled:pointer-events-none disabled:opacity-50 active:scale-95",
         variantStyles[variant],
+        sizeStyles[size] ?? sizeStyles.default,
         className,
       )}
       {...props}

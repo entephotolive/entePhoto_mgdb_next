@@ -230,7 +230,7 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
       const result = await addPortfolioMoment(userId, fd);
 
       if (!result.ok) {
-        showToast("error", result.error);
+        showToast("error", "error" in result ? result.error : "Portfolio upload failed.");
         // Optimistic item reverts automatically when the transition ends
       } else {
         showToast("success", "Moment added to your portfolio!");
@@ -258,7 +258,7 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
       setDeletePendingId(null);
 
       if (!result.ok) {
-        showToast("error", result.error);
+        showToast("error", "error" in result ? result.error : "Failed to delete moment.");
       } else {
         showToast("success", "Moment deleted successfully.");
       }
@@ -271,7 +271,7 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
 
   return (
     <>
-      <div className="rounded-2xl bg-white/[0.03] border border-white/8 backdrop-blur-sm p-6 flex flex-col gap-5">
+      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm p-6 flex flex-col gap-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>

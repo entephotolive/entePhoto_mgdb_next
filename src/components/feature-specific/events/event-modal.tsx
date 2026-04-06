@@ -44,7 +44,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
           window.location.reload();
         }, 1200);
       } else {
-        setFeedback({ type: "error", message: result.error });
+        setFeedback({ type: "error", message: "error" in result ? result.error : "Failed to create event." });
       }
     });
   }

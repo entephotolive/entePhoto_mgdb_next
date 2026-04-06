@@ -3,7 +3,7 @@
 import Navbar from "@/components/Navbar";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { galleryData } from "@/data/gallery.data";
 
 function ImageWithDialog({ src, altClass = "", children }) {
@@ -15,7 +15,15 @@ function ImageWithDialog({ src, altClass = "", children }) {
         </div>
       </DialogTrigger>
       <DialogContent className="flex max-w-[95vw] items-center justify-center rounded-xl border-white/20 bg-black/90 p-2 shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl md:max-w-5xl md:p-4">
-        <img src={src} className="max-h-[85vh] w-auto rounded-lg object-contain shadow-2xl" alt="Gallery preview" />
+        <DialogDescription className="sr-only">
+          Preview of selected gallery image
+        </DialogDescription>
+
+        <img
+          src={src}
+          className="max-h-[85vh] w-auto rounded-lg object-contain shadow-2xl"
+          alt="Gallery preview"
+        />
       </DialogContent>
     </Dialog>
   );

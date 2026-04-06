@@ -72,7 +72,7 @@ function Field({
 const inputClass = cn(
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200",
   "placeholder:text-slate-600 outline-none transition-all duration-200",
-  "focus:border-cyan-500/50 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.2)] focus:bg-white/8"
+  "focus:border-cyan-500/50 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.2)] focus:bg-white/[0.08]"
 );
 
 // ─── ProfileForm ──────────────────────────────────────────────────────────────
@@ -131,7 +131,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
         setAvatarUploading(false);
 
         if (!uploadResult.ok) {
-          showToast("error", uploadResult.error);
+          showToast("error", "error" in uploadResult ? uploadResult.error : "Image upload failed.");
           return;
         }
 
@@ -154,7 +154,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
       if (result.ok) {
         showToast("success", "Profile updated successfully!");
       } else {
-        showToast("error", result.error);
+        showToast("error", "error" in result ? result.error : "Failed to update profile.");
       }
     });
   }
@@ -177,7 +177,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
     <>
       <form
         onSubmit={handleSubmit}
-        className="rounded-2xl bg-white/[0.03] border border-white/8 backdrop-blur-sm p-6 flex flex-col gap-6"
+        className="rounded-2xl bg-white/[0.03] border border-white/[0.08] backdrop-blur-sm p-6 flex flex-col gap-6"
       >
         {/* Avatar */}
         <div className="flex justify-center pt-2">
@@ -217,6 +217,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
               onChange={(e) => setStudioLocation(e.target.value)}
               placeholder="City, Country"
               className={cn(inputClass, "pl-9")}
+              autoComplete="address-level2"
             />
           </div>
         </Field>

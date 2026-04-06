@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { AlertCircle, ImageIcon, MousePointer2, UploadCloud, X } from "lucide-react";

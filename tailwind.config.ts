@@ -2,23 +2,50 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
-    "./app/**/*.{ts,tsx,jsx}",
-    "./components/**/*.{ts,tsx,jsx}",
-    "./hooks/**/*.{ts,tsx,jsx}",
-    "./lib/**/*.{ts,tsx,jsx}",
-    "./*.{jsx,tsx}",
+    "./src/app/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/components/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/hooks/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/lib/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/data/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/types/**/*.{ts,tsx,js,jsx,mdx}",
+    "./src/**/*.{ts,tsx,js,jsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
-        background: "#0a0a0b",
-        surface: "#121214",
-        muted: "#94a3b8", // slate-400
-        primary: "#22d3ee", // cyan-400
-        accent: "#00E5FF", // neon cyan
-        success: "#34d399",
-        warning: "#fbbf24",
-        danger: "#ef4444", // red-500
+        background: "rgb(var(--background) / <alpha-value>)",
+        foreground: "rgb(var(--foreground) / <alpha-value>)",
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        card: {
+          DEFAULT: "rgb(var(--card) / <alpha-value>)",
+          foreground: "rgb(var(--card-foreground) / <alpha-value>)",
+        },
+        popover: {
+          DEFAULT: "rgb(var(--popover) / <alpha-value>)",
+          foreground: "rgb(var(--popover-foreground) / <alpha-value>)",
+        },
+        primary: {
+          DEFAULT: "rgb(var(--primary) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground) / <alpha-value>)",
+        },
+        secondary: {
+          DEFAULT: "rgb(var(--secondary) / <alpha-value>)",
+          foreground: "rgb(var(--secondary-foreground) / <alpha-value>)",
+        },
+        muted: {
+          DEFAULT: "rgb(var(--muted) / <alpha-value>)",
+          foreground: "rgb(var(--muted-foreground) / <alpha-value>)",
+        },
+        accent: {
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          foreground: "rgb(var(--accent-foreground) / <alpha-value>)",
+        },
+        border: "rgb(var(--border) / <alpha-value>)",
+        input: "rgb(var(--input) / <alpha-value>)",
+        ring: "rgb(var(--ring) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)",
+        danger: "rgb(var(--danger) / <alpha-value>)",
       },
       boxShadow: {
         glow: "0 0 20px rgba(34, 211, 238, 0.4)",
@@ -35,6 +62,10 @@ const config: Config = {
         "page-grid": "auto, 60px 60px, 60px 60px",
       },
       borderRadius: {
+        sm: "calc(var(--radius) - 0.25rem)",
+        md: "calc(var(--radius) - 0.125rem)",
+        lg: "var(--radius)",
+        xl: "calc(var(--radius) + 0.5rem)",
         "4xl": "2rem",
         portal: "90px", // Rounded top for cards
       },
@@ -74,8 +105,8 @@ const config: Config = {
         "pulse-slow": "pulse-slow 8s ease-in-out infinite",
       },
       fontFamily: {
-        sans: ["var(--font-sora)", "system-ui", "sans-serif"],
-        mono: ["var(--font-jetbrains-mono)", "monospace"],
+        sans: ["Geist Variable", "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
     },
   },

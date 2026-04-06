@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useRef, useState } from "react";
@@ -7,6 +8,7 @@ import bg from "@/assets/1st.jpg";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -16,7 +18,8 @@ export default function HomePage() {
   const [code, setCode] = useState("");
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const videoRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const normalizedCode = code.trim();
 
   const openCamera = async () => {
     try {
@@ -27,14 +30,19 @@ export default function HomePage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
-    } catch (_error) {
-      alert("Camera access denied");
+    } catch (error: any) {
+      console.log("FULL ERROR:", error);
+      console.log("NAME:", error?.name);
+      console.log("MESSAGE:", error?.message);
+      console.log("STACK:", error?.stack);
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
+    const stream = videoRef.current?.srcObject;
+
+    if (stream instanceof MediaStream) {
+      const tracks = stream.getTracks();
       tracks.forEach((track) => track.stop());
       videoRef.current.srcObject = null;
     }
@@ -99,6 +107,9 @@ export default function HomePage() {
                 <DialogTitle className="text-center">
                   Scan QR Code
                 </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Preview of selected gallery image
+                </DialogDescription>
               </DialogHeader>
 
               <div className="relative mt-4 h-64 w-full">
@@ -123,8 +134,15 @@ export default function HomePage() {
         </div>
 
         <button
-          onClick={() => router.push("/scan")}
-          className="w-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 py-4 font-medium text-black transition duration-300 hover:scale-105"
+          onClick={() => {
+            if (!normalizedCode) {
+              return;
+            }
+            router.push(`/event/${encodeURIComponent(normalizedCode)}/scan`);
+          }}
+          disabled={!normalizedCode}
+          aria-disabled={!normalizedCode}
+          className="w-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 py-4 font-medium text-black transition duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
         >
           Join Ceremony →
         </button>

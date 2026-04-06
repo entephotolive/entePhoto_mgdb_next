@@ -1,0 +1,41 @@
+.next/types/validator.ts(53,39): error TS2307: Cannot find module '../../app/(auth)/login/page.js' or its corresponding type declarations.
+.next/types/validator.ts(62,39): error TS2307: Cannot find module '../../app/(dashboard)/dashboard/page.js' or its corresponding type declarations.
+.next/types/validator.ts(71,39): error TS2307: Cannot find module '../../app/(dashboard)/events/page.js' or its corresponding type declarations.
+.next/types/validator.ts(80,39): error TS2307: Cannot find module '../../app/(dashboard)/gallery/page.js' or its corresponding type declarations.
+.next/types/validator.ts(89,39): error TS2307: Cannot find module '../../app/(dashboard)/photographers/page.js' or its corresponding type declarations.
+.next/types/validator.ts(98,39): error TS2307: Cannot find module '../../app/(dashboard)/profile/page.js' or its corresponding type declarations.
+.next/types/validator.ts(107,39): error TS2307: Cannot find module '../../app/(dashboard)/uploads/page.js' or its corresponding type declarations.
+.next/types/validator.ts(116,39): error TS2307: Cannot find module '../../app/page.js' or its corresponding type declarations.
+.next/types/validator.ts(125,39): error TS2307: Cannot find module '../../app/api/auth/callback/google/route.js' or its corresponding type declarations.
+.next/types/validator.ts(134,39): error TS2307: Cannot find module '../../app/api/auth/google/route.js' or its corresponding type declarations.
+.next/types/validator.ts(143,39): error TS2307: Cannot find module '../../app/api/auth/logout/route.js' or its corresponding type declarations.
+.next/types/validator.ts(152,39): error TS2307: Cannot find module '../../app/api/auth/me/route.js' or its corresponding type declarations.
+.next/types/validator.ts(161,39): error TS2307: Cannot find module '../../app/api/dashboard/route.js' or its corresponding type declarations.
+.next/types/validator.ts(170,39): error TS2307: Cannot find module '../../app/api/photographers/route.js' or its corresponding type declarations.
+.next/types/validator.ts(179,39): error TS2307: Cannot find module '../../app/api/photos/route.js' or its corresponding type declarations.
+.next/types/validator.ts(188,39): error TS2307: Cannot find module '../../app/api/sign-cloudinary-params/route.js' or its corresponding type declarations.
+.next/types/validator.ts(201,39): error TS2307: Cannot find module '../../app/(auth)/layout.js' or its corresponding type declarations.
+.next/types/validator.ts(210,39): error TS2307: Cannot find module '../../app/(dashboard)/layout.js' or its corresponding type declarations.
+.next/types/validator.ts(219,39): error TS2307: Cannot find module '../../app/layout.js' or its corresponding type declarations.
+src/app/event/[eid]/studio/page.tsx(111,12): error TS2741: Property 'plugins' is missing in type '{ children: Element; setApi: Dispatch<any>; opts: { loop: boolean; }; className: string; }' but required in type '{ [x: string]: any; orientation?: string; opts: any; setApi: any; plugins: any; className: any; children: any; }'.
+src/app/event/[eid]/studio/page.tsx(112,14): error TS2741: Property 'className' is missing in type '{ children: Element[]; }' but required in type '{ [x: string]: any; className: any; }'.
+src/app/event/[eid]/studio/page.tsx(114,18): error TS2741: Property 'className' is missing in type '{ children: Element; key: number; }' but required in type '{ [x: string]: any; className: any; }'.
+src/app/event/qr-scanner/page.tsx(99,16): error TS2741: Property 'className' is missing in type '{ children: Element; }' but required in type '{ [x: string]: any; className: any; }'.
+src/components/feature-specific/events/event-modal.tsx(47,54): error TS2339: Property 'error' does not exist on type 'ActionResult<{ id: string; title: string; }>'.
+  Property 'error' does not exist on type '{ success: true; data: { id: string; title: string; }; message: string; }'.
+src/components/feature-specific/events/events-client.tsx(325,20): error TS2339: Property 'error' does not exist on type 'ActionResult<void>'.
+  Property 'error' does not exist on type '{ success: true; data: void; message: string; }'.
+src/components/feature-specific/profile/portfolio-showcase.tsx(233,35): error TS2339: Property 'error' does not exist on type 'ActionResult<any>'.
+  Property 'error' does not exist on type '{ ok: true; data: any; }'.
+src/components/feature-specific/profile/portfolio-showcase.tsx(261,35): error TS2339: Property 'error' does not exist on type 'ActionResult<void>'.
+  Property 'error' does not exist on type '{ ok: true; data: void; }'.
+src/components/feature-specific/profile/profile-form.tsx(134,43): error TS2339: Property 'error' does not exist on type 'ActionResult<{ url: string; }>'.
+  Property 'error' does not exist on type '{ ok: true; data: { url: string; }; }'.
+src/components/feature-specific/profile/profile-form.tsx(157,35): error TS2339: Property 'error' does not exist on type 'ActionResult<any>'.
+  Property 'error' does not exist on type '{ ok: true; data: any; }'.
+src/components/feature-specific/profile/profile-form.tsx(298,18): error TS2693: 'SPECIALIZATION_OPTIONS' only refers to a type, but is being used as a value here.
+src/components/ui/carousel.tsx(157,7): error TS2322: Type 'string' is not assignable to type 'ButtonVariant'.
+src/components/ui/carousel.tsx(182,7): error TS2322: Type 'string' is not assignable to type 'ButtonVariant'.
+src/components/ui/dialog.tsx(57,8): error TS2741: Property 'className' is missing in type '{}' but required in type '{ [x: string]: any; className: any; }'.
+src/components/ui/hover-card.tsx(28,9): error TS2322: Type 'string' is not assignable to type '"center" | "end" | "start"'.
+src/components/ui/tooltip.tsx(12,12): error TS2741: Property 'children' is missing in type '{ "data-slot": string; delayDuration: number; }' but required in type 'TooltipProviderProps'.

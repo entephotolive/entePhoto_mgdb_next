@@ -1,0 +1,117 @@
+.next/types/validator.ts(53,39): error TS2307: Cannot find module '../../app/(auth)/login/page.js' or its corresponding type declarations.
+.next/types/validator.ts(62,39): error TS2307: Cannot find module '../../app/(dashboard)/dashboard/page.js' or its corresponding type declarations.
+.next/types/validator.ts(71,39): error TS2307: Cannot find module '../../app/(dashboard)/events/page.js' or its corresponding type declarations.
+.next/types/validator.ts(80,39): error TS2307: Cannot find module '../../app/(dashboard)/gallery/page.js' or its corresponding type declarations.
+.next/types/validator.ts(89,39): error TS2307: Cannot find module '../../app/(dashboard)/photographers/page.js' or its corresponding type declarations.
+.next/types/validator.ts(98,39): error TS2307: Cannot find module '../../app/(dashboard)/profile/page.js' or its corresponding type declarations.
+.next/types/validator.ts(107,39): error TS2307: Cannot find module '../../app/(dashboard)/uploads/page.js' or its corresponding type declarations.
+.next/types/validator.ts(116,39): error TS2307: Cannot find module '../../app/page.js' or its corresponding type declarations.
+.next/types/validator.ts(125,39): error TS2307: Cannot find module '../../app/api/auth/callback/google/route.js' or its corresponding type declarations.
+.next/types/validator.ts(134,39): error TS2307: Cannot find module '../../app/api/auth/google/route.js' or its corresponding type declarations.
+.next/types/validator.ts(143,39): error TS2307: Cannot find module '../../app/api/auth/logout/route.js' or its corresponding type declarations.
+.next/types/validator.ts(152,39): error TS2307: Cannot find module '../../app/api/auth/me/route.js' or its corresponding type declarations.
+.next/types/validator.ts(161,39): error TS2307: Cannot find module '../../app/api/dashboard/route.js' or its corresponding type declarations.
+.next/types/validator.ts(170,39): error TS2307: Cannot find module '../../app/api/photographers/route.js' or its corresponding type declarations.
+.next/types/validator.ts(179,39): error TS2307: Cannot find module '../../app/api/photos/route.js' or its corresponding type declarations.
+.next/types/validator.ts(188,39): error TS2307: Cannot find module '../../app/api/sign-cloudinary-params/route.js' or its corresponding type declarations.
+.next/types/validator.ts(201,39): error TS2307: Cannot find module '../../app/(auth)/layout.js' or its corresponding type declarations.
+.next/types/validator.ts(210,39): error TS2307: Cannot find module '../../app/(dashboard)/layout.js' or its corresponding type declarations.
+.next/types/validator.ts(219,39): error TS2307: Cannot find module '../../app/layout.js' or its corresponding type declarations.
+src/app/(dashboard)/dashboard/page.tsx(20,33): error TS7006: Parameter 'metric' implicitly has an 'any' type.
+src/app/(dashboard)/dashboard/page.tsx(37,40): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/app/(dashboard)/dashboard/page.tsx(56,42): error TS7006: Parameter 'folder' implicitly has an 'any' type.
+src/app/(dashboard)/profile/action.ts(17,46): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/(dashboard)/profile/page.tsx(5,34): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/app/event/[eid]/gallery/page.tsx(9,28): error TS7031: Binding element 'src' implicitly has an 'any' type.
+src/app/event/[eid]/gallery/page.tsx(9,48): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/app/event/[eid]/live/page.tsx(37,17): error TS2322: Type '"destructive"' is not assignable to type 'BadgeVariant | undefined'.
+src/app/event/[eid]/preview/page.tsx(42,47): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(51,47): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(60,47): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(69,47): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(78,31): error TS2322: Type '{ children: Element; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(92,37): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(95,37): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(98,37): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(101,37): error TS2322: Type '{ children: Element; variant: "ghost"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/preview/page.tsx(105,21): error TS2322: Type '{ children: Element; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/app/event/[eid]/scan/page.tsx(20,24): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/[eid]/scan/page.tsx(30,25): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/[eid]/scan/page.tsx(31,22): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/[eid]/scan/page.tsx(31,53): error TS7006: Parameter 'track' implicitly has an 'any' type.
+src/app/event/[eid]/scan/page.tsx(32,22): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/[eid]/studio/page.tsx(30,11): error TS2339: Property 'scrollNext' does not exist on type 'never'.
+src/app/event/[eid]/studio/page.tsx(111,12): error TS2741: Property 'plugins' is missing in type '{ children: Element; setApi: Dispatch<SetStateAction<null>>; opts: { loop: boolean; }; className: string; }' but required in type '{ [x: string]: any; orientation?: string | undefined; opts: any; setApi: any; plugins: any; className: any; children: any; }'.
+src/app/event/[eid]/studio/page.tsx(112,14): error TS2741: Property 'className' is missing in type '{ children: Element[]; }' but required in type '{ [x: string]: any; className: any; }'.
+src/app/event/[eid]/studio/page.tsx(114,18): error TS2741: Property 'className' is missing in type '{ children: Element; key: number; }' but required in type '{ [x: string]: any; className: any; }'.
+src/app/event/layout.tsx(16,38): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/app/event/qr-scanner/page.tsx(28,26): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/qr-scanner/page.tsx(36,27): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/qr-scanner/page.tsx(37,39): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/qr-scanner/page.tsx(38,23): error TS7006: Parameter 'track' implicitly has an 'any' type.
+src/app/event/qr-scanner/page.tsx(39,24): error TS2339: Property 'srcObject' does not exist on type 'never'.
+src/app/event/qr-scanner/page.tsx(82,28): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/app/event/qr-scanner/page.tsx(98,16): error TS2741: Property 'className' is missing in type '{ children: Element; }' but required in type '{ [x: string]: any; className: any; }'.
+src/components/feature-specific/events/events-client.tsx(6,31): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/gallery/gallery-folders.tsx(2,31): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/photographers/photographer-panel.tsx(1,37): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/photographers/profile-card.tsx(3,29): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/profile/portfolio-showcase.tsx(7,33): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/profile/profile-form.tsx(16,53): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/feature-specific/profile/profile-form.tsx(298,46): error TS7006: Parameter 'opt' implicitly has an 'any' type.
+src/components/feature-specific/uploads/upload-workspace.tsx(8,31): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/Layout.tsx(1,34): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/components/Navbar.tsx(11,21): error TS7006: Parameter 'path' implicitly has an 'any' type.
+src/components/shared/dashboard-shell.tsx(5,29): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/shared/desktop-sidebar.tsx(8,29): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/components/ui/carousel.tsx(24,3): error TS7031: Binding element 'opts' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(25,3): error TS7031: Binding element 'setApi' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(26,3): error TS7031: Binding element 'plugins' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(27,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(28,3): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(38,39): error TS7006: Parameter 'api' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(52,44): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(80,7): error TS2322: Type '{ carouselRef: EmblaViewportRefType; api: EmblaCarouselType | undefined; opts: any; orientation: string; scrollPrev: () => void; scrollNext: () => void; canScrollPrev: boolean; canScrollNext: boolean; }' is not assignable to type 'null'.
+src/components/ui/carousel.tsx(105,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(127,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(147,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(157,7): error TS2322: Type 'string' is not assignable to type 'ButtonVariant | undefined'.
+src/components/ui/carousel.tsx(172,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/carousel.tsx(182,7): error TS2322: Type 'string' is not assignable to type 'ButtonVariant | undefined'.
+src/components/ui/dialog.tsx(35,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(50,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(51,3): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(57,8): error TS2741: Property 'className' is missing in type '{}' but required in type '{ [x: string]: any; className: any; }'.
+src/components/ui/dialog.tsx(68,72): error TS2322: Type '{ children: Element[]; variant: "ghost"; className: string; size: string; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/ui/dialog.tsx(80,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(92,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(94,3): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(116,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/dialog.tsx(128,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/hover-card.tsx(19,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/hover-card.tsx(28,9): error TS2322: Type 'string' is not assignable to type '"end" | "center" | "start" | undefined'.
+src/components/ui/skeleton.tsx(4,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/tooltip.tsx(12,12): error TS2741: Property 'children' is missing in type '{ "data-slot": string; delayDuration: number; }' but required in type 'TooltipProviderProps'.
+src/components/ui/tooltip.tsx(28,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/tooltip.tsx(30,3): error TS7031: Binding element 'children' implicitly has an 'any' type.
+src/hooks/use-file-upload.ts(4,33): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/auth.service.ts(11,29): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/dashboard.service.ts(1,35): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/event.service.ts(4,31): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/photo.service.ts(5,31): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/photographer.service.ts(5,37): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/portfolio.service.ts(3,33): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/services/profile.service.ts(3,29): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+src/lib/utils.ts(4,20): error TS7019: Rest parameter 'inputs' implicitly has an 'any[]' type.
+src/lib/utils/constants.ts(2,26): error TS2307: Cannot find module '@/types' or its corresponding type declarations.

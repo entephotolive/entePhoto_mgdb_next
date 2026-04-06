@@ -8,31 +8,47 @@ export default function FaceScanPage() {
   const videoRef = useRef(null);
 
   useEffect(() => {
-    const videoElement = videoRef.current;
+  let stream: MediaStream | null = null;
 
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-        });
+  async function startCamera() {
+    // ✅ 1. Ensure browser
+    if (typeof window === "undefined") return;
 
-        if (videoElement) {
-          videoElement.srcObject = stream;
-        }
-      } catch (error) {
-        console.error("Camera access denied:", error);
-      }
+    // ✅ 2. Ensure API exists
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      console.error("Camera API not supported in this browser");
+      return;
     }
 
-    startCamera();
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+      });
 
-    return () => {
-      if (videoElement?.srcObject) {
-        videoElement.srcObject.getTracks().forEach((track) => track.stop());
-        videoElement.srcObject = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
       }
-    };
-  }, []);
+    } catch (error: any) {
+      // ✅ 3. Differentiate errors
+      if (error.name === "NotAllowedError") {
+        console.error("Permission denied by user");
+      } else if (error.name === "NotFoundError") {
+        console.error("No camera device found");
+      } else {
+        console.error("Camera error:", error);
+      }
+    }
+  }
+
+  startCamera();
+
+  return () => {
+    // ✅ 4. Proper cleanup
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+  };
+}, []);
 
   return (
     <div

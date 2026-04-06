@@ -1,0 +1,19 @@
+src/types/index.ts(1,31): error TS1127: Invalid character.
+src/types/index.ts(1,32): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,67): error TS1127: Invalid character.
+src/types/index.ts(1,68): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,101): error TS1127: Invalid character.
+src/types/index.ts(1,102): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,135): error TS1127: Invalid character.
+src/types/index.ts(1,136): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,175): error TS1127: Invalid character.
+src/types/index.ts(1,176): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,207): error TS1127: Invalid character.
+src/types/index.ts(1,208): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,250): error TS1127: Invalid character.
+src/types/index.ts(1,251): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,286): error TS1127: Invalid character.
+src/types/index.ts(1,287): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,324): error TS1127: Invalid character.
+src/types/index.ts(1,325): error TS1435: Unknown keyword or identifier. Did you mean 'export'?
+src/types/index.ts(1,353): error TS1127: Invalid character.

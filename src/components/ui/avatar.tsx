@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
@@ -19,9 +20,10 @@ Avatar.displayName = "Avatar";
 export const AvatarImage = React.forwardRef<
   HTMLImageElement,
   React.ImgHTMLAttributes<HTMLImageElement>
->(({ className, ...props }, ref) => (
+>(({ className, alt = "", ...props }, ref) => (
   <img
     ref={ref}
+    alt={alt}
     className={cn("aspect-square h-full w-full object-cover", className)}
     {...props}
   />

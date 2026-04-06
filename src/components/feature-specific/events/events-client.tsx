@@ -322,7 +322,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
     if (result.success) {
       window.location.reload();
     } else {
-      alert(result.error);
+      alert("error" in result ? result.error : "Failed to delete event.");
       setDeleting(null);
     }
   }

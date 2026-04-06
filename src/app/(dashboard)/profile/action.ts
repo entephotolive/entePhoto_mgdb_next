@@ -14,6 +14,7 @@ import {
   insertPortfolioMoment,
   deletePortfolioMomentById,
 } from "@/lib/services/portfolio.service";
+import { getEventById } from "@/lib/services/event.service";
 import { ProfileData, PortfolioMoment } from "@/types";
 
 // ─── Zod schema ────────────────────────────────────────────────────────────
@@ -154,5 +155,23 @@ export async function deletePortfolioMoment(
   } catch (err) {
     console.error("[deletePortfolioMoment]", err);
     return { ok: false, error: "Failed to delete moment. Please try again." };
+  }
+}
+
+// ─── getStudioByEventId ─────────────────────────────────────────────────────
+export async function getStudioByEventId(eventId: string) {
+  try {
+    const event = await getEventById(eventId);
+    if (!event || !event.createdBy?.id) return null;
+
+    const [profile, portfolio] = await Promise.all([
+      fetchProfileById(event.createdBy.id),
+      fetchPortfolioByUser(event.createdBy.id),
+    ]);
+
+    return { profile, portfolio };
+  } catch (err) {
+    console.error("[getStudioByEventId]", err);
+    return null;
   }
 }

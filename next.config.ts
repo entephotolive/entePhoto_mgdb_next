@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+
 const nextConfig: NextConfig = {
   // Raise the Server Action body limit to 4 MB as a safety net.
   // The primary fix is client-side compression (lib/utils/compress-image.ts),
@@ -9,6 +10,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
+   allowedDevOrigins: ['overgreedily-unrecessive-adalyn.ngrok-free.dev'],
   images: {
     remotePatterns: [
       {

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
-const CarouselContext = React.createContext(null)
+const CarouselContext = React.createContext<any>(null)
 
 function useCarousel() {
   const context = React.useContext(CarouselContext)
@@ -19,15 +19,14 @@ function useCarousel() {
   return context
 }
 
-function Carousel({
-  orientation = "horizontal",
+function Carousel({ orientation = "horizontal",
   opts,
   setApi,
   plugins,
   className,
   children,
   ...props
-}) {
+ }: any) {
   const [carouselRef, api] = useEmblaCarousel({
     ...opts,
     axis: orientation === "horizontal" ? "x" : "y",
@@ -101,10 +100,9 @@ function Carousel({
   );
 }
 
-function CarouselContent({
-  className,
+function CarouselContent({ className,
   ...props
-}) {
+ }: any) {
   const { carouselRef, orientation } = useCarousel()
 
   return (
@@ -123,10 +121,9 @@ function CarouselContent({
   );
 }
 
-function CarouselItem({
-  className,
+function CarouselItem({ className,
   ...props
-}) {
+ }: any) {
   const { orientation } = useCarousel()
 
   return (
@@ -143,12 +140,11 @@ function CarouselItem({
   );
 }
 
-function CarouselPrevious({
-  className,
+function CarouselPrevious({ className,
   variant = "outline",
   size = "icon-sm",
   ...props
-}) {
+ }: any) {
   const { orientation, scrollPrev, canScrollPrev } = useCarousel()
 
   return (
@@ -168,12 +164,11 @@ function CarouselPrevious({
   );
 }
 
-function CarouselNext({
-  className,
+function CarouselNext({ className,
   variant = "outline",
   size = "icon-sm",
   ...props
-}) {
+ }: any) {
   const { orientation, scrollNext, canScrollNext } = useCarousel()
 
   return (

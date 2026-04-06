@@ -1,8 +1,31 @@
+@import "../../node_modules/tw-animate-css/dist/tw-animate.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --background: 10 10 11;
+  --foreground: 248 250 252;
+  --surface: 18 18 20;
+  --card: 18 18 20;
+  --card-foreground: 248 250 252;
+  --popover: 15 17 23;
+  --popover-foreground: 248 250 252;
+  --primary: 34 211 238;
+  --primary-foreground: 2 6 23;
+  --secondary: 30 41 59;
+  --secondary-foreground: 248 250 252;
+  --muted: 30 41 59;
+  --muted-foreground: 148 163 184;
+  --accent: 0 229 255;
+  --accent-foreground: 2 6 23;
+  --border: 255 255 255;
+  --input: 255 255 255;
+  --ring: 34 211 238;
+  --success: 52 211 153;
+  --warning: 251 191 36;
+  --danger: 239 68 68;
+  --radius: 1rem;
   color-scheme: dark;
 }
 
@@ -17,8 +40,9 @@ body {
 
 body {
   margin: 0;
-  background: #0a0a0b;
-  color: #f8fafc;
+  background: rgb(var(--background));
+  color: rgb(var(--foreground));
+  font-family: "Geist Variable", system-ui, sans-serif;
 }
 
 a {
@@ -62,4 +86,3 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
