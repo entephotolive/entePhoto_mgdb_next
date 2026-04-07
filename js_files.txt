@@ -1,5 +1,0 @@
-E:\Desktop\projects\photo ceremony\Photo-Ceremony-main\full-stack\src\components\ui\aspect-ratio.jsx
-E:\Desktop\projects\photo ceremony\Photo-Ceremony-main\full-stack\src\data\gallery.data.js
-E:\Desktop\projects\photo ceremony\Photo-Ceremony-main\full-stack\src\data\livefeed.data.js
-E:\Desktop\projects\photo ceremony\Photo-Ceremony-main\full-stack\src\data\studio.data.js
-E:\Desktop\projects\photo ceremony\Photo-Ceremony-main\full-stack\src\lib\utils.js

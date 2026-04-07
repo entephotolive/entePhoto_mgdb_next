@@ -17,9 +17,9 @@ const photoSchema = new Schema(
       ref: "User",
       required: true,
     },
-    faceEmbedding: {
-      type: [Number],
-      required: false,
+    imageName: {
+      type: String,
+      required: true,
     },
   },
   {

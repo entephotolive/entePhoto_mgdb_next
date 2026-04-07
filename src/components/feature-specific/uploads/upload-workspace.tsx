@@ -103,7 +103,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 relative z-10">
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             <AlertCircle size={14} className="opacity-50" />
-            Max File Size: 5MB
+            Max File Size: 15MB
           </div>
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             <ImageIcon size={14} className="opacity-50" />
