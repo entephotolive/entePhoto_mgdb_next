@@ -6,7 +6,7 @@ import { UploadQueueItem } from "@/types";
 const allowedMimeTypes = ["image/jpeg", "image/png", "image/webp"];
 // Increased limit to 50MB so photographers can upload large raw photos.
 // Cloudinary will automatically compress them down to web-friendly sizes.
-const maxFileSize = 50 * 1024 * 1024; 
+const maxFileSize = 50 * 1024 * 1024;
 
 export function useFileUpload() {
   const [items, setItems] = useState<UploadQueueItem[]>([]);
@@ -39,13 +39,37 @@ export function useFileUpload() {
 
   const [isUploading, setIsUploading] = useState(false);
 
-  async function uploadFile(id: string, eventsName : string, eventId: string, uploadedBy: string) {
+  async function uploadFile(id: string, eventsName: string, eventId: string, uploadedBy: string) {
     const item = itemsRef.current.find((i) => i.id === id);
     if (!item) return;
+  
 
     updateItem(id, (prev) => ({ ...prev, status: "uploading", progress: 0 }));
 
     try {
+      // 1. Calculate hash
+      const buffer = await item.file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+      const hash = [...new Uint8Array(hashBuffer)]
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      // 2. Check existence in DB
+      const checkRes = await fetch("/api/photos/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hash }),
+      });
+      if (!checkRes.ok) throw new Error("Failed to check duplicate");
+      const { exists } = await checkRes.json();
+      if (exists) {
+        updateItem(id, (prev) => ({
+          ...prev,
+          status: "failed",
+          error: "This file already exists",
+        }));
+        return;
+      }
       const timestamp = Math.round(new Date().getTime() / 1000);
       const paramsToSign = {
         timestamp,
@@ -103,9 +127,10 @@ export function useFileUpload() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: uploadResult.secure_url, 
+          url: uploadResult.secure_url,
           eventId,
           uploadedBy,
+          hash,
         }),
       });
 
@@ -166,6 +191,16 @@ export function useFileUpload() {
 
   }
 
+  function removeFile(id: string) {
+    setItems((current) => {
+      const itemToRemove = current.find((item) => item.id === id);
+      if (itemToRemove) {
+        URL.revokeObjectURL(itemToRemove.preview);
+      }
+      return current.filter((item) => item.id !== id);
+    });
+  }
+
   function clearAll() {
     Object.values(timersRef.current).forEach((timer) => window.clearInterval(timer));
     timersRef.current = {};
@@ -188,6 +223,7 @@ export function useFileUpload() {
   return {
     items,
     addFiles,
+    removeFile,
     clearAll,
     startUpload,
     isUploading,

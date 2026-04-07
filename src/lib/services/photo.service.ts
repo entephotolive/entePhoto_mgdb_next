@@ -8,12 +8,13 @@ const photoInputSchema = z.object({
   url: z.string().url(),
   eventId: z.string().min(1),
   uploadedBy: z.string().min(1),
-  faceEmbedding: z.array(z.number()).optional(),
+  hash: z.string().min(1),
 });
 
 export async function createPhoto(input: unknown) {
   const payload = photoInputSchema.parse(input);
   await connectToDatabase();
+  console.log("the page photo.service payload", payload);
 
   const photo = await PhotoModel.create(payload);
 

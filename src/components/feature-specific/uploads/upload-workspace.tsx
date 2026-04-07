@@ -18,7 +18,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [showWarning, setShowWarning] = useState(events.length === 0);
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
-  const { items, addFiles, clearAll, overallProgress, completedCount, startUpload, isUploading } = useFileUpload();
+  const { items, addFiles, removeFile, clearAll, overallProgress, completedCount, startUpload, isUploading } = useFileUpload();
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
@@ -165,6 +165,20 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                     </div>
                     <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center">{item.error}</p>
                   </div>
+                )}
+
+                {item.status !== "completed" && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(item.id);
+                    }}
+                    className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-rose-500/80 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all scale-0 group-hover:scale-100 border border-white/10 z-20"
+                    title="Remove file"
+                  >
+                    <X size={14} />
+                  </button>
                 )}
               </div>
               <div className="px-3 pb-3">

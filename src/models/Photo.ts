@@ -17,9 +17,10 @@ const photoSchema = new Schema(
       ref: "User",
       required: true,
     },
-    imageName: {
+    hash: {
       type: String,
       required: true,
+      unique: true,
     },
   },
   {
