@@ -46,7 +46,7 @@ export function GalleryFolders({ folders, eventId }: GalleryFoldersProps) {
                 </h3>
                 <div className="flex items-center gap-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
                   <Images size={12} className="opacity-50" />
-                  <span>{folder.photoCount} ITEMS</span>
+                  <span>{folder.photoCount} PHOTOS</span>
                 </div>
               </Link>
 

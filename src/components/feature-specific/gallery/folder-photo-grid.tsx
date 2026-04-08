@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Camera, Clock, X, ZoomIn, Upload, Loader2 } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
 import { useFileUpload } from "@/hooks/use-file-upload";
@@ -13,10 +14,9 @@ interface FolderPhotoGridProps {
   userId: string;
 }
 
-export function FolderPhotoGrid({ photos: initialPhotos, folderId, eventId, userId }: FolderPhotoGridProps) {
-  const [photos, setPhotos] = useState<PhotoItem[]>(initialPhotos);
+export function FolderPhotoGrid({ photos, folderId, eventId, userId }: FolderPhotoGridProps) {
+  const router = useRouter();
   const [lightbox, setLightbox] = useState<PhotoItem | null>(null);
-  const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { items, addFiles, removeFile, clearAll, overallProgress, completedCount, startUpload, isUploading } = useFileUpload();
@@ -56,7 +56,10 @@ export function FolderPhotoGrid({ photos: initialPhotos, folderId, eventId, user
           ) : (
             <>
               <button
-                onClick={() => startUpload(eventId, "upload", userId, folderId)}
+                onClick={async () => {
+                  await startUpload(eventId, "upload", userId, folderId);
+                  router.refresh();
+                }}
                 disabled={isUploading}
                 className={`flex cursor-pointer items-center gap-2 rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-bold text-black shadow-[0_0_24px_rgba(52,211,153,0.35)] transition-all hover:bg-emerald-300 hover:shadow-[0_0_32px_rgba(52,211,153,0.5)] active:scale-95 ${isUploading ? "opacity-60 pointer-events-none" : ""}`}
               >

@@ -1,6 +1,7 @@
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { FolderModel } from "@/models/Folder";
 import { PhotoModel } from "@/models/Photo";
+import { Types } from "mongoose";
 
 export async function listFoldersByEvent(eventId: string, userId: string) {
   await connectToDatabase();
@@ -8,20 +9,31 @@ export async function listFoldersByEvent(eventId: string, userId: string) {
   // Fetch real folders from the database
   const folders = await FolderModel.find({ eventId, createdBy: userId }).lean();
 
-  // For each folder, we might want to get a cover image and photo count.
-  // This is a simplified version.
+  // For each folder, we want to get a cover image and photo count.
   const photoCounts = await PhotoModel.aggregate([
-    { $match: { eventId: eventId as any } },
+    { $match: { eventId: new (Types.ObjectId as any)(eventId) } },
     {
       $group: {
-        _id: "$eventId",
+        _id: "$folderId",
         count: { $sum: 1 },
         coverUrl: { $first: "$url" },
       },
     },
   ]);
 
-  const eventStats = photoCounts[0] || { count: 0, coverUrl: null };
+  let totalCount = 0;
+  let eventCoverUrl = null;
+  const folderStats = new Map();
+
+  for (const group of photoCounts) {
+    totalCount += group.count;
+    if (!eventCoverUrl && group.coverUrl) {
+      eventCoverUrl = group.coverUrl;
+    }
+    if (group._id) {
+      folderStats.set(group._id.toString(), group);
+    }
+  }
 
   // Map the local models to the UI representation.
   // The mockup shows "All Photos" as the first item.
@@ -29,19 +41,22 @@ export async function listFoldersByEvent(eventId: string, userId: string) {
     {
       id: "all",
       title: "All Photos",
-      photoCount: eventStats.count,
-      coverUrl: eventStats.coverUrl,
+      photoCount: totalCount,
+      coverUrl: eventCoverUrl,
       location: "", // Not used in mockup cards
       date: new Date().toISOString(), // Not used in mockup cards
     },
-    ...folders.map((f) => ({
-      id: f._id.toString(),
-      title: f.name,
-      photoCount: 0, // Placeholder
-      coverUrl: null, // Placeholder
-      location: "",
-      date: (f as any).createdAt?.toISOString() || new Date().toISOString(),
-    })),
+    ...folders.map((f) => {
+      const stats = folderStats.get(f._id.toString());
+      return {
+        id: f._id.toString(),
+        title: f.name,
+        photoCount: stats?.count || 0,
+        coverUrl: stats?.coverUrl || null,
+        location: "",
+        date: (f as any).createdAt?.toISOString() || new Date().toISOString(),
+      };
+    }),
   ];
 
   return results;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, CalendarDays, MapPin, User2, Clock, Search, LayoutGrid, List, Trash2, Loader2, ChevronRight, X, Camera } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, CalendarDays, MapPin, User2, Clock, Search, LayoutGrid, List, Trash2, Loader2, ChevronRight, X, Camera, Copy, Check, Download, ExternalLink } from "lucide-react";
+import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils/cn";
 import { EventListItem } from "@/types";
 import { EventModal } from "./event-modal";
@@ -34,9 +35,20 @@ const STATUS_META: Record<string, { label: string; dot: string; badge: string }>
 };
 
 function getDefaultStatus(event: EventListItem): string {
-  const now = new Date();
-  const eventDate = new Date(event.date);
-  return eventDate < now ? "completed" : "active";
+  const now = Date.now();
+  const eventTime = new Date(event.date).getTime();
+
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+  if (now < eventTime) {
+    return "draft";
+  }
+
+  if (now >= eventTime && now <= eventTime + TWENTY_FOUR_HOURS) {
+    return "active";
+  }
+
+  return "completed";
 }
 
 function formatDate(iso: string) {
@@ -242,49 +254,153 @@ function EventRow({
 
 // ── View Event Modal ───────────────────────────────────────────────────────────
 function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
+
   if (!event) return null;
+
   const status = getDefaultStatus(event);
   const meta = STATUS_META[status] ?? STATUS_META.active;
 
+  const eventPath = `/event/${event.id}/gallery`;
+  const eventUrl = typeof window !== "undefined"
+    ? `${window.location.origin}${eventPath}`
+    : eventPath;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(eventUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const clone = svg.cloneNode(true) as SVGElement;
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const blob = new Blob([clone.outerHTML], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `qr-${event.title.toLowerCase().replace(/\s+/g, "-")}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <>
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
+
+      {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#0f1117] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/[0.06]">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
-              <h2 className="text-lg font-semibold text-white truncate">{event.title}</h2>
+        <div className="relative w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+          {/* ── Header ── */}
+          <div className="flex items-center justify-between px-7 pt-6 pb-5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
+              <h2 className="text-[15px] font-semibold text-white truncate lowercase tracking-tight">
+                {event.title}
+              </h2>
             </div>
-            <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors shrink-0 ml-4">
-              <X size={18} />
+            <button
+              onClick={onClose}
+              className="text-slate-500 hover:text-white transition-colors shrink-0"
+            >
+              <X size={17} />
             </button>
           </div>
-          <div className="px-6 py-5 space-y-4">
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <CalendarDays size={16} className="text-slate-500 shrink-0" />
-              <span>{formatDate(event.date)}</span>
+
+          {/* ── Body: 2-column grid ── */}
+          <div className="grid grid-cols-[1fr_auto] gap-6 px-7 pb-5">
+
+            {/* Left — event details */}
+            <div className="flex flex-col justify-center space-y-4">
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <CalendarDays size={15} className="text-slate-500 shrink-0" />
+                <span>{formatDate(event.date)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <Clock size={15} className="text-slate-500 shrink-0" />
+                <span>{formatTime(event.date)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <MapPin size={15} className="text-slate-500 shrink-0" />
+                <span>{event.location}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <User2 size={15} className="text-slate-500 shrink-0" />
+                <span>Created by {event.createdBy.name}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-300">
+                <Camera size={15} className="text-slate-500 shrink-0" />
+                <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+              </div>
             </div>
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <Clock size={16} className="text-slate-500 shrink-0" />
-              <span>{formatTime(event.date)}</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <MapPin size={16} className="text-slate-500 shrink-0" />
-              <span>{event.location}</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <User2 size={16} className="text-slate-500 shrink-0" />
-              <span>Created by {event.createdBy.name}</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-300">
-              <Camera size={16} className="text-slate-500 shrink-0" />
-              <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+
+            {/* Right — QR code */}
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <div ref={qrRef} className="bg-white rounded-2xl p-4 shadow-xl">
+                <QRCode
+                  value={eventUrl}
+                  size={168}
+                  bgColor="#ffffff"
+                  fgColor="#020617"
+                  level="H"
+                  style={{ display: "block" }}
+                />
+              </div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                Scan to open gallery
+              </p>
             </div>
           </div>
+
+          {/* ── Divider ── */}
+          <div className="mx-7 border-t border-white/[0.06]" />
+
+          {/* ── Footer: URL pill + download ── */}
+          <div className="px-7 py-5 space-y-3">
+            {/* URL pill */}
+            <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-4 py-2.5">
+              <code className="flex-1 text-[12px] text-slate-300 truncate font-mono">
+                {eventPath}
+              </code>
+              <button
+                onClick={handleCopy}
+                title="Copy link"
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all",
+                  copied ? "text-emerald-400" : "text-slate-500 hover:text-white hover:bg-white/10"
+                )}
+              >
+                {copied ? <Check size={13} /> : <Copy size={13} />}
+              </button>
+              <a
+                href={eventUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open in new tab"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+              >
+                <ExternalLink size={13} />
+              </a>
+            </div>
+
+            {/* Download button */}
+            <button
+              onClick={handleDownload}
+              className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1a2a2a] border border-cyan-500/20 text-cyan-400 text-sm font-semibold hover:bg-cyan-500/10 transition-all"
+            >
+              <Download size={14} />
+              Download QR Code
+            </button>
+          </div>
+
         </div>
       </div>
     </>
@@ -331,7 +447,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
     all: events.length,
     active: events.filter((e) => getDefaultStatus(e) === "active").length,
     completed: events.filter((e) => getDefaultStatus(e) === "completed").length,
-    draft: 0,
+    draft: events.filter((e) => getDefaultStatus(e) === "draft").length,
   };
 
   return (
