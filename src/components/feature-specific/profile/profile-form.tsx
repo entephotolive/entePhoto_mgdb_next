@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { AvatarUpload } from "@/components/feature-specific/profile/avatar-upload";
 import { SpecializationTags } from "@/components/feature-specific/profile/specialization-tags";
-import { updateProfile, uploadProfileImage } from "@/app/(dashboard)/profile/action";
+import { updateProfile, uploadProfileImage } from "@/app/admin/(dashboard)/profile/action";
 import { ProfileData, SPECIALIZATION_OPTIONS } from "@/types";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateFolderAction, deleteFolderAction } from "@/app/(dashboard)/gallery/action";
+import { updateFolderAction, deleteFolderAction } from "@/app/admin/(dashboard)/gallery/action";
 
 interface FolderActionsMenuProps {
   folderId: string;

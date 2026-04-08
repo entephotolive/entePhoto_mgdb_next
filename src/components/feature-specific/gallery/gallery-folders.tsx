@@ -13,7 +13,7 @@ export function GalleryFolders({ folders, eventId }: GalleryFoldersProps) {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {folders.map((folder) => {
-        const href = `/gallery/${folder.id}${eventId ? `?eventId=${eventId}` : ""}`;
+        const href = `/admin/gallery/${folder.id}${eventId ? `?eventId=${eventId}` : ""}`;
 
         return (
           <div

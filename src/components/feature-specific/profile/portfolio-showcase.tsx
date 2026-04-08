@@ -2,7 +2,7 @@
 
 import { useOptimistic, useRef, useTransition, useState, useCallback } from "react";
 import { Plus, Upload, Info, Trash2, X, CheckCircle, XCircle } from "lucide-react";
-import { addPortfolioMoment, deletePortfolioMoment } from "@/app/(dashboard)/profile/action";
+import { addPortfolioMoment, deletePortfolioMoment } from "@/app/admin/(dashboard)/profile/action";
 import { compressImage, PRESET_3MB } from "@/lib/utils/compress-image";
 import { PortfolioMoment } from "@/types";
 import { cn } from "@/lib/utils/cn";

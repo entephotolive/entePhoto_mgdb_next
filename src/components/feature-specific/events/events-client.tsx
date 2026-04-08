@@ -5,7 +5,7 @@ import { Plus, CalendarDays, MapPin, User2, Clock, Search, LayoutGrid, List, Tra
 import { cn } from "@/lib/utils/cn";
 import { EventListItem } from "@/types";
 import { EventModal } from "./event-modal";
-import { deleteEventAction } from "@/app/(dashboard)/events/event.actions";
+import { deleteEventAction } from "@/app/admin/(dashboard)/events/event.actions";
 
 interface EventsClientProps {
   events: EventListItem[];

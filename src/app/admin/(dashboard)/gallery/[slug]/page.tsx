@@ -45,7 +45,7 @@ export default async function FolderDetailPage({
       {/* ── Breadcrumb ── */}
       <nav className="mb-8 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         <Link
-          href="/gallery"
+          href="/admin/gallery"
           className="transition-colors hover:text-slate-300"
         >
           Gallery

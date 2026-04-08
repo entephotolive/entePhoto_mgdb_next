@@ -18,7 +18,7 @@ export async function createNewFolder(name: string, eventId: string) {
 
     await createFolder(name, eventId, session.id);
     
-    revalidatePath("/gallery");
+    revalidatePath("/admin/gallery");
     return { ok: true };
   } catch (error) {
     console.error("[createNewFolder]", error);
@@ -40,7 +40,7 @@ export async function updateFolderAction(folderId: string, name: string) {
 
     await updateFolder(folderId, name, session.id);
     
-    revalidatePath("/gallery");
+    revalidatePath("/admin/gallery");
     return { ok: true };
   } catch (error) {
     console.error("[updateFolderAction]", error);
@@ -58,7 +58,7 @@ export async function deleteFolderAction(folderId: string) {
 
     await deleteFolder(folderId, session.id);
     
-    revalidatePath("/gallery");
+    revalidatePath("/admin/gallery");
     return { ok: true };
   } catch (error) {
     console.error("[deleteFolderAction]", error);

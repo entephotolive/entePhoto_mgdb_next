@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createNewFolder } from "@/app/(dashboard)/gallery/action";
+import { createNewFolder } from "@/app/admin/(dashboard)/gallery/action";
 
 interface GalleryControlsProps {
   events: EventListItem[];

@@ -14,7 +14,7 @@ export async function updatePhotoStatus(
     await requireSession();
     await connectToDatabase();
     await PhotoModel.findByIdAndUpdate(photoId, { status });
-    revalidatePath("/gallery");
+    revalidatePath("/admin/gallery");
     return { ok: true };
   } catch (error) {
     console.error("[updatePhotoStatus]", error);

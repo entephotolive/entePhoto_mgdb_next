@@ -5,32 +5,32 @@ export const authCookieName = "photo_ceremony_session";
 
 export const dashboardNavItems = [
   {
-    href: "/dashboard",
+    href: "/admin/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
   },
   {
-    href: "/events",
+    href: "/admin/events",
     label: "Events",
     icon: CalendarDays,
   },
   {
-    href: "/uploads",
+    href: "/admin/uploads",
     label: "Uploads",
     icon: UploadCloud,
   },
   {
-    href: "/gallery",
+    href: "/admin/gallery",
     label: "Gallery",
     icon: FolderKanban,
   },
   {
-    href: "/profile",
+    href: "/admin/profile",
     label: "Profile",
     icon: UserRound,
   },
   {
-    href: "/photographers",
+    href: "/admin/photographers",
     label: "Photographers",
     icon: Users,
   },
