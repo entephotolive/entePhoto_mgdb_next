@@ -13,7 +13,8 @@ const eventInputSchema = z.object({
 export async function listEvents(userId: string) {
   await connectToDatabase();
 
-  const query = {};
+
+  const query = { createdBy: userId };
 
   const events = await EventModel.find(query)
     .populate("createdBy", "name")

@@ -5,7 +5,7 @@ import { X, Calendar, MapPin, Tag, Plus, Loader2, CheckCircle2, AlertCircle } fr
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createEventAction } from "@/app/(dashboard)/events/event.actions";
+import { createEventAction } from "@/app/admin/(dashboard)/events/event.actions";
 
 interface EventModalProps {
   open: boolean;

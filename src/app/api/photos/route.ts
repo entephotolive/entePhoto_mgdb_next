@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/services/auth.service";
 import { createPhoto } from "@/lib/services/photo.service";
+import { PhotoModel } from "@/models/Photo";
+
 
 export async function POST(request: Request) {
   try {
     await requireSession();
     const payload = await request.json();
+   
     const photo = await createPhoto(payload);
 
     return NextResponse.json({ message: "Photo registered.", data: photo }, { status: 201 });

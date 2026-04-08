@@ -21,7 +21,7 @@ export function DesktopSidebar({ user }: DesktopSidebarProps) {
         <nav className="space-y-1">
           {dashboardNavItems.map((item) => {
             const isActive =
-              pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
             const Icon = item.icon;
 
             return (

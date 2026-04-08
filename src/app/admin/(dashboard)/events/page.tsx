@@ -11,6 +11,7 @@ export default async function EventsPage() {
   const session = await requireSession();
   const events = await listEvents(session.id).catch(() => []);
 
+
   return (
     <EventsClient
       events={events}

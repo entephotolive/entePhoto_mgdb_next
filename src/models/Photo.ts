@@ -12,14 +12,20 @@ const photoSchema = new Schema(
       ref: "Event",
       required: true,
     },
+    folderId: {
+      type: Types.ObjectId,
+      ref: "Folder",
+      default: null,
+    },
     uploadedBy: {
       type: Types.ObjectId,
       ref: "User",
       required: true,
     },
-    faceEmbedding: {
-      type: [Number],
-      required: false,
+    hash: {
+      type: String,
+      required: true,
+      unique: true,
     },
   },
   {
