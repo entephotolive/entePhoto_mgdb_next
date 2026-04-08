@@ -39,7 +39,7 @@ export function useFileUpload() {
 
   const [isUploading, setIsUploading] = useState(false);
 
-  async function uploadFile(id: string, eventsName: string, eventId: string, uploadedBy: string) {
+  async function uploadFile(id: string, eventsName: string, eventId: string, uploadedBy: string, folderId?: string) {
     const item = itemsRef.current.find((i) => i.id === id);
     if (!item) return;
   
@@ -131,6 +131,7 @@ export function useFileUpload() {
           eventId,
           uploadedBy,
           hash,
+          folderId,
         }),
       });
 
@@ -138,7 +139,7 @@ export function useFileUpload() {
 
       updateItem(id, (prev) => ({ ...prev, status: "completed", progress: 100 }));
     } catch (error) {
-      console.log("error")
+   
       console.log(error)
       updateItem(id, (prev) => ({
         ...prev,
@@ -208,13 +209,13 @@ export function useFileUpload() {
     setItems([]);
   }
 
-  async function startUpload(eventId: string, eventName: string, uploadedBy: string) {
+  async function startUpload(eventId: string, eventName: string, uploadedBy: string, folderId?: string) {
     setIsUploading(true);
     const toUpload = itemsRef.current.filter((i) => i.status === "queued" || i.status === "failed");
 
     // Process strictly sequentially to emulate batch processing without crushing browser
     for (const item of toUpload) {
-      await uploadFile(item.id, eventName, eventId, uploadedBy);
+      await uploadFile(item.id, eventName, eventId, uploadedBy, folderId);
     }
 
     setIsUploading(false);

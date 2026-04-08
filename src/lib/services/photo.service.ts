@@ -2,19 +2,21 @@ import { z } from "zod";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { EventModel } from "@/models/Event";
 import { PhotoModel } from "@/models/Photo";
+import { FolderModel } from "@/models/Folder";
 import { GalleryFolder } from "@/types";
+import { Types } from "mongoose";
 
 const photoInputSchema = z.object({
   url: z.string().url(),
   eventId: z.string().min(1),
   uploadedBy: z.string().min(1),
   hash: z.string().min(1),
+  folderId: z.string().optional().nullable(),
 });
 
 export async function createPhoto(input: unknown) {
   const payload = photoInputSchema.parse(input);
   await connectToDatabase();
-  console.log("the page photo.service payload", payload);
 
   const photo = await PhotoModel.create(payload);
 
@@ -75,4 +77,69 @@ export async function listGalleryFolders(userId: string) {
       photoCount: match?.count ?? 0,
     } satisfies GalleryFolder;
   });
+}
+
+export type PhotoItem = {
+  id: string;
+  url: string;
+  createdAt: string;
+};
+
+export type FolderMeta = {
+  id: string;
+  name: string;
+  photoCount: number;
+  eventId: string;
+};
+
+/** Fetch all photos belonging to a specific folder */
+export async function listPhotosByFolder(
+  folderId: string,
+  eventId: string,
+): Promise<PhotoItem[]> {
+  await connectToDatabase();
+
+  const query: Record<string, unknown> =
+    folderId === "all"
+      ? { eventId: new Types.ObjectId(eventId) }
+      : { folderId: new Types.ObjectId(folderId) };
+
+  const photos = await PhotoModel.find(query)
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return photos.map((p) => ({
+    id: p._id.toString(),
+    url: p.url,
+    createdAt: (p as any).createdAt?.toISOString() ?? new Date().toISOString(),
+  }));
+}
+
+/** Fetch folder metadata by folder ID (or "all" pseudo-folder) */
+export async function getFolderMeta(
+  folderId: string,
+  eventId: string,
+): Promise<FolderMeta | null> {
+  await connectToDatabase();
+
+  if (folderId === "all") {
+    const count = await PhotoModel.countDocuments({
+      eventId: new Types.ObjectId(eventId),
+    });
+    return { id: "all", name: "All Photos", photoCount: count, eventId };
+  }
+
+  const folder = await FolderModel.findById(folderId).lean();
+  if (!folder) return null;
+
+  const count = await PhotoModel.countDocuments({
+    folderId: new Types.ObjectId(folderId),
+  });
+
+  return {
+    id: folder._id.toString(),
+    name: (folder as any).name,
+    photoCount: count,
+    eventId: (folder as any).eventId?.toString() ?? eventId,
+  };
 }

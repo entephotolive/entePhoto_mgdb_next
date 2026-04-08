@@ -10,7 +10,7 @@ export const metadata = {
 export default async function EventsPage() {
   const session = await requireSession();
   const events = await listEvents(session.id).catch(() => []);
-  console.log("events", events)
+
 
   return (
     <EventsClient

@@ -6,11 +6,12 @@ const folderSchema = new Schema({
     required: true,
     trim: true,
   },
-
   slug: {
     type: String,
     required: true,
+    trim: true,
   },
+  photoCount: { type: Number, default: 0 },
 
   eventId: {
     type: Schema.Types.ObjectId,
@@ -27,10 +28,12 @@ const folderSchema = new Schema({
     type: Date,
     default: Date.now,
   },
-  
 });
 
-export type FolderModel = InferSchemaType<typeof folderSchema> & { _id: string };
+export type FolderModel = InferSchemaType<typeof folderSchema> & {
+  _id: string;
+};
 
 export const FolderModel =
-  (models.Folder as Model<FolderModel>) || model<FolderModel>("Folder", folderSchema);
+  (models.Folder as Model<FolderModel>) ||
+  model<FolderModel>("Folder", folderSchema);

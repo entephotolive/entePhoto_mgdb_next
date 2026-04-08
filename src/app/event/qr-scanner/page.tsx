@@ -31,10 +31,8 @@ export default function HomePage() {
         videoRef.current.srcObject = stream;
       }
     } catch (error: any) {
-      console.log("FULL ERROR:", error);
-      console.log("NAME:", error?.name);
-      console.log("MESSAGE:", error?.message);
-      console.log("STACK:", error?.stack);
+      console.log("error", error)
+
     }
   };
 
