@@ -5,7 +5,7 @@ import { AlertCircle, ImageIcon, MousePointer2, UploadCloud, X } from "lucide-re
 import { useRef, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
-import { useFileUpload } from "@/hooks/use-file-upload";
+import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { EventListItem } from "@/types";
 
 interface UploadWorkspaceProps {
@@ -18,7 +18,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [showWarning, setShowWarning] = useState(events.length === 0);
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
-  const { items, addFiles, removeFile, clearAll, overallProgress, completedCount, startUpload, isUploading } = useFileUpload();
+  const { items, addFiles, removeFile, clearAll, completedCount, isUploading, setUploadContext } = useGlobalUpload();
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
@@ -34,7 +34,16 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           <div className="relative">
             <select
               value={selectedEventId}
-              onChange={(event) => setSelectedEventId(event.target.value)}
+              onChange={(event) => {
+                const newId = event.target.value;
+                setSelectedEventId(newId);
+                const selectedEvent = events.find((e) => e.id === newId);
+                setUploadContext({
+                  eventId: newId,
+                  eventName: selectedEvent?.title || "event",
+                  uploadedBy: userId,
+                });
+              }}
               className="w-full md:w-auto bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm pr-10 appearance-none focus:outline-none focus:ring-1 focus:ring-cyan-500/50 min-w-[200px] text-white"
             >
               {events.length ? (
@@ -75,7 +84,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             setShowWarning(true);
             return;
           }
-          addFiles(event.dataTransfer.files);
+          const selectedEvent = events.find((e) => e.id === selectedEventId);
+          addFiles(event.dataTransfer.files, {
+            eventId: selectedEventId,
+            eventName: selectedEvent?.title || "event",
+            uploadedBy: userId,
+          });
         }}
         className={`w-full h-52 sm:h-80 border-2 border-dashed rounded-[24px] sm:rounded-[40px] flex flex-col items-center justify-center group transition-all cursor-pointer relative overflow-hidden ${isDragging ? "border-cyan-400 bg-cyan-400/10 scale-[1.02]" : "border-white/10 hover:border-cyan-500/30 bg-gradient-to-b from-white/[0.02] to-transparent"
           }`}
@@ -88,7 +102,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           className="hidden"
           onChange={(event) => {
             if (event.target.files) {
-              addFiles(event.target.files);
+              const selectedEvent = events.find((e) => e.id === selectedEventId);
+              addFiles(event.target.files, {
+                eventId: selectedEventId,
+                eventName: selectedEvent?.title || "event",
+                uploadedBy: userId,
+              });
             }
           }}
         />
@@ -201,37 +220,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         </div>
       </section>
 
-      <div className="fixed bottom-16 lg:bottom-8 left-0 right-0 lg:left-1/2 lg:-translate-x-1/2 lg:w-full lg:max-w-4xl px-3 sm:px-4 z-20">
-        <div className="bg-[#121214] border border-white/5 border-b-0 lg:border-b rounded-t-[1.5rem] sm:rounded-t-[2rem] lg:rounded-[2rem] p-4 sm:p-6 shadow-panel flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-8">
-          <div className="flex-1 w-full">
-            <div className="flex justify-between items-center mb-3">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Overall Progress</label>
-              <span className="text-xs font-bold text-cyan-400">{overallProgress}%</span>
-            </div>
-            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-cyan-400 rounded-full transition-all duration-700 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
-                style={{ width: `${overallProgress}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-slate-500 mt-2 italic">
-              {completedCount} of {items.length || 0} files ready for storage registration.
-            </p>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
+          <div className="flex-1 w-full md:w-auto">
+             {items.length > 0 && (
+                 <p className="text-xs text-slate-500 italic">
+                     {items.length} files queued. Click "START UPLOAD" on the widget to begin.
+                 </p>
+             )}
           </div>
-
-          <button
-            type="button"
-            className="w-full md:w-auto bg-cyan-400 hover:bg-cyan-300 text-black font-bold py-4 px-10 rounded-2xl flex items-center justify-center gap-3 transition-all transform active:scale-95 group/btn shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={items.length === 0 || !selectedEventId || isUploading}
-            onClick={() => {
-              const selectedEvent = events.find((e) => e.id === selectedEventId);
-              startUpload(selectedEventId, selectedEvent?.title || "event", userId);
-            }}
-          >
-            {isUploading ? "UPLOADING..." : "START UPLOAD"}
-            {!isUploading && <MousePointer2 className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" size={18} />}
-          </button>
-        </div>
       </div>
 
       {/* Warning Modal for No Events */}

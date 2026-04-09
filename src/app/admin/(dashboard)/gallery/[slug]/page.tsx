@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronRight, Images } from "lucide-react";
 import { requireSession } from "@/lib/services/auth.service";
 import { listPhotosByFolder, getFolderMeta } from "@/lib/services/photo.service";
+import { getEventById } from "@/lib/services/event.service";
 import { FolderPhotoGrid } from "@/components/feature-specific/gallery/folder-photo-grid";
 
 interface FolderPageProps {
@@ -25,11 +26,12 @@ export default async function FolderDetailPage({
   // If none is given in query params we fallback gracefully
   const resolvedEventId = eventId ?? "";
 
-  const [meta, photos] = await Promise.all([
+  const [meta, photos, event] = await Promise.all([
     getFolderMeta(folderId, resolvedEventId).catch(() => null),
     resolvedEventId || folderId !== "all"
       ? listPhotosByFolder(folderId, resolvedEventId).catch(() => [])
       : Promise.resolve([]),
+    resolvedEventId ? getEventById(resolvedEventId).catch(() => null) : Promise.resolve(null),
   ]);
 
   if (!meta && folderId !== "all") {
@@ -39,6 +41,7 @@ export default async function FolderDetailPage({
   const folderName = meta?.name ?? "All Photos";
   const photoCount = meta?.photoCount ?? photos.length;
   const canonicalEventId = meta?.eventId ?? resolvedEventId;
+  const eventTitle = event?.title ?? "event";
 
   return (
     <div className="min-h-screen">
@@ -77,6 +80,7 @@ export default async function FolderDetailPage({
         photos={photos}
         folderId={folderId}
         eventId={canonicalEventId}
+        eventTitle={eventTitle}
         userId={session.id}
       />
     </div>

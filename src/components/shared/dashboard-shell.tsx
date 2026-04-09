@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { SessionUser } from "@/types";
 import { DesktopSidebar } from "@/components/shared/desktop-sidebar";
 import { MobileBottomNav } from "@/components/shared/mobile-bottom-nav";
+import { GlobalUploadProgress } from "@/components/feature-specific/uploads/global-upload-progress";
 
 interface DashboardShellProps {
   user: SessionUser;
@@ -74,6 +75,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
       {/* ── Mobile Bottom Tab Bar ── */}
       <MobileBottomNav />
+      {/* Global widget mounted here so it's over all routes */}
+      <GlobalUploadProgress />
     </div>
   );
 }

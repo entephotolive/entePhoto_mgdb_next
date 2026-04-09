@@ -12,7 +12,7 @@ export default async function UploadsPage() {
       <PageHeader
         eyebrow="Upload pipeline"
         title="Drag, review, and register image batches"
-        description="The upload queue is a focused client component. The route and page remain server-side."
+
       />
       <UploadWorkspace events={events} userId={session.id} />
     </div>

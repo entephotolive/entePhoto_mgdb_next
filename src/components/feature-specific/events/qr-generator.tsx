@@ -16,7 +16,7 @@ const APP_URL = window.location.origin;
 export function QRGenerator({ eventId, eventTitle }: QRGeneratorProps) {
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
-  const eventUrl = `${APP_URL}/event/${eventId}/gallery`;
+  const eventUrl = `${APP_URL}/event/${eventId}/scan`;
 
  
 
@@ -69,7 +69,7 @@ export function QRGenerator({ eventId, eventTitle }: QRGeneratorProps) {
 
       {/* Label */}
       <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 text-center">
-        Scan to open gallery
+        Scan to open Event
       </p>
 
       {/* URL pill */}

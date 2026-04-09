@@ -5,31 +5,47 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Camera, Clock, X, ZoomIn, Upload, Loader2 } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
-import { useFileUpload } from "@/hooks/use-file-upload";
+import { useGlobalUpload } from "@/hooks/use-global-upload";
 
 interface FolderPhotoGridProps {
   photos: PhotoItem[];
   folderId: string;
   eventId: string;
+  eventTitle: string;
   userId: string;
 }
 
-export function FolderPhotoGrid({ photos, folderId, eventId, userId }: FolderPhotoGridProps) {
+export function FolderPhotoGrid({ photos, folderId, eventId, eventTitle, userId }: FolderPhotoGridProps) {
   const router = useRouter();
   const [lightbox, setLightbox] = useState<PhotoItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { items, addFiles, removeFile, clearAll, overallProgress, completedCount, startUpload, isUploading } = useFileUpload();
+  const { items, addFiles, removeFile, clearAll, completedCount, isUploading } = useGlobalUpload();
+
+  // ─── Refresh after upload ──────────────────────────────────────
+  const lastCompletedRef = useRef(0);
+  useState(() => {
+    // Sync initial count
+    lastCompletedRef.current = completedCount;
+  });
+
+  if (completedCount > lastCompletedRef.current) {
+    lastCompletedRef.current = completedCount;
+    router.refresh();
+  }
 
   // ─── Upload Handler ────────────────────────────────────────────
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
+      addFiles(e.target.files, {
+        eventId,
+        eventName: eventTitle,
+        uploadedBy: userId,
+        folderId: folderId === "all" ? undefined : folderId,
+      });
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
-
-
 
   return (
     <div>
@@ -45,40 +61,13 @@ export function FolderPhotoGrid({ photos, folderId, eventId, userId }: FolderPho
             onChange={handleUpload}
             id="photo-upload-input"
           />
-          {items.length === 0 || completedCount === items.length ? (
-            <label
-              htmlFor="photo-upload-input"
-              className={`flex cursor-pointer items-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-bold text-black shadow-[0_0_24px_rgba(34,211,238,0.35)] transition-all hover:bg-cyan-300 hover:shadow-[0_0_32px_rgba(34,211,238,0.5)] active:scale-95`}
-            >
-              <Camera size={16} />
-              UPLOAD TO FOLDER
-            </label>
-          ) : (
-            <>
-              <button
-                onClick={async () => {
-                  await startUpload(eventId, "upload", userId, folderId);
-                  router.refresh();
-                }}
-                disabled={isUploading}
-                className={`flex cursor-pointer items-center gap-2 rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-bold text-black shadow-[0_0_24px_rgba(52,211,153,0.35)] transition-all hover:bg-emerald-300 hover:shadow-[0_0_32px_rgba(52,211,153,0.5)] active:scale-95 ${isUploading ? "opacity-60 pointer-events-none" : ""}`}
-              >
-                {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                {isUploading ? `UPLOADING (${overallProgress}%)` : `START UPLOAD (${items.length - completedCount})`}
-              </button>
-              
-              {!isUploading && (
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="px-4 py-2 text-sm font-bold text-slate-400 hover:text-white"
-                >
-                  CANCEL
-                </button>
-              )}
-            </>
-          )}
-
+          <label
+            htmlFor="photo-upload-input"
+            className="flex cursor-pointer items-center gap-2 rounded-2xl bg-cyan-400 px-6 py-3 text-sm font-bold text-black shadow-[0_0_24px_rgba(34,211,238,0.35)] transition-all hover:bg-cyan-300 hover:shadow-[0_0_32px_rgba(34,211,238,0.5)] active:scale-95"
+          >
+            <Camera size={16} />
+            ADD TO FOLDER
+          </label>
         </div>
       )}
 
@@ -102,7 +91,7 @@ export function FolderPhotoGrid({ photos, folderId, eventId, userId }: FolderPho
             if (item.status === "completed") return null;
             return (
               <div key={item.id} className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[20px] border border-white/5 bg-[#141416]">
-                <img src={item.preview} className="w-full object-cover opacity-60" />
+                <img src={item.preview} className="w-full object-cover opacity-60" alt="Queue upload item" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
                   {item.status === "uploading" ? (
                     <>

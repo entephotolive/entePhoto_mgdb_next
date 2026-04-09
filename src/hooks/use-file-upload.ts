@@ -19,7 +19,9 @@ export function useFileUpload() {
 
   useEffect(() => {
     return () => {
-      Object.values(timersRef.current).forEach((timer) => window.clearInterval(timer));
+      Object.values(timersRef.current).forEach((timer) =>
+        window.clearInterval(timer),
+      );
       itemsRef.current.forEach((item) => URL.revokeObjectURL(item.preview));
     };
   }, []);
@@ -33,16 +35,26 @@ export function useFileUpload() {
     return Math.round(total / items.length);
   }, [items]);
 
-  function updateItem(id: string, updater: (item: UploadQueueItem) => UploadQueueItem) {
-    setItems((current) => current.map((item) => (item.id === id ? updater(item) : item)));
+  function updateItem(
+    id: string,
+    updater: (item: UploadQueueItem) => UploadQueueItem,
+  ) {
+    setItems((current) =>
+      current.map((item) => (item.id === id ? updater(item) : item)),
+    );
   }
 
   const [isUploading, setIsUploading] = useState(false);
 
-  async function uploadFile(id: string, eventsName: string, eventId: string, uploadedBy: string, folderId?: string) {
+  async function uploadFile(
+    id: string,
+    eventsName: string,
+    eventId: string,
+    uploadedBy: string,
+    folderId?: string,
+  ) {
     const item = itemsRef.current.find((i) => i.id === id);
     if (!item) return;
-  
 
     updateItem(id, (prev) => ({ ...prev, status: "uploading", progress: 0 }));
 
@@ -51,7 +63,7 @@ export function useFileUpload() {
       const buffer = await item.file.arrayBuffer();
       const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
       const hash = [...new Uint8Array(hashBuffer)]
-        .map(b => b.toString(16).padStart(2, "0"))
+        .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
       // 2. Check existence in DB
@@ -89,7 +101,10 @@ export function useFileUpload() {
 
       const formData = new FormData();
       formData.append("file", item.file);
-      formData.append("api_key", process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || "");
+      formData.append(
+        "api_key",
+        process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || "",
+      );
       formData.append("timestamp", timestamp.toString());
       formData.append("signature", signature);
       formData.append("folder", paramsToSign.folder);
@@ -98,27 +113,32 @@ export function useFileUpload() {
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
       // Use XMLHttpRequest for progress tracking
-      const uploadPromise = new Promise<{ secure_url: string }>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
+      const uploadPromise = new Promise<{ secure_url: string }>(
+        (resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open(
+            "POST",
+            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          );
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100);
-            updateItem(id, (prev) => ({ ...prev, progress }));
-          }
-        };
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded / e.total) * 100);
+              updateItem(id, (prev) => ({ ...prev, progress }));
+            }
+          };
 
-        xhr.onload = () => {
-          if (xhr.status === 200) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            reject(new Error("Cloudinary upload failed"));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Network Error"));
-        xhr.send(formData);
-      });
+          xhr.onload = () => {
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              reject(new Error("Cloudinary upload failed"));
+            }
+          };
+          xhr.onerror = () => reject(new Error("Network Error"));
+          xhr.send(formData);
+        },
+      );
 
       const uploadResult = await uploadPromise;
 
@@ -137,10 +157,13 @@ export function useFileUpload() {
 
       if (!saveRes.ok) throw new Error("Failed to save to database");
 
-      updateItem(id, (prev) => ({ ...prev, status: "completed", progress: 100 }));
+      updateItem(id, (prev) => ({
+        ...prev,
+        status: "completed",
+        progress: 100,
+      }));
     } catch (error) {
-   
-      console.log(error)
+      console.log(error);
       updateItem(id, (prev) => ({
         ...prev,
         status: "failed",
@@ -188,8 +211,6 @@ export function useFileUpload() {
     });
 
     setItems((current) => [...current, ...nextItems]);
-
-
   }
 
   function removeFile(id: string) {
@@ -203,22 +224,12 @@ export function useFileUpload() {
   }
 
   function clearAll() {
-    Object.values(timersRef.current).forEach((timer) => window.clearInterval(timer));
+    Object.values(timersRef.current).forEach((timer) =>
+      window.clearInterval(timer),
+    );
     timersRef.current = {};
     items.forEach((item) => URL.revokeObjectURL(item.preview));
     setItems([]);
-  }
-
-  async function startUpload(eventId: string, eventName: string, uploadedBy: string, folderId?: string) {
-    setIsUploading(true);
-    const toUpload = itemsRef.current.filter((i) => i.status === "queued" || i.status === "failed");
-
-    // Process strictly sequentially to emulate batch processing without crushing browser
-    for (const item of toUpload) {
-      await uploadFile(item.id, eventName, eventId, uploadedBy, folderId);
-    }
-
-    setIsUploading(false);
   }
 
   return {
@@ -226,7 +237,6 @@ export function useFileUpload() {
     addFiles,
     removeFile,
     clearAll,
-    startUpload,
     isUploading,
     overallProgress,
     completedCount: items.filter((item) => item.status === "completed").length,
