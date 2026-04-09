@@ -1,7 +1,15 @@
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { FolderModel } from "@/models/Folder";
 import { PhotoModel } from "@/models/Photo";
+import { EventModel } from "@/models/Event";
 import { Types } from "mongoose";
+
+export async function listPublicFoldersByEvent(eventId: string) {
+  await connectToDatabase();
+  const event = await EventModel.findById(eventId).lean();
+  if (!event) return [];
+  return listFoldersByEvent(eventId, event.createdBy.toString());
+}
 
 export async function listFoldersByEvent(eventId: string, userId: string) {
   await connectToDatabase();
