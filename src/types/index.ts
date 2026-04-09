@@ -2,7 +2,6 @@ export type ProfileData = any;
 export type PortfolioMoment = any;
 export type EventListItem = any;
 export type GalleryFolder = any;
-export type PhotographerSummary = any;
 export type SessionUser = any;
 export type SPECIALIZATION_OPTIONS = any;
 export type UploadQueueItem = any;

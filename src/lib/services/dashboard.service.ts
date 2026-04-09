@@ -1,38 +1,46 @@
-import { DashboardSnapshot } from "@/types";
 import { requireSession } from "@/lib/services/auth.service";
 import { listEvents } from "@/lib/services/event.service";
 import { listGalleryFolders } from "@/lib/services/photo.service";
-import { listPhotographers } from "@/lib/services/photographer.service";
+import { fetchProfileById } from "@/lib/services/profile.service";
+import { connectToDatabase } from "@/lib/db/mongodb";
+import { PhotoModel } from "@/models/Photo";
+import { DashboardSnapshot } from "@/types";
 
 export async function getDashboardSnapshot(): Promise<DashboardSnapshot> {
   const session = await requireSession();
+  const userId = session.id;
 
-  const [events, folders, photographers] = await Promise.all([
-    listEvents(session.id),
-    listGalleryFolders(session.id),
-    listPhotographers(),
+  await connectToDatabase();
+
+  const [events, folders, profile, photoUploadCount] = await Promise.all([
+    listEvents(userId),
+    listGalleryFolders(userId),
+    fetchProfileById(userId),
+    // Count only photos uploaded by this photographer
+    PhotoModel.countDocuments({ uploadedBy: userId }),
   ]);
 
   return {
     metrics: [
       {
-        label: "Events scheduled",
+        label: "My Events",
         value: String(events.length),
-        delta: "Across the whole studio",
+        delta: "Events you have created",
       },
       {
-        label: "Gallery folders",
+        label: "Gallery Folders",
         value: String(folders.length),
-        delta: "Event-based organization",
+        delta: "Across your events",
       },
       {
-        label: "Photographers",
-        value: String(photographers.length),
-        delta: "Active team members",
+        label: "Photos Uploaded",
+        value: String(photoUploadCount),
+        delta: "Your total contributions",
       },
     ],
     recentEvents: events.slice(0, 5),
     galleryFolders: folders.slice(0, 4),
-    photographers: photographers.slice(0, 4),
+    profile,
   };
 }
+

@@ -407,10 +407,71 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
   );
 }
 
+
+
+// ── Delete Confirmation Modal ──────────────────────────────────────────────────
+function DeleteConfirmationModal({
+  event,
+  onClose,
+  onConfirm,
+  isDeleting,
+}: {
+  event: EventListItem | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  if (!event) return null;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none">
+        <div className="relative w-full max-w-md rounded-2xl border border-rose-500/20 bg-[#0d0f14] shadow-[0_0_40px_rgba(244,63,94,0.15)] pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex flex-col items-center text-center p-8">
+            <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-6">
+              <Trash2 size={24} className="text-rose-500" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Delete Event?</h2>
+            <p className="text-sm text-slate-400 mb-6 leading-relaxed text-center">
+              Are you sure you want to delete <span className="text-slate-200 font-semibold italic">"{event.title}"</span>? <br />
+              <span className="text-rose-400/90 font-medium">Warning: This will remove the entire photo gallery associated with this event.</span>
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full">
+              <button
+                onClick={onClose}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 text-sm font-semibold hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl bg-rose-500 text-black text-sm font-bold hover:bg-rose-400 transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  "Delete Event"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Main Client Component ──────────────────────────────────────────────────────
 export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewEvent, setViewEvent] = useState<EventListItem | null>(null);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState<EventListItem | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -432,7 +493,14 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
     return matchSearch && matchFilter;
   });
 
-  async function handleDelete(id: string) {
+  function handleDeleteClick(event: EventListItem) {
+    setConfirmDeleteEvent(event);
+  }
+
+  async function handleConfirmDelete() {
+    if (!confirmDeleteEvent) return;
+    const id = confirmDeleteEvent.id;
+
     setDeleting(id);
     const result = await deleteEventAction(id);
     if (result.success) {
@@ -440,6 +508,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
     } else {
       alert("error" in result ? result.error : "Failed to delete event.");
       setDeleting(null);
+      setConfirmDeleteEvent(null);
     }
   }
 
@@ -455,6 +524,12 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
       {/* Modal */}
       <EventModal open={modalOpen} onClose={() => setModalOpen(false)} createdBy={userId} />
       <ViewEventModal event={viewEvent} onClose={() => setViewEvent(null)} />
+      <DeleteConfirmationModal
+        event={confirmDeleteEvent}
+        onClose={() => setConfirmDeleteEvent(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={!!deleting}
+      />
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
@@ -589,7 +664,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
               key={event.id}
               event={event}
               isAdmin={isAdmin}
-              onDelete={handleDelete}
+              onDelete={() => handleDeleteClick(event)}
               onView={setViewEvent}
               deleting={deleting}
             />
@@ -633,7 +708,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
               key={event.id}
               event={event}
               isAdmin={isAdmin}
-              onDelete={handleDelete}
+              onDelete={() => handleDeleteClick(event)}
               onView={setViewEvent}
               deleting={deleting}
             />

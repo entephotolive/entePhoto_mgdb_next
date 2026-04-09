@@ -135,4 +135,4 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
     const message = err instanceof Error ? err.message : "Failed to delete event.";
     return { success: false, error: message };
   }
-}
+}

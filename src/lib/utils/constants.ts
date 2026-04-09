@@ -29,9 +29,5 @@ export const dashboardNavItems = [
     label: "Profile",
     icon: UserRound,
   },
-  {
-    href: "/admin/photographers",
-    label: "Photographers",
-    icon: Users,
-  },
+ 
 ];

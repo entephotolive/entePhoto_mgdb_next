@@ -74,16 +74,14 @@ export default function FaceScanPage() {
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
+          <div className="hidden h-6 w-px bg-white/20 sm:block"></div>
           <div className="flex items-center gap-2 text-xs text-red-400 sm:text-sm">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
             <span className="hidden sm:inline">Live</span>
           </div>
 
-          <div className="hidden h-6 w-px bg-white/20 sm:block"></div>
 
-          <div className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 transition hover:scale-105 hover:bg-white/20 sm:h-9 sm:w-9">
-            👤
-          </div>
+          
         </div>
       </div>
 

@@ -18,7 +18,25 @@ export async function createPhoto(input: unknown) {
   const payload = photoInputSchema.parse(input);
   await connectToDatabase();
 
+  const event = await EventModel.findById(payload.eventId).lean();
+  if (!event) {
+    throw new Error("Event not found.");
+  }
+
+  const now = Date.now();
+  const eventTime = new Date(event.date).getTime();
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+  if (now < eventTime) {
+    throw new Error("This event hasn't started yet. Uploads will be available once the event begins.");
+  }
+
+  if (now > eventTime + TWENTY_FOUR_HOURS) {
+    throw new Error("This event has ended (24-hour window closed). New photos can no longer be added.");
+  }
+
   const photo = await PhotoModel.create(payload);
+
 
   return {
     id: photo._id.toString(),
@@ -29,9 +47,8 @@ export async function createPhoto(input: unknown) {
 export async function listGalleryFolders(userId: string) {
   await connectToDatabase();
 
-  const eventQuery = {};
-
-  const events = await EventModel.find(eventQuery).sort({ date: -1 }).lean();
+  // Filter events to only this user's own events
+  const events = await EventModel.find({ createdBy: userId }).sort({ date: -1 }).lean();
 
   if (!events.length) {
     return [] satisfies GalleryFolder[];
