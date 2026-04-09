@@ -44,11 +44,11 @@ const config: Config = {
         input: "rgb(var(--input) / <alpha-value>)",
         ring: "rgb(var(--ring) / <alpha-value>)",
         success: "rgb(var(--success) / <alpha-value>)",
-        warning: "rgb(var(--warning) / <alpha-value>)",
+        warning: "rgb(var(--warning) / <alpha-value>)", 
         danger: "rgb(var(--danger) / <alpha-value>)",
       },
       boxShadow: {
-        glow: "0 0 20px rgba(34, 211, 238, 0.4)",
+        "glow": "0 0 20px rgba(34, 211, 238, 0.4)",
         "glow-lg": "0 0 40px rgba(34, 211, 238, 0.2)",
         panel: "0 24px 80px rgba(10, 10, 11, 0.8)",
         glass: "0 8px 32px 0 rgba(0, 0, 0, 0.8)",

@@ -13,7 +13,6 @@ const eventInputSchema = z.object({
 export async function listEvents(userId: string) {
   await connectToDatabase();
 
-
   const query = { createdBy: userId };
 
   const events = await EventModel.find(query)
@@ -60,7 +59,9 @@ export async function createEvent(input: unknown) {
 export async function getEventById(eventId: string) {
   await connectToDatabase();
 
-  const event = await EventModel.findById(eventId).populate("createdBy", "name").lean();
+  const event = await EventModel.findById(eventId)
+    .populate("createdBy", "name")
+    .lean();
 
   if (!event) {
     return null;
@@ -113,8 +114,66 @@ export async function updateEvent(eventId: string, input: unknown) {
   } satisfies EventListItem;
 }
 
+import { PhotoModel } from "@/models/Photo";
+import { FolderModel } from "@/models/Folder";
+import { deleteEventFolderFromCloudinary } from "@/lib/cloudinary-config";
+
+import mongoose from "mongoose";
+
 export async function deleteEvent(eventId: string) {
   await connectToDatabase();
-  const result = await EventModel.findByIdAndDelete(eventId);
-  return Boolean(result);
+
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const event = await EventModel.findById(eventId).session(session);
+
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    await PhotoModel.deleteMany({ eventId }).session(session);
+
+    await FolderModel.deleteMany({ eventId }).session(session);
+
+    await EventModel.findByIdAndDelete(eventId).session(session);
+
+    await session.commitTransaction();
+
+    // External service after DB success
+    await deleteEventFolderFromCloudinary(eventId);
+
+    return true;
+
+  } catch (error) {
+    await session.abortTransaction();
+
+    console.error("Delete Event Error:", error);
+
+    return false;
+
+  } finally {
+    session.endSession();
+  }
+}
+export async function cleanupExpiredEvents() {
+  await connectToDatabase();
+
+  // Calculate the threshold: 48 hours ago
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+  const expirationTime = new Date(Date.now() - FORTY_EIGHT_HOURS);
+
+  // Find events where the event start date was more than 48 hours ago
+  const expiredEvents = await EventModel.find({
+    date: { $lt: expirationTime },
+  }).lean();
+
+  let deletedCount = 0;
+  for (const event of expiredEvents) {
+    await deleteEvent(event._id.toString());
+    deletedCount++;
+  }
+  return deletedCount;
 }

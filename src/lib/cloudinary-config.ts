@@ -90,3 +90,17 @@ export async function deleteFromCloudinary(publicId: string): Promise<void> {
     console.warn("[cloudinary-config] destroy() failed for", publicId, err);
   }
 }
+
+/**
+ * deleteEventFolderFromCloudinary
+ * Deletes all resources in Cloudinary that match the event's prefix path.
+ * This cleanly removes the entire gallery for an event in one API call.
+ */
+export async function deleteEventFolderFromCloudinary(eventId: string): Promise<void> {
+  const prefix = `photo-ceremony/events/${eventId}`;
+  try {
+    await cloudinary.api.delete_resources_by_prefix(prefix);
+  } catch (err) {
+    console.warn("[cloudinary-config] deleteEventFolderFromCloudinary failed for prefix:", prefix, err);
+  }
+}

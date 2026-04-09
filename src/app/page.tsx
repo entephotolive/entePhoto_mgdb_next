@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
-  redirect("/event/qr-scanner");
+  redirect("/qr-scanner");
 }
 
 // export default async function Page() {
