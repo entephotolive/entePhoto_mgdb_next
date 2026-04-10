@@ -18,9 +18,18 @@ export default function Navbar() {
   const eventBasePath = eventMatch ? `/event/${eventMatch[1]}` : null;
 
   const navLinks = [
-    { name: "Live Feed", href: eventBasePath ? `${eventBasePath}/live`    : "/qr-scanner" },
-    { name: "Gallery",  href: eventBasePath ? `${eventBasePath}/gallery` : "/qr-scanner" },
-    { name: "Studio",   href: eventBasePath ? `${eventBasePath}/studio`  : "/qr-scanner" },
+    {
+      name: "Live Feed",
+      href: eventBasePath ? `${eventBasePath}/live` : "/qr-scanner",
+    },
+    {
+      name: "Gallery",
+      href: eventBasePath ? `${eventBasePath}/gallery` : "/qr-scanner",
+    },
+    {
+      name: "Studio",
+      href: eventBasePath ? `${eventBasePath}/studio` : "/qr-scanner",
+    },
   ];
 
   const isActive = (path: string) => pathname === path;
@@ -36,22 +45,23 @@ export default function Navbar() {
       >
         <nav className="flex items-center justify-between">
           {/* Logo */}
-          <Link href={homeHref} className="flex items-center gap-2 cursor-pointer">
+          <Link
+            href={homeHref}
+            className="flex items-center gap-2 cursor-pointer"
+          >
             <Image
               src="/logo.jpeg"
-              alt="Photo Ceremony Logo"
+              alt="Ente photo Logo"
               width={40}
               height={40}
               className="rounded-full object-cover"
               priority
             />
-            <span className="font-semibold text-white">Photo Ceremony</span>
+            <span className="font-semibold text-white">Ente photo</span>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-4 lg:gap-6 text-sm text-gray-300">
-            
-
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -71,8 +81,6 @@ export default function Navbar() {
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               LIVE
             </div>
-
-           
           </div>
 
           {/* Mobile Toggle */}
@@ -134,8 +142,6 @@ export default function Navbar() {
                   <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
                   LIVE
                 </div>
-
-                
               </div>
             </motion.aside>
           </>

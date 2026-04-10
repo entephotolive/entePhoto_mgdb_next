@@ -31,8 +31,7 @@ export default function HomePage() {
         videoRef.current.srcObject = stream;
       }
     } catch (error: any) {
-      console.log("error", error)
-
+      console.log("error", error);
     }
   };
 
@@ -59,11 +58,15 @@ export default function HomePage() {
 
       <div className="relative z-10 w-[380px] rounded-3xl border border-white/20 bg-gradient-to-br from-white/10 to-white/5 p-8 shadow-2xl backdrop-blur-2xl">
         <div className="mx-auto mb-5 h-20 w-20 overflow-hidden rounded-2xl border border-white/20">
-          <img src="/logo.jpeg" className="h-full w-full object-cover" alt="Photo Ceremony logo" />
+          <img
+            src="/logo.jpeg"
+            className="h-full w-full object-cover"
+            alt="Ente photo logo"
+          />
         </div>
 
         <h1 className="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-center text-3xl font-semibold text-transparent">
-          Photo Ceremony
+          Ente photo
         </h1>
 
         <p className="mt-2 mb-6 text-center text-sm text-gray-400">
@@ -102,9 +105,7 @@ export default function HomePage() {
 
             <DialogContent className="border border-white/20 bg-black/90 text-white sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle className="text-center">
-                  Scan QR Code
-                </DialogTitle>
+                <DialogTitle className="text-center">Scan QR Code</DialogTitle>
                 <DialogDescription className="sr-only">
                   Preview of selected gallery image
                 </DialogDescription>
@@ -152,12 +153,8 @@ export default function HomePage() {
             </p>
 
             <div className="flex justify-center gap-6 text-gray-400">
-              <span className="cursor-pointer hover:text-white">
-                Support
-              </span>
-              <span className="cursor-pointer hover:text-white">
-                Privacy
-              </span>
+              <span className="cursor-pointer hover:text-white">Support</span>
+              <span className="cursor-pointer hover:text-white">Privacy</span>
             </div>
           </div>
         </div>

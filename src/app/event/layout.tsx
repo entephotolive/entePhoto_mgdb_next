@@ -2,7 +2,7 @@ import Footer from "@/components/Footer";
 import type { CSSProperties, ReactNode } from "react";
 
 export const metadata = {
-  title: "Photo Ceremony",
+  title: "Ente photo",
   description: "Your digital lens for the moments that matter.",
   icons: {
     icon: "/favicon.svg",
@@ -37,7 +37,10 @@ const eventTheme: CSSProperties = {
 
 export default function EventLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={eventTheme} className="flex min-h-screen flex-col bg-background text-foreground">
+    <div
+      style={eventTheme}
+      className="flex min-h-screen flex-col bg-background text-foreground"
+    >
       <div className="flex-1">{children}</div>
       <Footer />
     </div>

@@ -8,47 +8,47 @@ export default function FaceScanPage() {
   const videoRef = useRef(null);
 
   useEffect(() => {
-  let stream: MediaStream | null = null;
+    let stream: MediaStream | null = null;
 
-  async function startCamera() {
-    // ✅ 1. Ensure browser
-    if (typeof window === "undefined") return;
+    async function startCamera() {
+      // ✅ 1. Ensure browser
+      if (typeof window === "undefined") return;
 
-    // ✅ 2. Ensure API exists
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.error("Camera API not supported in this browser");
-      return;
-    }
-
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      // ✅ 2. Ensure API exists
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error("Camera API not supported in this browser");
+        return;
       }
-    } catch (error: any) {
-      // ✅ 3. Differentiate errors
-      if (error.name === "NotAllowedError") {
-        console.error("Permission denied by user");
-      } else if (error.name === "NotFoundError") {
-        console.error("No camera device found");
-      } else {
-        console.error("Camera error:", error);
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+        });
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (error: any) {
+        // ✅ 3. Differentiate errors
+        if (error.name === "NotAllowedError") {
+          console.error("Permission denied by user");
+        } else if (error.name === "NotFoundError") {
+          console.error("No camera device found");
+        } else {
+          console.error("Camera error:", error);
+        }
       }
     }
-  }
 
-  startCamera();
+    startCamera();
 
-  return () => {
-    // ✅ 4. Proper cleanup
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-    }
-  };
-}, []);
+    return () => {
+      // ✅ 4. Proper cleanup
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -66,10 +66,10 @@ export default function FaceScanPage() {
           <img
             src="/logo.jpeg"
             className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
-            alt="Photo Ceremony logo"
+            alt="Ente photo logo"
           />
           <span className="text-sm font-semibold text-white sm:text-base">
-            Photo Ceremony
+            Ente photo
           </span>
         </Link>
 
@@ -79,9 +79,6 @@ export default function FaceScanPage() {
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
             <span className="hidden sm:inline">Live</span>
           </div>
-
-
-          
         </div>
       </div>
 

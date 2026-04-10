@@ -1,13 +1,16 @@
 import { requireSession } from "@/lib/services/auth.service";
-import { getProfile, getPortfolioMoments } from "@/app/admin/(dashboard)/profile/action";
+import {
+  getProfile,
+  getPortfolioMoments,
+} from "@/app/admin/(dashboard)/profile/action";
 import { ProfileForm } from "@/components/feature-specific/profile/profile-form";
 import { PortfolioShowcase } from "@/components/feature-specific/profile/portfolio-showcase";
 import type { ProfileData } from "@/types";
 
 export const metadata = {
-  title: "Edit Profile — Photo Ceremony",
+  title: "Edit Profile — Ente photo",
   description:
-    "Update your professional profile, studio details, and portfolio on Photo Ceremony.",
+    "Update your professional profile, studio details, and portfolio on Ente photo.",
 };
 
 export default async function ProfilePage() {
@@ -38,7 +41,9 @@ export default async function ProfilePage() {
     <div className="w-full flex flex-col gap-6 pb-10">
       {/* Page header */}
       <div className="text-center pt-4 pb-2">
-        <h1 className="text-3xl font-bold text-white tracking-tight">Edit Profile</h1>
+        <h1 className="text-3xl font-bold text-white tracking-tight">
+          Edit Profile
+        </h1>
         <p className="text-sm text-slate-500 mt-1">
           Update your professional presence in the celestial gallery.
         </p>
