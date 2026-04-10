@@ -32,6 +32,8 @@ lib-cov
 coverage
 *.lcov
 
+audit_report.md.resolved
+audit_report.md
 # nyc test coverage
 .nyc_output
 
