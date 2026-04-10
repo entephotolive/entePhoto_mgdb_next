@@ -59,12 +59,19 @@ export async function createEvent(input: unknown) {
 export async function getEventById(eventId: string) {
   await connectToDatabase();
 
+  // Validate ObjectId first
+  if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    return "Invalid event ID";
+  }
+
   const event = await EventModel.findById(eventId)
     .populate("createdBy", "name")
     .lean();
 
-  if (!event) {
-    return null;
+ if (!event) {
+    return {
+      error: "Event not found",
+    };
   }
 
   return {

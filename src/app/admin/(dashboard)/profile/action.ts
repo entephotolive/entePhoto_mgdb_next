@@ -162,7 +162,7 @@ export async function deletePortfolioMoment(
 export async function getStudioByEventId(eventId: string) {
   try {
     const event = await getEventById(eventId);
-    if (!event || !event.createdBy?.id) return null;
+    if (!event || typeof event === "string" || "error" in event || !event.createdBy?.id) return "Event not found";
 
     const [profile, portfolio] = await Promise.all([
       fetchProfileById(event.createdBy.id),

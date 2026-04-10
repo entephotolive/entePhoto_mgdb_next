@@ -41,7 +41,7 @@ export default async function FolderDetailPage({
   const folderName = meta?.name ?? "All Photos";
   const photoCount = meta?.photoCount ?? photos.length;
   const canonicalEventId = meta?.eventId ?? resolvedEventId;
-  const eventTitle = event?.title ?? "event";
+  const eventTitle = (event && typeof event !== "string" && !("error" in event)) ? event.title : "event";
 
   return (
     <div className="min-h-screen">

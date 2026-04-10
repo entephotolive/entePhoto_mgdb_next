@@ -3,11 +3,26 @@ import { FolderModel } from "@/models/Folder";
 import { PhotoModel } from "@/models/Photo";
 import { EventModel } from "@/models/Event";
 import { Types } from "mongoose";
+import mongoose from "mongoose";
 
 export async function listPublicFoldersByEvent(eventId: string) {
   await connectToDatabase();
+
+ if (!mongoose.Types.ObjectId.isValid(eventId)) {
+    return {
+      error: "Invalid event ID",
+      folders: [],
+    };
+  }
+
   const event = await EventModel.findById(eventId).lean();
-  if (!event) return [];
+
+  if (!event) {
+    return {
+      error: "Event not found",
+      folders: [],
+    };
+  }  
   return listFoldersByEvent(eventId, event.createdBy.toString());
 }
 
