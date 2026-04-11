@@ -6,13 +6,20 @@
  * run in the background via the Zustand store.
  */
 
-import { registerXhr, unregisterXhr, useUploadStore, UploadContext } from "@/store/upload-store";
+import {
+  registerXhr,
+  unregisterXhr,
+  useUploadStore,
+  UploadContext,
+} from "@/store/upload-store";
 
 export async function processUploadQueue(context: UploadContext) {
   const store = useUploadStore.getState();
   if (store.isUploading || store.items.length === 0) return;
 
-  const toUpload = store.items.filter((i) => i.status === "queued" || i.status === "failed");
+  const toUpload = store.items.filter(
+    (i) => i.status === "queued" || i.status === "failed",
+  );
   if (toUpload.length === 0) return;
 
   store._setUploading(true);
@@ -59,7 +66,9 @@ export async function processUploadQueue(context: UploadContext) {
 
       // 2. Get Cloudinary signature
       const timestamp = Math.round(new Date().getTime() / 1000);
-      const safeEventName = context.eventName.replace(/[^a-z0-9]/gi, "_").toLowerCase();
+      const safeEventName = context.eventName
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
       const folderPath = `photo-ceremony/events/${context.eventId}-${safeEventName}`;
 
       const paramsToSign = {
@@ -93,46 +102,55 @@ export async function processUploadQueue(context: UploadContext) {
       // We can apply transformations via the URL in the gallery instead
       formData.append("file", item.file);
 
-      const uploadPromise = new Promise<{ secure_url: string }>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        registerXhr(item.id, xhr);
+      const uploadPromise = new Promise<{ secure_url: string }>(
+        (resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          registerXhr(item.id, xhr);
 
-        xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`);
+          xhr.open(
+            "POST",
+            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          );
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100);
-            useUploadStore.getState()._updateItem(item.id, { progress });
-          }
-        };
-
-        xhr.onload = () => {
-          unregisterXhr(item.id);
-          if (xhr.status === 200) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            console.error("Cloudinary Error Response:", xhr.responseText);
-            try {
-              const errorData = JSON.parse(xhr.responseText);
-              reject(new Error(errorData.error?.message || "Cloudinary upload failed"));
-            } catch {
-              reject(new Error("Cloudinary upload failed"));
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const progress = Math.round((e.loaded / e.total) * 100);
+              useUploadStore.getState()._updateItem(item.id, { progress });
             }
-          }
-        };
+          };
 
-        xhr.onerror = () => {
-          unregisterXhr(item.id);
-          reject(new Error("Network Error"));
-        };
+          xhr.onload = () => {
+            unregisterXhr(item.id);
+            if (xhr.status === 200) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              console.error("Cloudinary Error Response:", xhr.responseText);
+              try {
+                const errorData = JSON.parse(xhr.responseText);
+                reject(
+                  new Error(
+                    errorData.error?.message || "Cloudinary upload failed",
+                  ),
+                );
+              } catch {
+                reject(new Error("Cloudinary upload failed"));
+              }
+            }
+          };
 
-        xhr.onabort = () => {
-          unregisterXhr(item.id);
-          reject(new Error("Upload cancelled"));
-        };
+          xhr.onerror = () => {
+            unregisterXhr(item.id);
+            reject(new Error("Network Error"));
+          };
 
-        xhr.send(formData);
-      });
+          xhr.onabort = () => {
+            unregisterXhr(item.id);
+            reject(new Error("Upload cancelled"));
+          };
+
+          xhr.send(formData);
+        },
+      );
 
       const uploadResult = await uploadPromise;
 
@@ -149,7 +167,10 @@ export async function processUploadQueue(context: UploadContext) {
         }),
       });
 
-      if (!saveRes.ok) throw new Error("Failed to save to database");
+      if (!saveRes.ok) {
+        const err = await saveRes.json();
+        throw new Error(err.message || "Save failed");
+      }
 
       store._updateItem(item.id, { status: "completed", progress: 100 });
     } catch (error: any) {
@@ -172,9 +193,13 @@ export async function processUploadQueue(context: UploadContext) {
   finalStore._setUploading(false);
   finalStore._setCurrentFileName("");
 
-  if (finalStore.items.filter(i => i.status === 'queued' || i.status === 'uploading').length === 0) {
-     finalStore._setStatus(hasFailures ? "partial" : "success");
+  if (
+    finalStore.items.filter(
+      (i) => i.status === "queued" || i.status === "uploading",
+    ).length === 0
+  ) {
+    finalStore._setStatus(hasFailures ? "partial" : "success");
   } else {
-     finalStore._setStatus("idle"); // In case items were added during upload
+    finalStore._setStatus("idle"); // In case items were added during upload
   }
 }

@@ -32,6 +32,14 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
     setFeedback(null);
 
     const formData = new FormData(e.currentTarget);
+    const dateValue = formData.get("date");
+
+    if (typeof dateValue === "string") {
+      // Convert the local datetime string from the input into a full ISO string (UTC).
+      // This ensures the time is saved correctly regardless of the user's or server's timezone.
+      const isoDateString = new Date(dateValue).toISOString();
+      formData.set("date", isoDateString);
+    }
     formData.set("createdBy", createdBy);
 
     startTransition(async () => {

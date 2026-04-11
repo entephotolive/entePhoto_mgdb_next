@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     let user = await UserModel.findOne({ email });
 
     if (!user) {
-      return NextResponse.redirect(new URL("/login?error=You are not authorized to login. contact admin", request.url));
+      return NextResponse.redirect(new URL("/admin/login?error=You are not authorized to login. contact admin", request.url));
     }
 
     const token = await signSessionToken({
