@@ -10,7 +10,8 @@ interface GalleryPageProps {
 
 export default async function GalleryPage({ params }: GalleryPageProps) {
   const { eid } = await params;
-  const folders = await listPublicFoldersByEvent(eid);
+  const result = await listPublicFoldersByEvent(eid);
+  const folders = Array.isArray(result) ? result : result.folders;
 
   return (
     <Layout>
