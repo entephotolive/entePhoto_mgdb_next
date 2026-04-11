@@ -72,7 +72,10 @@ export function useFileUpload() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hash }),
       });
-      if (!checkRes.ok) throw new Error("Failed to check duplicate");
+      if (!checkRes.ok) {
+        const err = await checkRes.json();
+        throw new Error(err.message || "Failed to check duplicate");
+      }
       const { exists } = await checkRes.json();
       if (exists) {
         updateItem(id, (prev) => ({
@@ -155,7 +158,10 @@ export function useFileUpload() {
         }),
       });
 
-      if (!saveRes.ok) throw new Error("Failed to save to database");
+      if (!saveRes.ok) {
+        const err = await saveRes.json();
+        throw new Error(err.message || "Failed to save to database");
+      }
 
       updateItem(id, (prev) => ({
         ...prev,
