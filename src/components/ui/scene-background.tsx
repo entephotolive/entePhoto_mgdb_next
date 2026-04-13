@@ -72,7 +72,7 @@ export function SceneBackground({
 
 
       {/* Content Container */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex min-h-screen flex-col">
         {children}
       </div>
     </div>

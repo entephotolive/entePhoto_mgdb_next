@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
-   allowedDevOrigins: ['overgreedily-unrecessive-adalyn.ngrok-free.dev'],
+   allowedDevOrigins: ['overgreedily-unrecessive-adalyn.ngrok-free.dev','10.248.238.166'],
   images: {
     remotePatterns: [
       {
