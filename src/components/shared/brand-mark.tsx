@@ -2,12 +2,12 @@ export function BrandMark() {
   return (
     <div className="mb-6">
       <div className="flex flex-col items-center gap-4">
-        <div className="group relative flex h-20 w-22 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/10 p-1 transition-all duration-500 hover:border-cyan-500/50">
+        <div className="group relative flex h-20 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-black border border-white/10 p-1 transition-all duration-500 hover:border-cyan-500/50">
           <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           <img
             src="/logo.jpeg"
             alt="Ente photo logo"
-            className="flex h-20 w-29 items-center justify-center "
+            className="h-full w-auto object-contain"
           />
         </div>
         <div className="flex flex-col items-center text-center">

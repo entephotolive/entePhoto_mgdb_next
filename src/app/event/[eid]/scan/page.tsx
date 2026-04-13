@@ -65,7 +65,7 @@ export default function FaceScanPage() {
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <img
             src="/logo.jpeg"
-            className="h-8 w-8 rounded-full object-cover sm:h-10 sm:w-10"
+            className="h-8 w-auto rounded-full object-cover sm:h-10"
             alt="Ente photo logo"
           />
           <span className="text-sm font-semibold text-white sm:text-base">

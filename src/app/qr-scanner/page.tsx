@@ -61,7 +61,7 @@ export default function HomePage() {
         <div className="mx-auto mb-5 h-20 w-20 overflow-hidden rounded-2xl border border-white/20">
           <img
             src="/logo.jpeg"
-            className="h-full w-full object-cover"
+            className="h-full w-auto object-cover"
             alt="Ente photo logo"
           />
         </div>
