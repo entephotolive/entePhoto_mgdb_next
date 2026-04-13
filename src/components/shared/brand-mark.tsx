@@ -16,7 +16,7 @@ export function BrandMark() {
           </h1>
           <div className="mt-1 h-[2px] w-8 bg-cyan-500 rounded-full" />
           <p className="mt-2 text-[10px] font-bold tracking-[0.2em] text-slate-500 uppercase">
-            Celestial Darkroom
+            Make you Event live
           </p>
         </div>
       </div>

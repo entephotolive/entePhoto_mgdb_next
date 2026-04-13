@@ -17,14 +17,14 @@ interface DashboardShellProps {
 
 export function DashboardShell({ user, children }: DashboardShellProps) {
   return (
-    <div className="flex flex-1 text-slate-300 overflow-hidden font-sans selection:bg-cyan-500/30 h-screen">
+    <div className="flex flex-1 text-slate-300 overflow-hidden font-sans selection:bg-cyan-500/30 h-screen lg:pl-64">
       {/* ── Desktop Sidebar (lg+) ── */}
       <DesktopSidebar user={user} />
 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Header */}
-        <header className="px-4 sm:px-6 lg:px-10 py-3 lg:py-5 flex items-center justify-between shrink-0 sticky top-0 z-10 bg-background/60 backdrop-blur-xl border-b border-white/5">
+        <header className="fixed top-0 right-0 left-0 lg:left-64 px-4 sm:px-6 lg:px-10 py-3 lg:py-5 flex items-center justify-between z-10 bg-background/60 backdrop-blur-xl border-b border-white/5 h-16 lg:h-20">
           <div className="flex items-center gap-3">
             {/* Brand mark — mobile only */}
             <div className="lg:hidden flex items-center gap-2">
@@ -76,7 +76,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
         {/* Scrollable page content */}
         {/* pb-24 on mobile = clears the 64px bottom nav + some breathing room */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pt-4 lg:pt-4 pb-24 lg:pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pt-20 lg:pt-24 pb-24 lg:pb-10">
           {children}
         </div>
       </main>
