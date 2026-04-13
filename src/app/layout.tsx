@@ -3,12 +3,15 @@ import "@fontsource-variable/geist";
 import type { ReactNode } from "react";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Ente photo Admin",
-  description:
-    "Production-grade admin studio for events, uploads, galleries, and photographer access.",
+export const metadata = {
+  title: "Ente Photo",
+  description: "Photo management app",
+  icons: {
+    icon: "/micon.png",
+    shortcut: "/micon.png",
+    apple: "/micon.png",
+  },
 };
-
 import { SceneBackground } from "@/components/ui/scene-background";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
