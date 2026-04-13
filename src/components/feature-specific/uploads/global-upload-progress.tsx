@@ -96,7 +96,7 @@ export function GlobalUploadProgress() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 w-full max-w-[360px] sm:max-w-sm px-4 sm:px-0 pointer-events-none"
+        className="fixed bottom-12 right-0 sm:bottom-12 sm:right-8 z-50 w-full max-w-[360px] sm:max-w-sm px-4 sm:px-0 pointer-events-auto"
       >
         <div className="bg-[#121214] border border-white/10 rounded-2xl sm:rounded-[1.5rem] p-4 sm:p-5 shadow-2xl flex flex-col gap-3 pointer-events-auto">
           {/* Header */}

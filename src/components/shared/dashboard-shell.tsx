@@ -6,6 +6,9 @@ import { SessionUser } from "@/types";
 import { DesktopSidebar } from "@/components/shared/desktop-sidebar";
 import { MobileBottomNav } from "@/components/shared/mobile-bottom-nav";
 import { GlobalUploadProgress } from "@/components/feature-specific/uploads/global-upload-progress";
+import { BrandMark } from "./brand-mark";
+import Link from "next/link";
+import Image from "next/image";
 
 interface DashboardShellProps {
   user: SessionUser;
@@ -25,25 +28,22 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           <div className="flex items-center gap-3">
             {/* Brand mark — mobile only */}
             <div className="lg:hidden flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 border border-white/10 text-cyan-400">
-                {/* Camera icon inline SVG */}
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-cyan-400 tracking-tight">
-                Ente photo
-              </span>
+              <Link
+                href="/"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Image
+                  src="/logo.jpeg"
+                  alt="Ente photo Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                  priority
+                />
+                <span className="text-sm font-bold text-cyan-400 tracking-tight">
+                  Ente photo
+                </span>
+              </Link>
             </div>
 
             {/* Search input — sm+ only */}
