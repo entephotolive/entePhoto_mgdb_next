@@ -3,6 +3,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { requireSession } from "@/lib/services/auth.service";
 import { listEvents } from "@/lib/services/event.service";
 
+export const metadata = {
+  title: "Uploads — Ente photo",
+  description:
+    "Upload, review, and register image batches for your events.",
+};
+
 export default async function UploadsPage() {
   const session = await requireSession();
   const events = await listEvents(session.id).catch(() => []);
