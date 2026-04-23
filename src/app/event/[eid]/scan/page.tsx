@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import bg from "@/assets/1st.jpg";
+import { api } from "@/app/api/api-client";
 
 export default function FaceScanPage() {
-  const videoRef = useRef(null);
+  const params = useParams();
+  const eid = params?.eid;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -49,6 +54,62 @@ export default function FaceScanPage() {
       }
     };
   }, []);
+
+  const handleScan = async () => {
+    if (!videoRef.current) return;
+    setIsScanning(true);
+
+    try {
+      // 1. Capture the frame from the video stream
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth || 480;
+      canvas.height = videoRef.current.videoHeight || 640;
+      const ctx = canvas.getContext("2d");
+      
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64 Data URL (JPEG format for smaller size)
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        
+        // 2. Save instantly to local storage
+        localStorage.setItem("user_scanned_photo", dataUrl);
+
+        // 3. Convert Data URL to File object for the API
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const imageFile = new File([blob], "scanned_face.jpg", { type: "image/jpeg" });
+
+        // 4. Construct FormData to send to API
+        const formData = new FormData();
+        formData.append("image", imageFile);
+        if (eid) {
+          formData.append("event_id", Array.isArray(eid) ? eid[0] : eid);
+        }
+
+        // 5. Call the API directly
+        const apiResponse = await api.post("/api/scan-face/", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        
+        console.log("Scan successful:", apiResponse.data);
+        
+        if (apiResponse.data?.matched_images) {
+           localStorage.setItem("matched_images", JSON.stringify(apiResponse.data.matched_images));
+        }
+        
+        // Redirect to the live gallery feed
+        window.location.href = `/event/${eid}/live`;
+      }
+    } catch (error) {
+      console.error("Failed to process scan:", error);
+      alert("Failed to scan face. Please try again.");
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   return (
     <div
@@ -123,8 +184,12 @@ export default function FaceScanPage() {
           </div>
         </div>
 
-        <button className="mt-12 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-8 py-3 transition duration-300 hover:scale-105">
-          Start Scan →
+        <button 
+          onClick={handleScan}
+          disabled={isScanning}
+          className="mt-12 rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-8 py-3 transition duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+        >
+          {isScanning ? "Scanning..." : "Start Scan →"}
         </button>
       </div>
     </div>

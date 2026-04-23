@@ -12,6 +12,7 @@ import {
   useUploadStore,
   UploadContext,
 } from "@/store/upload-store";
+import { api } from "@/app/api/api-client";
 
 export async function processUploadQueue(context: UploadContext) {
   const store = useUploadStore.getState();
@@ -26,169 +27,67 @@ export async function processUploadQueue(context: UploadContext) {
   store._setStatus("uploading");
   store.setWidgetVisible(true);
 
+  toUpload.forEach(item => {
+    store._updateItem(item.id, { status: "uploading", progress: 0 });
+  });
+
   let hasFailures = false;
 
-  for (const item of toUpload) {
-    // Check if user cancelled/cleared the queue mid-upload
-    const currentStore = useUploadStore.getState();
-    if (!currentStore.items.find((i) => i.id === item.id)) {
-      continue; // Item was removed
-    }
-
+  const uploadPromises = toUpload.map(async (item) => {
     try {
-      store._setCurrentFileName(item.file.name);
-      store._updateItem(item.id, { status: "uploading", progress: 0 });
-
-      // 1. Hash file to check for duplicates
-      const buffer = await item.file.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-      const hash = Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-      const checkRes = await fetch("/api/photos/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hash }),
-      });
-
-      if (!checkRes.ok) throw new Error("Failed to check duplicate");
-      const { exists } = await checkRes.json();
-
-      if (exists) {
-        store._updateItem(item.id, {
-          status: "duplicate",
-          progress: 100,
-          error: "Already exists",
-        });
-        continue;
-      }
-
-      // 2. Get Cloudinary signature
-      const timestamp = Math.round(new Date().getTime() / 1000);
-      const safeEventName = context.eventName
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase();
-      const folderPath = `photo-ceremony/events/${context.eventId}-${safeEventName}`;
-
-      const paramsToSign = {
-        timestamp,
-        folder: folderPath,
-      };
-
-      const signRes = await fetch("/api/sign-cloudinary-params", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paramsToSign }),
-      });
-
-      if (!signRes.ok) throw new Error("Failed to get upload signature");
-      const { signature } = await signRes.json();
-
-      // 3. Upload to Cloudinary via XHR (for progress)
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-
-      if (!cloudName || !apiKey) {
-        throw new Error("Cloudinary configuration is missing");
-      }
-
       const formData = new FormData();
-      formData.append("api_key", apiKey);
-      formData.append("timestamp", timestamp.toString());
-      formData.append("signature", signature);
-      formData.append("folder", folderPath);
-      // Removed transformation from direct upload params to simplify and avoid signature mismatches
-      // We can apply transformations via the URL in the gallery instead
-      formData.append("file", item.file);
+      formData.append("event_id", String(context.eventId));
+      formData.append("images", item.file);
+      if (context.folderId) {
+        formData.append("folder_id", context.folderId);
+      }
 
-      const uploadPromise = new Promise<{ secure_url: string }>(
-        (resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          registerXhr(item.id, xhr);
+      // Create a single use AbortController for this upload
+      const itemController = new AbortController();
+      registerXhr(item.id, { abort: () => itemController.abort() } as any);
 
-          xhr.open(
-            "POST",
-            `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          );
-
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              const progress = Math.round((e.loaded / e.total) * 100);
-              useUploadStore.getState()._updateItem(item.id, { progress });
-            }
-          };
-
-          xhr.onload = () => {
-            unregisterXhr(item.id);
-            if (xhr.status === 200) {
-              resolve(JSON.parse(xhr.responseText));
-            } else {
-              console.error("Cloudinary Error Response:", xhr.responseText);
-              try {
-                const errorData = JSON.parse(xhr.responseText);
-                reject(
-                  new Error(
-                    errorData.error?.message || "Cloudinary upload failed",
-                  ),
-                );
-              } catch {
-                reject(new Error("Cloudinary upload failed"));
-              }
-            }
-          };
-
-          xhr.onerror = () => {
-            unregisterXhr(item.id);
-            reject(new Error("Network Error"));
-          };
-
-          xhr.onabort = () => {
-            unregisterXhr(item.id);
-            reject(new Error("Upload cancelled"));
-          };
-
-          xhr.send(formData);
+      const response = await api.post("api/upload-images/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
-
-      const uploadResult = await uploadPromise;
-
-      // 4. Save to database
-      const saveRes = await fetch("/api/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: uploadResult.secure_url,
-          eventId: context.eventId,
-          uploadedBy: context.uploadedBy,
-          hash,
-          folderId: context.folderId,
-        }),
+        signal: itemController.signal,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.lengthComputable && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            useUploadStore.getState()._updateItem(item.id, { progress });
+          }
+        }
       });
 
-      if (!saveRes.ok) {
-        const err = await saveRes.json();
-        throw new Error(err.message || "Save failed");
+      const responseData = response.data;
+      if (responseData && responseData.images_not_uploaded > 0) {
+        const reasonObj = responseData.reason_why_not_uploaded?.find((r: any) => r.filename === item.file.name) || responseData.reason_why_not_uploaded?.[0];
+        throw new Error(reasonObj?.reason || "Image not uploaded");
       }
 
-      store._updateItem(item.id, { status: "completed", progress: 100 });
+      unregisterXhr(item.id);
+      useUploadStore.getState()._updateItem(item.id, { status: "completed", progress: 100 });
     } catch (error: any) {
-      if (error.message === "Upload cancelled") {
-        console.log("Upload cancelled for", item.file.name);
-        // Item is already removed from store, so nothing more to do
-      } else {
-        console.error("Upload error for", item.file.name, error);
-        hasFailures = true;
-        store._updateItem(item.id, {
-          status: "failed",
-          error: error instanceof Error ? error.message : "Upload failed",
-        });
-      }
-    }
-  }
+      console.error(`Upload Error for ${item.file.name}:`, error);
+      hasFailures = true;
+      const isCancelled = error.name === 'CanceledError' || error.message === 'canceled';
 
-  // Finished queue processing
+      unregisterXhr(item.id);
+
+      if (isCancelled && !useUploadStore.getState().items.find(i => i.id === item.id)) {
+        return;
+      }
+
+      useUploadStore.getState()._updateItem(item.id, {
+        status: "failed",
+        progress: 0,
+        error: isCancelled ? "Cancelled" : (error.response?.data?.detail || error.message || "Upload failed"),
+      });
+    }
+  });
+
+  await Promise.all(uploadPromises);
+
   const finalStore = useUploadStore.getState();
   finalStore._setUploading(false);
   finalStore._setCurrentFileName("");
@@ -200,6 +99,6 @@ export async function processUploadQueue(context: UploadContext) {
   ) {
     finalStore._setStatus(hasFailures ? "partial" : "success");
   } else {
-    finalStore._setStatus("idle"); // In case items were added during upload
+    finalStore._setStatus("idle");
   }
 }

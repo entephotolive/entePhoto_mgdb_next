@@ -18,7 +18,10 @@ export default async function PublicFolderDetailPage({ params }: PublicFolderDet
     listPhotosByFolder(fid, eid).catch(() => []),
   ]);
 
-  if (!meta) {
+  // For the "all" pseudo-folder, create a fallback meta so we never 404
+  const resolvedMeta = meta ?? (fid === "all" ? { id: "all", name: "All Photos", photoCount: photos.length, eventId: eid } : null);
+
+  if (!resolvedMeta) {
     notFound();
   }
 
@@ -40,7 +43,7 @@ export default async function PublicFolderDetailPage({ params }: PublicFolderDet
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4">
-                        {meta.name}
+                        {resolvedMeta!.name}
                     </h1>
                     <div className="flex items-center gap-3 text-white/40 font-bold uppercase tracking-widest text-[11px]">
                         <Images size={14} />

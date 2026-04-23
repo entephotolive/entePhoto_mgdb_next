@@ -437,7 +437,7 @@ function DeleteConfirmationModal({
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Delete Event?</h2>
             <p className="text-sm text-slate-400 mb-6 leading-relaxed text-center">
-              Are you sure you want to delete <span className="text-slate-200 font-semibold italic">"{event.title}"</span>? <br />
+              Are you sure you want to delete <span className="text-slate-200 font-semibold italic">&quot;{event.title}&quot;</span>? <br />
               <span className="text-rose-400/90 font-medium">Warning: This will remove the entire photo gallery associated with this event.</span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 w-full">

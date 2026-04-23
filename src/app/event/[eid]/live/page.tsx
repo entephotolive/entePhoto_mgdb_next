@@ -1,9 +1,26 @@
+"use client";
+
 import Navbar from "@/components/Navbar";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { liveFeedData } from "@/data/livefeed.data";
+import { useEffect, useState } from "react";
 
 export default function LiveFeedPage() {
+  const [matchedImages, setMatchedImages] = useState<any[]>([]);
+
+  useEffect(() => {
+    const savedMatches = localStorage.getItem("matched_images");
+    if (savedMatches) {
+      try {
+        // eslint-disable-next-line
+        setMatchedImages(JSON.parse(savedMatches));
+      } catch (e) {
+        console.error("Failed to parse matched images", e);
+      }
+    }
+  }, []);
+
   return (
     <Layout>
       <Navbar />
@@ -19,6 +36,37 @@ export default function LiveFeedPage() {
           </p>
         </div>
 
+        {matchedImages.length > 0 && (
+          <div className="mb-16">
+            <h2 className="mb-6 text-2xl font-semibold text-cyan-400">Your Matched Photos</h2>
+            <div className="columns-2 gap-5 space-y-5 md:columns-3 lg:columns-4">
+              {matchedImages.map((image) => (
+                <div
+                  key={image.image_id}
+                  className="group relative cursor-pointer overflow-hidden rounded-xl break-inside-avoid border-2 border-cyan-400/50"
+                >
+                  <img
+                    src={image.image_url}
+                    alt={image.image_name}
+                    className="w-full rounded-xl transition duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 transition group-hover:opacity-100"></div>
+                  <Badge
+                    variant="default"
+                    className="absolute top-3 right-3 text-[10px] uppercase tracking-widest bg-cyan-500 text-white"
+                  >
+                    MATCH
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <div className="mt-12 h-px w-full bg-white/10" />
+          </div>
+        )}
+
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold">Live Feed</h2>
+        </div>
         <div className="columns-2 gap-5 space-y-5 md:columns-3 lg:columns-4">
           {liveFeedData.map((image) => (
             <div

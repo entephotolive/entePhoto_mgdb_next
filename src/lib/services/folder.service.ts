@@ -1,9 +1,33 @@
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { FolderModel } from "@/models/Folder";
-import { PhotoModel } from "@/models/Photo";
 import { EventModel } from "@/models/Event";
 import { Types } from "mongoose";
 import mongoose from "mongoose";
+
+function toObjectId(value: string): Types.ObjectId | null {
+  return Types.ObjectId.isValid(value) ? new Types.ObjectId(value) : null;
+}
+
+function resolveImageUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== "string" || rawUrl.trim().length === 0) return null;
+
+  const normalized = rawUrl.trim().replace(/\\/g, "/");
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+
+  let relative = normalized;
+  if (!relative.startsWith("/") && relative.startsWith("public/")) {
+    relative = `/media/${relative}`;
+  } else if (!relative.startsWith("/") && relative.startsWith("media/")) {
+    relative = `/${relative}`;
+  } else if (!relative.startsWith("/")) {
+    relative = `/${relative}`;
+  }
+
+  const base = process.env.NEXT_PUBLIC_PYTHON_API_URL?.replace(/\/+$/g, "");
+  if (!base) return relative;
+
+  return `${base}${relative}`;
+}
 
 export async function listPublicFoldersByEvent(eventId: string) {
   await connectToDatabase();
@@ -26,63 +50,186 @@ export async function listPublicFoldersByEvent(eventId: string) {
   return listFoldersByEvent(eventId, event.createdBy.toString());
 }
 
-export async function listFoldersByEvent(eventId: string, userId: string) {
-  await connectToDatabase();
+export async function listFoldersByEvent(
+  eventId: string,
+  userId: string,
+) {
+  const conn = await connectToDatabase();
+  const db = conn.connection.db;
+  if (!db) return [];
 
-  // Fetch real folders from the database
-  const folders = await FolderModel.find({ eventId, createdBy: userId }).lean();
+  const eventObjectId = toObjectId(eventId);
+  const eventMatch =
+    eventObjectId
+      ? [
+          { event_id: eventObjectId },
+          { eventId: eventObjectId },
+          { event_id: eventId },
+          { eventId: eventId },
+        ]
+      : [{ event_id: eventId }, { eventId: eventId }];
 
-  // For each folder, we want to get a cover image and photo count.
-  const photoCounts = await PhotoModel.aggregate([
-    { $match: { eventId: new (Types.ObjectId as any)(eventId) } },
-    {
-      $group: {
-        _id: "$folderId",
-        count: { $sum: 1 },
-        coverUrl: { $first: "$url" },
-      },
-    },
-  ]);
+  // Keep access control: ensure this event belongs to the current user.
+  // (Folders and photos may be written by a separate backend and not carry createdBy.)
+  const owningEvent = await EventModel.findOne({
+    _id: eventId,
+    createdBy: userId,
+  })
+    .select({ _id: 1 })
+    .lean();
 
-  let totalCount = 0;
-  let eventCoverUrl = null;
-  const folderStats = new Map();
-
-  for (const group of photoCounts) {
-    totalCount += group.count;
-    if (!eventCoverUrl && group.coverUrl) {
-      eventCoverUrl = group.coverUrl;
-    }
-    if (group._id) {
-      folderStats.set(group._id.toString(), group);
-    }
+  if (!owningEvent) {
+    return [];
   }
 
-  // Map the local models to the UI representation.
-  // The mockup shows "All Photos" as the first item.
-  const results = [
+  const foldersCollection = db.collection("folders");
+  const rawFolders = await foldersCollection
+    .find(
+      { $or: eventMatch },
+      {
+        projection: {
+          _id: 1,
+          id: 1,
+          name: 1,
+          title: 1,
+          folder_name: 1,
+          folderName: 1,
+          createdAt: 1,
+          created_at: 1,
+        },
+      },
+    )
+    .toArray();
+
+  const folderItems = rawFolders
+    .map((f: any) => {
+      const id = f._id?.toString?.() ?? String(f.id ?? "");
+      const title =
+        f.name ?? f.title ?? f.folder_name ?? f.folderName ?? "Folder";
+      const createdAt =
+        (f.createdAt instanceof Date
+          ? f.createdAt
+          : f.created_at instanceof Date
+            ? f.created_at
+            : null) ?? new Date(0);
+      return { id, title, createdAt };
+    })
+    .filter((f) => Boolean(f.id));
+
+  // Fetch photo counts + cover images from both collections used by the Python backend.
+  const photosCollection = db.collection("photos");
+  const facesCollection = db.collection("image_with_face");
+
+  const buildAgg = (collection: any) => ({
+    total: collection
+      .aggregate([
+        { $match: { $or: eventMatch } },
+        {
+          $addFields: {
+            __sortDate: { $ifNull: ["$uploaded_at", "$createdAt"] },
+            __url: {
+              $ifNull: ["$image_url", { $ifNull: ["$url", "$image_storage_name"] }],
+            },
+          },
+        },
+        { $sort: { __sortDate: -1, _id: -1 } },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            coverUrl: { $first: "$__url" },
+          },
+        },
+      ])
+      .toArray(),
+    perFolder: collection
+      .aggregate([
+        { $match: { $or: eventMatch } },
+        {
+          $addFields: {
+            __sortDate: { $ifNull: ["$uploaded_at", "$createdAt"] },
+            __folder: { $ifNull: ["$folder_id", "$folderId"] },
+            __url: {
+              $ifNull: ["$image_url", { $ifNull: ["$url", "$image_storage_name"] }],
+            },
+          },
+        },
+        { $sort: { __sortDate: -1, _id: -1 } },
+        {
+          $group: {
+            _id: "$__folder",
+            count: { $sum: 1 },
+            coverUrl: { $first: "$__url" },
+          },
+        },
+      ])
+      .toArray(),
+  });
+
+  const [photosAgg, facesAgg] = await Promise.all([
+    Promise.all([buildAgg(photosCollection).total, buildAgg(photosCollection).perFolder]),
+    Promise.all([buildAgg(facesCollection).total, buildAgg(facesCollection).perFolder]),
+  ]);
+
+  const [totalAggPhotos, perFolderAggPhotos] = photosAgg as any;
+  const [totalAggFaces, perFolderAggFaces] = facesAgg as any;
+
+  const totalCountPhotos = (totalAggPhotos?.[0] as any)?.count ?? 0;
+  const totalCountFaces = (totalAggFaces?.[0] as any)?.count ?? 0;
+  const totalCount = totalCountPhotos + totalCountFaces;
+
+  const coverPhotos = resolveImageUrl((totalAggPhotos?.[0] as any)?.coverUrl ?? null);
+  const coverFaces = resolveImageUrl((totalAggFaces?.[0] as any)?.coverUrl ?? null);
+  const eventCoverUrl = coverPhotos ?? coverFaces ?? null;
+
+  const folderStats = new Map<string, { count: number; coverUrl: string | null }>();
+
+  const applyAgg = (perFolderAgg: any[]) => {
+    for (const group of perFolderAgg as any[]) {
+      const key =
+        group?._id?.toString?.() ??
+        (typeof group?._id === "string" ? group._id : null);
+      if (!key) continue;
+      const existing = folderStats.get(key) ?? { count: 0, coverUrl: null };
+      const nextCover = resolveImageUrl(group.coverUrl ?? null);
+      folderStats.set(key, {
+        count: existing.count + (group.count ?? 0),
+        coverUrl: existing.coverUrl ?? nextCover,
+      });
+    }
+  };
+
+  // Prefer covers from `photos` over `image_with_face` when both exist.
+  applyAgg(perFolderAggPhotos);
+  applyAgg(perFolderAggFaces);
+
+  folderItems.sort((a, b) => {
+    const delta = a.createdAt.getTime() - b.createdAt.getTime();
+    if (delta !== 0) return delta;
+    return a.title.localeCompare(b.title);
+  });
+
+  return [
     {
       id: "all",
       title: "All Photos",
       photoCount: totalCount,
       coverUrl: eventCoverUrl,
-      location: "", // Not used in mockup cards
-      date: new Date().toISOString(), // Not used in mockup cards
+      location: "",
+      date: new Date().toISOString(),
     },
-    ...folders.map((f) => {
-      const stats = folderStats.get(f._id.toString());
+    ...folderItems.map((f) => {
+      const stats = folderStats.get(f.id);
       return {
-        id: f._id.toString(),
-        title: f.name,
-        photoCount: stats?.count || 0,
-        coverUrl: stats?.coverUrl || null,
+        id: f.id,
+        title: f.title,
+        photoCount: stats?.count ?? 0,
+        coverUrl: stats?.coverUrl ?? null,
         location: "",
-        date: (f as any).createdAt?.toISOString() || new Date().toISOString(),
+        date: f.createdAt.toISOString(),
       };
     }),
   ];
-
-  return results;
 }
 
 export async function createFolder(

@@ -123,7 +123,7 @@ export async function updateEvent(eventId: string, input: unknown) {
 
 import { PhotoModel } from "@/models/Photo";
 import { FolderModel } from "@/models/Folder";
-import { deleteEventFolderFromCloudinary } from "@/lib/cloudinary-config";
+// import { deleteEventFolderFromCloudinary } from "@/lib/cloudinary-config";
 
 import mongoose from "mongoose";
 
@@ -150,7 +150,7 @@ export async function deleteEvent(eventId: string) {
     await session.commitTransaction();
 
     // External service after DB success
-    await deleteEventFolderFromCloudinary(eventId);
+    // await deleteEventFolderFromCloudinary(eventId);
 
     return true;
 

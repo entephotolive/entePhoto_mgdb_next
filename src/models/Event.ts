@@ -16,6 +16,10 @@ const eventSchema = new Schema(
       required: true,
       trim: true,
     },
+    photoCount: {
+      type: Number,
+      default: 0,
+    },
     createdBy: {
       type: Types.ObjectId,
       ref: "User",
