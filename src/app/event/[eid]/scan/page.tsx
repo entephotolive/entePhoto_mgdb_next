@@ -96,6 +96,9 @@ export default function FaceScanPage() {
         
         console.log("Scan successful:", apiResponse.data);
         
+        // Save the response in a cookie
+        document.cookie = `scan_response=${encodeURIComponent(JSON.stringify(apiResponse.data))}; path=/; max-age=${60 * 60 * 24 * 30}`;
+        
         if (apiResponse.data?.matched_images) {
            localStorage.setItem("matched_images", JSON.stringify(apiResponse.data.matched_images));
         }
