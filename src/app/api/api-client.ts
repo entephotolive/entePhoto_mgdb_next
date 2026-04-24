@@ -4,6 +4,7 @@ const pythonApi = process.env.NEXT_PUBLIC_PYTHON_API_URL;
 
 export const api = axios.create({
   baseURL: pythonApi,
+  withCredentials: true,
 });
 
 // Optional: response interceptor

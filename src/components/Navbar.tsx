@@ -55,6 +55,7 @@ export default function Navbar() {
               width={40}
               height={40}
               className="rounded-full object-cover"
+              style={{ width: "auto", height: "auto" }}
               priority
             />
             <span className="font-semibold text-white">Ente photo</span>
