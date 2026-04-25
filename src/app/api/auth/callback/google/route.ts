@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL("/login?error=Google authentication failed.", request.url));
     }
 
-    const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+    const host = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || url.origin;
     // VERY IMPORTANT: Use the exact NextAuth default callback URL structure here
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
