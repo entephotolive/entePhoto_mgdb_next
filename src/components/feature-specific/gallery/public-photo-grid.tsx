@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import { ZoomIn } from "lucide-react";
 import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
 
@@ -17,7 +16,7 @@ interface PublicPhotoGridProps {
   photos: Photo[];
 }
 
-function tolightbox(p: Photo): LightboxPhoto {
+function toLightbox(p: Photo): LightboxPhoto {
   return {
     url: (p.url ?? p.image_url ?? "") as string,
     name: (p.image_name ?? `Photo ${p.id ?? p.image_id ?? ""}`) as string,
@@ -26,17 +25,8 @@ function tolightbox(p: Photo): LightboxPhoto {
 
 export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
   const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
-  const [matchedImages, setMatchedImages] = useState<Photo[]>([]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem("matched_images");
-    if (!saved) return;
-    try {
-      setMatchedImages(JSON.parse(saved));
-    } catch {}
-  }, []);
-
-  if (photos.length === 0 && matchedImages.length === 0) {
+  if (photos.length === 0) {
     return (
       <div className="py-20 text-center border border-dashed border-white/10 rounded-[40px] bg-white/[0.02]">
         <p className="text-white/40 font-medium">This folder is currently empty.</p>
@@ -46,81 +36,34 @@ export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
 
   return (
     <div>
-      {/* ── Matched Photos ── */}
-      {matchedImages.length > 0 && (
-        <div className="mb-16">
-          <h2 className="mb-6 text-2xl font-semibold text-cyan-400">Your Matched Photos</h2>
-          <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
-            {matchedImages.map((image) => {
-              const photo = tolightbox(image);
-              const key = String(image.image_id ?? image.id ?? photo.url);
-              return (
-                <div
-                  key={key}
-                  className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[24px] border-2 border-cyan-400/50 bg-[#141416] transition-all duration-300 hover:scale-[1.02] shadow-xl"
+      <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
+        {photos.map((p) => {
+          const photo = toLightbox(p);
+          const key = String(p.id ?? p.image_id ?? photo.url);
+          return (
+            <div
+              key={key}
+              className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416] transition-all duration-300 hover:scale-[1.02] hover:border-white/20 shadow-xl"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo.url}
+                alt={photo.name}
+                loading="lazy"
+                className="w-full object-cover block"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  onClick={() => setLightbox(photo)}
+                  className="rounded-full bg-white/10 p-4 backdrop-blur-xl border border-white/20 transition-transform hover:scale-110"
                 >
-                  <Image
-                    src={photo.url}
-                    alt={photo.name}
-                    width={500}
-                    height={500}
-                    className="w-full object-cover block"
-                  />
-                  <div className="absolute top-3 right-3 rounded-md bg-cyan-500 px-2 py-1 text-[10px] font-bold text-white tracking-widest">
-                    MATCH
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={() => setLightbox(photo)}
-                      className="rounded-full bg-white/10 p-4 backdrop-blur-xl border border-white/20 transition-transform hover:scale-110"
-                    >
-                      <ZoomIn size={24} className="text-white" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-12 h-px w-full bg-white/10" />
-        </div>
-      )}
-
-      {/* ── Folder Photos ── */}
-      {photos.length > 0 && (
-        <>
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white/80">Folder Photos</h2>
-          </div>
-          <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
-            {photos.map((p) => {
-              const photo = tolightbox(p);
-              const key = String(p.id ?? p.image_id ?? photo.url);
-              return (
-                <div
-                  key={key}
-                  className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416] transition-all duration-300 hover:scale-[1.02] hover:border-white/20 shadow-xl"
-                >
-                  <Image
-                    src={photo.url}
-                    alt={photo.name}
-                    width={500}
-                    height={500}
-                    className="w-full object-cover block"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                      onClick={() => setLightbox(photo)}
-                      className="rounded-full bg-white/10 p-4 backdrop-blur-xl border border-white/20 transition-transform hover:scale-110"
-                    >
-                      <ZoomIn size={24} className="text-white" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+                  <ZoomIn size={24} className="text-white" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       <PhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
     </div>
