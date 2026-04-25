@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 
 export function GET(request: Request) {
   const url = new URL(request.url);
-  const host =
-  process.env.NEXTAUTH_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  url.origin;
+  const host = "http://143.110.179.24.nip.io:3000";
   const redirectUri = `${host}/api/auth/callback/google`;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
