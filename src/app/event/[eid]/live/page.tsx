@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/app/api/api-client";
+import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
 
 interface MatchedPhoto {
   image_id: number | string;
@@ -33,6 +34,7 @@ export default function LiveFeedPage() {
 
   const [photos, setPhotos] = useState<MatchedPhoto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   // ─── Initial HTTP load ───────────────────────────────────────────────────────
@@ -84,9 +86,11 @@ export default function LiveFeedPage() {
     if (!eid) return;
 
     const attendeeId = getAttendeeFromCookie();
-    if (!attendeeId) return; // No identity — cannot subscribe to a private channel
+    if (!attendeeId) return;
 
-    const wsBase = process.env.NEXT_PUBLIC_PYTHON_API_URL!.replace(/^http/, "ws").replace(/\/$/, "");
+    const wsBase = process.env.NEXT_PUBLIC_PYTHON_API_URL!
+      .replace(/^http/, "ws")
+      .replace(/\/$/, "");
     const wsUrl = `${wsBase}/ws/matches/${eid}/${attendeeId}/`;
 
     function connect() {
@@ -104,7 +108,6 @@ export default function LiveFeedPage() {
               isNew: true,
             };
             setPhotos((prev) => {
-              // Deduplicate by image_id
               const exists = prev.some((p) => p.image_id === incoming.image_id);
               return exists ? prev : [incoming, ...prev];
             });
@@ -122,7 +125,6 @@ export default function LiveFeedPage() {
       };
 
       ws.onclose = () => {
-        // Auto-reconnect after 3 s if the component is still mounted
         reconnectTimer.current = window.setTimeout(connect, 3000);
       };
     }
@@ -172,6 +174,9 @@ export default function LiveFeedPage() {
               {photos.map((photo) => (
                 <div
                   key={photo.image_id}
+                  onClick={() =>
+                    setLightbox({ url: photo.image_url, name: photo.image_name })
+                  }
                   className={`group relative cursor-pointer overflow-hidden rounded-xl break-inside-avoid border-2 transition-all duration-700 ${
                     photo.isNew
                       ? "border-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.5)] scale-[1.02]"
@@ -215,8 +220,7 @@ export default function LiveFeedPage() {
 
               <p className="mx-auto max-w-md text-sm leading-7 text-gray-300 md:text-base">
                 We couldn&apos;t find any matched photos right now. Once the
-                photographer uploads your photos, they will appear here
-                instantly.
+                photographer uploads your photos, they will appear here instantly.
               </p>
 
               <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-5 py-2 text-sm text-cyan-400 border border-cyan-400/20">
@@ -227,6 +231,9 @@ export default function LiveFeedPage() {
           </div>
         )}
       </div>
+
+      {/* Lightbox — opened when a photo card is clicked */}
+      <PhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
     </Layout>
   );
 }
