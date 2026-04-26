@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL("/login?error=Google authentication failed.", request.url));
     }
 
-    const host = "http://143.110.179.24.nip.io:3000";
+    const host = "https://entephoto.co.in";
     // VERY IMPORTANT: Use the exact NextAuth default callback URL structure here
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
     });
 
     // 5. Create redirect response and set the JWT auth cookie
-    const response = NextResponse.redirect(new URL("/admin/dashboard", request.url));
+    const response = NextResponse.redirect("https://entephoto.co.in/admin/dashboard");
     const cookieOptions = getAuthCookieOptions();
 
     response.cookies.set(cookieOptions.name, token, cookieOptions);
