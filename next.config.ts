@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 
-
 const nextConfig: NextConfig = {
   // Raise the Server Action body limit to 4 MB as a safety net.
   // The primary fix is client-side compression (lib/utils/compress-image.ts),
@@ -10,7 +9,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "4mb",
     },
   },
-   allowedDevOrigins: ['overgreedily-unrecessive-adalyn.ngrok-free.dev'],
+  allowedDevOrigins: [
+    "overgreedily-unrecessive-adalyn.ngrok-free.dev",
+    "10.248.238.166",
+  ],
   images: {
     remotePatterns: [
       {
@@ -24,6 +26,18 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
+      },
+      {
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "8000",
+        pathname: "/media/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "8000",
+        pathname: "/media/**",
       },
     ],
   },

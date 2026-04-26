@@ -46,6 +46,11 @@ const METRIC_CONFIG = [
     href: "/admin/gallery",
   },
 ];
+export const metadata = {
+  title: "Dashboard — Ente photo",
+  description:
+    "A live snapshot of your events, gallery folders, and photo uploads.",
+};
 
 export default async function DashboardPage() {
   const snapshot = await getDashboardSnapshot().catch(() => null);

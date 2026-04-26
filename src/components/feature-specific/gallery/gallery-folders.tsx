@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { GalleryFolder } from "@/types";
 import { Images } from "lucide-react";
@@ -24,11 +23,11 @@ export function GalleryFolders({ folders, eventId }: GalleryFoldersProps) {
             <Link href={href} className="block">
               <div className="relative aspect-[4/3] rounded-[32px] overflow-hidden bg-white/5 mb-4 cursor-pointer">
                 {folder.coverUrl ? (
-                  <Image
+                  <img
                     src={folder.coverUrl}
                     alt={folder.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-slate-600">

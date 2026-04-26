@@ -1,16 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { X, ZoomIn } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { ZoomIn } from "lucide-react";
+import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
+
+interface Photo {
+  id?: number | string;
+  image_id?: number | string;
+  url?: string;
+  image_url?: string;
+  image_name?: string;
+}
 
 interface PublicPhotoGridProps {
-  photos: any[];
+  photos: Photo[];
+}
+
+function toLightbox(p: Photo): LightboxPhoto {
+  return {
+    url: (p.url ?? p.image_url ?? "") as string,
+    name: (p.image_name ?? `Photo ${p.id ?? p.image_id ?? ""}`) as string,
+  };
 }
 
 export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
-  const [lightbox, setLightbox] = useState<any | null>(null);
+  const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
 
   if (photos.length === 0) {
     return (
@@ -23,23 +37,22 @@ export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
   return (
     <div>
       <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416] transition-all duration-300 hover:scale-[1.02] hover:border-white/20 shadow-xl"
-          >
-            <div className="relative">
-              <Image
+        {photos.map((p) => {
+          const photo = toLightbox(p);
+          const key = String(p.id ?? p.image_id ?? photo.url);
+          return (
+            <div
+              key={key}
+              className="group relative mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416] transition-all duration-300 hover:scale-[1.02] hover:border-white/20 shadow-xl"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={photo.url}
-                alt="Gallery photo"
-                width={500}
-                height={500}
-                className="w-full object-cover"
-                style={{ display: "block" }}
+                alt={photo.name}
+                loading="lazy"
+                className="w-full object-cover block"
               />
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 flex-col gap-3">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                   onClick={() => setLightbox(photo)}
                   className="rounded-full bg-white/10 p-4 backdrop-blur-xl border border-white/20 transition-transform hover:scale-110"
@@ -48,27 +61,11 @@ export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
                 </button>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* ── Lightbox ── */}
-      {lightbox && (
-        <Dialog open={!!lightbox} onOpenChange={() => setLightbox(null)}>
-          <DialogContent className="flex max-w-[95vw] items-center justify-center rounded-[32px] border-white/10 bg-black/95 p-2 shadow-2xl backdrop-blur-3xl md:max-w-6xl md:p-4 outline-none">
-            <DialogDescription className="sr-only">
-              Full screen photo preview
-            </DialogDescription>
-            <div className="relative w-full h-full flex items-center justify-center">
-                <img
-                    src={lightbox.url}
-                    className="max-h-[85vh] w-auto rounded-2xl object-contain"
-                    alt="Gallery preview"
-                />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <PhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
     </div>
   );
 }

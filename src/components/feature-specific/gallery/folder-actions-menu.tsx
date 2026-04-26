@@ -149,7 +149,7 @@ export function FolderActionsMenu({ folderId, folderName }: FolderActionsMenuPro
           <DialogHeader>
             <DialogTitle>Delete Folder</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to delete <span className="text-white font-semibold">"{folderName}"</span>? This action cannot be undone.
+              Are you sure you want to delete <span className="text-white font-semibold">&quot;{folderName}&quot;</span>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {errorMsg && <p className="text-sm text-red-500 mb-4">{errorMsg}</p>}

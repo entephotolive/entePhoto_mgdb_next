@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Images } from "lucide-react";
 
@@ -8,9 +7,20 @@ interface PublicGalleryFoldersProps {
 }
 
 export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersProps) {
+  // Inject a virtual "My Photos" folder at the top if it isn't already present
+  const myPhotosFolder = {
+    id: "my-photos",
+    title: "My Photos",
+    photoCount: null, // we don't know the count server-side
+    coverUrl: null,
+    isVirtual: true,
+  };
+
+  const allFolders = [myPhotosFolder, ...folders.filter((f) => f.id !== "all" && f.id !== "my-photos")];
+
   return (
     <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-      {folders.map((folder) => {
+      {allFolders.map((folder) => {
         const href = `/event/${eventId}/gallery/${folder.id}`;
 
         return (
@@ -22,21 +32,25 @@ export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersP
             <Link href={href} className="block">
               <div className="relative aspect-[4/3] rounded-[26px] overflow-hidden bg-white/5 mb-4 cursor-pointer">
                 {folder.coverUrl ? (
-                  <Image
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
                     src={folder.coverUrl}
                     alt={folder.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-slate-600">
-                    <Images size={48} className="opacity-20" />
+                  <div className="flex h-full items-center justify-center">
+                    {folder.isVirtual ? (
+                      <span className="text-5xl">🪪</span>
+                    ) : (
+                      <Images size={48} className="text-slate-600 opacity-20" />
+                    )}
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-white border border-white/20">
-                        VIEW FOLDER
-                    </div>
+                  <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-white border border-white/20">
+                    VIEW FOLDER
+                  </div>
                 </div>
               </div>
             </Link>
@@ -49,7 +63,9 @@ export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersP
                 </h3>
                 <div className="flex items-center gap-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
                   <Images size={12} className="opacity-50" />
-                  <span>{folder.photoCount} PHOTOS</span>
+                  <span>
+                    {folder.isVirtual ? "YOUR MATCHED CAPTURES" : `${folder.photoCount} PHOTOS`}
+                  </span>
                 </div>
               </Link>
             </div>

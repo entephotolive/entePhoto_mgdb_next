@@ -6,6 +6,9 @@ import { SessionUser } from "@/types";
 import { DesktopSidebar } from "@/components/shared/desktop-sidebar";
 import { MobileBottomNav } from "@/components/shared/mobile-bottom-nav";
 import { GlobalUploadProgress } from "@/components/feature-specific/uploads/global-upload-progress";
+import { BrandMark } from "./brand-mark";
+import Link from "next/link";
+import Image from "next/image";
 
 interface DashboardShellProps {
   user: SessionUser;
@@ -14,36 +17,33 @@ interface DashboardShellProps {
 
 export function DashboardShell({ user, children }: DashboardShellProps) {
   return (
-    <div className="flex flex-1 text-slate-300 overflow-hidden font-sans selection:bg-cyan-500/30 h-screen">
+    <div className="flex flex-1 text-slate-300 overflow-hidden font-sans selection:bg-cyan-500/30 h-screen lg:pl-64">
       {/* ── Desktop Sidebar (lg+) ── */}
       <DesktopSidebar user={user} />
 
       {/* ── Main Content ── */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top Header */}
-        <header className="px-4 sm:px-6 lg:px-10 py-3 lg:py-5 flex items-center justify-between shrink-0 sticky top-0 z-10 bg-background/60 backdrop-blur-xl border-b border-white/5">
+        <header className="fixed top-0 right-0 left-0 lg:left-64 px-4 sm:px-6 lg:px-10 py-3 lg:py-5 flex items-center justify-between z-10 bg-background/60 backdrop-blur-xl border-b border-white/5 h-16 lg:h-20">
           <div className="flex items-center gap-3">
             {/* Brand mark — mobile only */}
             <div className="lg:hidden flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 border border-white/10 text-cyan-400">
-                {/* Camera icon inline SVG */}
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                  <circle cx="12" cy="13" r="4" />
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-cyan-400 tracking-tight">
-                Ente photo
-              </span>
+              <Link
+                href="/"
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <Image
+                  src="/logo.jpeg"
+                  alt="Ente photo Logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
+                  priority
+                />
+                <span className="text-sm font-bold text-cyan-400 tracking-tight">
+                  Ente photo
+                </span>
+              </Link>
             </div>
 
             {/* Search input — sm+ only */}
@@ -76,7 +76,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
         {/* Scrollable page content */}
         {/* pb-24 on mobile = clears the 64px bottom nav + some breathing room */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pt-4 lg:pt-4 pb-24 lg:pb-10">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 pt-20 lg:pt-24 pb-24 lg:pb-10">
           {children}
         </div>
       </main>

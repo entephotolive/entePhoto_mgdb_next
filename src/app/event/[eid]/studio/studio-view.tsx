@@ -59,18 +59,23 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
 
           <div className="mt-6 flex gap-4 flex-wrap">
             {profile.specializations && profile.specializations.length > 0 ? (
-              profile.specializations.slice(0, 2).map((spec: string, idx: number) => (
-                <Card key={idx} className="h-28 w-40 border-white/10 bg-white/5">
-                  <CardHeader className="gap-1 p-4">
-                    <CardTitle className="text-sm text-white">
-                      {spec}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-white/60">
-                      Expertly crafted expertise.
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))
+              profile.specializations
+                .slice(0, 2)
+                .map((spec: string, idx: number) => (
+                  <Card
+                    key={idx}
+                    className="h-28 w-40 border-white/10 bg-white/5"
+                  >
+                    <CardHeader className="gap-1 p-4">
+                      <CardTitle className="text-sm text-white">
+                        {spec}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-white/60">
+                        Expertly crafted expertise.
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))
             ) : (
               <>
                 <Card className="h-28 w-40 border-white/10 bg-white/5">
@@ -154,9 +159,9 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
               </CarouselContent>
             </Carousel>
           ) : (
-             <div className="w-full h-[500px] rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <p className="text-white/40">No portfolio moments yet.</p>
-             </div>
+            <div className="w-full h-[500px] rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <p className="text-white/40">No portfolio moments yet.</p>
+            </div>
           )}
         </div>
       </div>

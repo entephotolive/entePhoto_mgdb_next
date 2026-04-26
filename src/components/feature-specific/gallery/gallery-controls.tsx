@@ -26,7 +26,7 @@ interface GalleryControlsProps {
 export function GalleryControls({ events, selectedEventId }: GalleryControlsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isFaceFilterEnabled, setIsFaceFilterEnabled] = useState(true);
+  const [isFaceFilterEnabled] = useState(true);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -89,9 +89,11 @@ export function GalleryControls({ events, selectedEventId }: GalleryControlsProp
         <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full">
           <FiSmile size={16} className="text-sky-400" />
           <span className="text-xs font-semibold text-slate-300">Filter by Face</span>
-          <button 
-            onClick={() => setIsFaceFilterEnabled(!isFaceFilterEnabled)}
-            className={`relative w-8 h-4 rounded-full transition-colors ${isFaceFilterEnabled ? 'bg-sky-400' : 'bg-slate-600'}`}
+          <button
+            type="button"
+            aria-label="Filter by Face (static)"
+            disabled
+            className={`relative w-8 h-4 cursor-not-allowed rounded-full opacity-80 transition-colors ${isFaceFilterEnabled ? 'bg-sky-400' : 'bg-slate-600'}`}
           >
             <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${isFaceFilterEnabled ? 'translate-x-4' : ''}`} />
           </button>

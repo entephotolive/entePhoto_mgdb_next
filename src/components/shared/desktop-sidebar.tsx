@@ -15,7 +15,7 @@ export function DesktopSidebar({ user }: DesktopSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex w-64 border-r border-white/5 flex-col p-6 bg-black/20 backdrop-blur-3xl shrink-0 sticky top-0 h-screen">
+    <aside className="hidden lg:flex w-64 border-r border-white/5 flex-col p-6 bg-black/20 backdrop-blur-3xl shrink-0 fixed top-0 left-0 h-screen z-20">
       <BrandMark />
       <div className="flex-1 overflow-y-auto overflow-x-hidden pt-4">
         <nav className="space-y-1">

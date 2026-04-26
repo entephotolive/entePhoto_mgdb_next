@@ -26,35 +26,9 @@ export default function PhotoPreviewPage() {
 
           <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6">
             <div className="relative">
-              <div>
-                <h2 className="text-lg font-semibold md:text-xl">
-                  First Pic ✨
-                </h2>
-                <p className="text-xs text-gray-300">
-                  Uploaded by Midlaj · 01:01 PM
-                </p>
-              </div>
-
               <TooltipProvider delayDuration={200}>
                 <div className="absolute bottom-0 left-1/2 hidden -translate-x-1/2 items-center gap-4 rounded-full border border-white/20 bg-black/50 px-3 py-2 shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-xl md:flex">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full text-red-500 transition hover:scale-110 hover:bg-white/10 hover:text-red-400">
-                        <Heart size={18} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="border-white/20 bg-black text-white"><p>Like</p></TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full text-orange-400 transition hover:scale-110 hover:bg-white/10 hover:text-orange-300">
-                        <Flame size={18} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="border-white/20 bg-black text-white"><p>Hot</p></TooltipContent>
-                  </Tooltip>
-
+                  
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full text-white transition hover:scale-110 hover:bg-white/10 hover:text-gray-300">
@@ -62,15 +36,6 @@ export default function PhotoPreviewPage() {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="border-white/20 bg-black text-white"><p>Share</p></TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full text-white transition hover:scale-110 hover:bg-white/10 hover:text-gray-300">
-                        <Info size={18} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="border-white/20 bg-black text-white"><p>Info</p></TooltipContent>
                   </Tooltip>
 
                   <Tooltip>
@@ -89,19 +54,11 @@ export default function PhotoPreviewPage() {
 
         <div className="mt-6 flex justify-center md:hidden">
           <div className="flex items-center gap-4 rounded-full border border-white/20 bg-black/50 px-4 py-2 shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-            <Button variant="ghost" size="icon" className="rounded-full text-red-500 hover:bg-white/10 hover:text-red-400">
-              <Heart size={20} />
-            </Button>
-            <Button variant="ghost" size="icon" className="rounded-full text-orange-400 hover:bg-white/10 hover:text-orange-300">
-              <Flame size={20} />
-            </Button>
+            
             <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-gray-300">
               <Share2 size={20} />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/10 hover:text-gray-300">
-              <Info size={20} />
-            </Button>
-
+            
             <Button size="icon" className="ml-2 rounded-full bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:bg-cyan-300">
               <Download size={18} />
             </Button>

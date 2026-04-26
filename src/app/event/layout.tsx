@@ -1,13 +1,6 @@
 import Footer from "@/components/Footer";
 import type { CSSProperties, ReactNode } from "react";
 
-export const metadata = {
-  title: "Ente photo",
-  description: "Your digital lens for the moments that matter.",
-  icons: {
-    icon: "/favicon.svg",
-  },
-};
 
 export const viewport = {
   themeColor: "#020617",

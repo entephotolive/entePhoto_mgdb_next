@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createEvent, deleteEvent, updateEvent } from "@/lib/services/event.service";
 import { requireSession } from "@/lib/services/auth.service";
+import { api } from "@/app/api/api-client";
+
 
 // ── Zod Schemas ────────────────────────────────────────────────────────────────
 
@@ -25,15 +27,15 @@ export type ActionResult<T = void> =
   | { success: false; error: string };
 
 // ── Create Event Action ────────────────────────────────────────────────────────
-
 export async function createEventAction(
   formData: FormData,
 ): Promise<ActionResult<{ id: string; title: string }>> {
   try {
     await requireSession();
 
+    // Extract form values FIRST
     const raw = {
-      title: formData.get("title"),
+      title: String(formData.get("title") || ""),
       date: formData.get("date")
         ? new Date(String(formData.get("date"))).toISOString()
         : "",
@@ -41,12 +43,15 @@ export async function createEventAction(
       createdBy: formData.get("createdBy"),
     };
 
+    // Validate input
     const parsed = createEventSchema.safeParse(raw);
 
     if (!parsed.success) {
       const firstError = parsed.error.errors[0];
       return { success: false, error: firstError.message };
     }
+
+
 
     const event = await createEvent(parsed.data);
 
@@ -58,7 +63,14 @@ export async function createEventAction(
       message: `Event "${event.title}" created successfully.`,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create event.";
+    console.error("Create Event Action Error:", err);
+    
+    if (err instanceof z.ZodError) {
+      return { success: false, error: err.errors[0].message };
+    }
+    
+    const message =
+      err instanceof Error ? err.message : "Failed to create event.";
     return { success: false, error: message };
   }
 }
@@ -103,6 +115,12 @@ export async function updateEventAction(
       message: `Event "${updated.title}" updated successfully.`,
     };
   } catch (err) {
+    console.error("Update Event Action Error:", err);
+
+    if (err instanceof z.ZodError) {
+      return { success: false, error: err.errors[0].message };
+    }
+
     const message = err instanceof Error ? err.message : "Failed to update event.";
     return { success: false, error: message };
   }
@@ -135,4 +153,14 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
     const message = err instanceof Error ? err.message : "Failed to delete event.";
     return { success: false, error: message };
   }
-}
+}
+
+
+
+export const createWedding = async (data) => {
+  const res = await api.post("/create-wedding/", data, {
+    headers: { "Content-Type": "application/json" },
+  });
+
+  return res.data;
+};

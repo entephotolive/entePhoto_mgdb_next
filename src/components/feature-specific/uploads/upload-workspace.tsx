@@ -3,8 +3,6 @@
 
 import { AlertCircle, ImageIcon, MousePointer2, UploadCloud, X } from "lucide-react";
 import { useRef, useState } from "react";
-import { Progress } from "@/components/ui/progress";
-import { Select } from "@/components/ui/select";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { EventListItem } from "@/types";
 
@@ -13,10 +11,19 @@ interface UploadWorkspaceProps {
   userId: string;
 }
 
+function isEventActive(event: EventListItem | undefined): boolean {
+  if (!event || !event.date) return false;
+  const now = Date.now();
+  const eventTime = new Date(event.date).getTime();
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  return now >= eventTime && now <= eventTime + TWENTY_FOUR_HOURS;
+}
+
 export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showWarning, setShowWarning] = useState(events.length === 0);
+  const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
   const { items, addFiles, removeFile, clearAll, completedCount, isUploading, setUploadContext } = useGlobalUpload();
 
@@ -68,9 +75,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         onClick={() => {
           if (events.length === 0) {
             setShowWarning(true);
-          } else {
-            inputRef.current?.click();
+            return;
           }
+          const selectedEvent = events.find((e) => e.id === selectedEventId);
+          if (selectedEvent && !isEventActive(selectedEvent)) {
+            setShowInactiveWarning(true);
+            return;
+          }
+          inputRef.current?.click();
         }}
         onDragOver={(event) => {
           event.preventDefault();
@@ -85,6 +97,10 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             return;
           }
           const selectedEvent = events.find((e) => e.id === selectedEventId);
+          if (selectedEvent && !isEventActive(selectedEvent)) {
+            setShowInactiveWarning(true);
+            return;
+          }
           addFiles(event.dataTransfer.files, {
             eventId: selectedEventId,
             eventName: selectedEvent?.title || "event",
@@ -103,6 +119,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           onChange={(event) => {
             if (event.target.files) {
               const selectedEvent = events.find((e) => e.id === selectedEventId);
+              if (selectedEvent && !isEventActive(selectedEvent)) {
+                setShowInactiveWarning(true);
+                // clear the input so it can be selected again if needed
+                if (inputRef.current) inputRef.current.value = "";
+                return;
+              }
               addFiles(event.target.files, {
                 eventId: selectedEventId,
                 eventName: selectedEvent?.title || "event",
@@ -223,12 +245,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
           <div className="flex-1 w-full md:w-auto">
              {items.length > 0 && (
-                 <p className="text-xs text-slate-500 italic">
-                     {items.length} files queued. Click "START UPLOAD" on the widget to begin.
-                 </p>
-             )}
-          </div>
-      </div>
+                  <p className="text-xs text-slate-500 italic">
+                      {items.length} files queued. Click &quot;START UPLOAD&quot; on the widget to begin.
+                  </p>
+              )}
+           </div>
+       </div>
 
       {/* Warning Modal for No Events */}
       {showWarning && (
@@ -250,6 +272,35 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             <div className="mt-2">
               <button
                 onClick={() => setShowWarning(false)}
+                className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2.5 rounded-xl transition-colors"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warning Modal for Inactive Event */}
+      {showInactiveWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowInactiveWarning(false)}
+          />
+          <div className="relative bg-[#141416] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-panel flex flex-col gap-4 text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-1">
+              <AlertCircle size={24} className="text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg mb-1">Event is Inactive</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                This event is marked as inactive. Uploads are rejected for inactive events.
+              </p>
+            </div>
+            <div className="mt-2">
+              <button
+                onClick={() => setShowInactiveWarning(false)}
                 className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-2.5 rounded-xl transition-colors"
               >
                 Understood

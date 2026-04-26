@@ -3,7 +3,7 @@ import { listEvents } from "@/lib/services/event.service";
 import { EventsClient } from "@/components/feature-specific/events/events-client";
 
 export const metadata = {
-  title: "Events — Ente photo Admin",
+  title: "Events — Ente photo",
   description:
     "Manage photography event schedules, upload sessions, and track progress.",
 };

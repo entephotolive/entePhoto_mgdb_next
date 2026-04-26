@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
-import Image from "next/image";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Clock, X, ZoomIn, Upload, Loader2 } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
@@ -23,16 +22,13 @@ export function FolderPhotoGrid({ photos, folderId, eventId, eventTitle, userId 
   const { items, addFiles, removeFile, clearAll, completedCount, isUploading } = useGlobalUpload();
 
   // ─── Refresh after upload ──────────────────────────────────────
-  const lastCompletedRef = useRef(0);
-  useState(() => {
-    // Sync initial count
-    lastCompletedRef.current = completedCount;
-  });
-
-  if (completedCount > lastCompletedRef.current) {
-    lastCompletedRef.current = completedCount;
-    router.refresh();
-  }
+  const lastCompletedRef = useRef(completedCount);
+  useEffect(() => {
+    if (completedCount > lastCompletedRef.current) {
+      lastCompletedRef.current = completedCount;
+      router.refresh();
+    }
+  }, [completedCount, router]);
 
   // ─── Upload Handler ────────────────────────────────────────────
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,12 +121,11 @@ export function FolderPhotoGrid({ photos, folderId, eventId, eventTitle, userId 
               >
                 {/* Photo */}
                 <div className="relative">
-                  <Image
+                  <img
                     src={photo.url}
                     alt="Gallery photo"
-                    width={400}
-                    height={400}
                     className="w-full object-cover"
+                    loading="lazy"
                     style={{ display: "block" }}
                   />
 
@@ -167,13 +162,10 @@ export function FolderPhotoGrid({ photos, folderId, eventId, eventTitle, userId 
             className="relative max-h-[90vh] max-w-[90vw]"
             onClick={(e) => e.stopPropagation()}
           >
-            <Image
+            <img
               src={lightbox.url}
               alt="Gallery photo"
-              width={1200}
-              height={1200}
               className="max-h-[90vh] w-auto rounded-2xl object-contain shadow-2xl"
-              priority
             />
           </div>
         </div>

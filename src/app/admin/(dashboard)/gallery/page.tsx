@@ -5,6 +5,12 @@ import { requireSession } from "@/lib/services/auth.service";
 import { listEvents } from "@/lib/services/event.service";
 import { listFoldersByEvent } from "@/lib/services/folder.service";
 
+export const metadata = {
+  title: "Gallery — Ente photo",
+  description:
+    "Organize high-resolution captures from the ceremony. Group by timeline for client delivery.",
+};
+
 export default async function GalleryPage({
   searchParams,
 }: {

@@ -2,6 +2,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QrCode } from "lucide-react";
 import bg from "@/assets/1st.jpg";
@@ -60,7 +61,7 @@ export default function HomePage() {
         <div className="mx-auto mb-5 h-20 w-20 overflow-hidden rounded-2xl border border-white/20">
           <img
             src="/logo.jpeg"
-            className="h-full w-full object-cover"
+            className="h-full w-auto object-cover"
             alt="Ente photo logo"
           />
         </div>
@@ -148,13 +149,25 @@ export default function HomePage() {
 
         <div className="mt-8 text-center text-xs text-gray-500">
           <div className="border-t border-white/10 pt-4">
-            <p className="mb-2 text-[10px] tracking-widest">
+            
+             <div      className="mb-2 block text-[10px] tracking-widest hover:text-cyan-400 transition-colors">
+            
               AUTHORIZED ENTRY ONLY
-            </p>
+            </div> 
 
             <div className="flex justify-center gap-6 text-gray-400">
-              <span className="cursor-pointer hover:text-white">Support</span>
-              <span className="cursor-pointer hover:text-white">Privacy</span>
+              <Link
+                href="/terms"
+                className="cursor-pointer hover:text-white transition-colors"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/privacy"
+                className="cursor-pointer hover:text-white transition-colors"
+              >
+                Privacy
+              </Link>
             </div>
           </div>
         </div>
