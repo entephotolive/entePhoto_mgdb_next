@@ -60,19 +60,16 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
           <div className="mt-6 flex gap-4 flex-wrap">
             {profile.specializations && profile.specializations.length > 0 ? (
               profile.specializations
-                .slice(0, 2)
+                
                 .map((spec: string, idx: number) => (
                   <Card
                     key={idx}
-                    className="h-28 w-40 border-white/10 bg-white/5"
+                    className="h-auto w-40 border-white/10 bg-white/5"
                   >
                     <CardHeader className="gap-1 p-4">
                       <CardTitle className="text-sm text-white">
                         {spec}
                       </CardTitle>
-                      <CardDescription className="text-xs text-white/60">
-                        Expertly crafted expertise.
-                      </CardDescription>
                     </CardHeader>
                   </Card>
                 ))
@@ -125,8 +122,19 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
               Book Consultation
             </Button>
 
-            <Button className="bg-gradient-to-r from-cyan-400 to-purple-500 px-6 py-5 text-black transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_25px_rgba(34,211,238,0.6)]">
-              Visit our shop
+            <Button 
+              onClick={() => {
+                const location = profile.studioLocation;
+                if (location && location.startsWith("http")) {
+                  window.open(location, "_blank");
+                } else {
+                  const query = location || profile.studioName || profile.name || "Photography Studio";
+                  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, "_blank");
+                }
+              }}
+              className="bg-gradient-to-r from-cyan-400 to-purple-500 px-6 py-5 text-black transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_25px_rgba(34,211,238,0.6)]"
+            >
+              Visit our location
             </Button>
           </div>
         </div>

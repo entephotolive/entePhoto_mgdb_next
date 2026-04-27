@@ -204,7 +204,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
         </Field>
 
         {/* Studio Location */}
-        <Field label="Studio Location">
+        <Field label="Studio Location (Google Maps Link)">
           <div className="relative">
             <MapPin
               size={14}
@@ -212,12 +212,13 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
             />
             <input
               id="profile-studio-location"
-              type="text"
+              type="url"
+              pattern="https?://.*(google\.com/maps|maps\.app\.goo\.gl|maps\.google\.com).*"
+              title="Please provide a valid Google Maps link"
               value={studioLocation}
               onChange={(e) => setStudioLocation(e.target.value)}
-              placeholder="City, Country"
+              placeholder="https://maps.app.goo.gl/..."
               className={cn(inputClass, "pl-9")}
-              autoComplete="address-level2"
             />
           </div>
         </Field>

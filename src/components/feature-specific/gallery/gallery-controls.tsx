@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createNewFolder } from "@/app/admin/(dashboard)/gallery/action";
+import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 
 interface GalleryControlsProps {
   events: EventListItem[];
@@ -64,23 +65,22 @@ export function GalleryControls({ events, selectedEventId }: GalleryControlsProp
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 py-6">
       {/* Left Side: Breadcrumbs / Event Selection */}
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-        <span>EVENTS</span>
-        <span className="text-slate-700">/</span>
-        <div className="relative group">
-          <select
-            value={currentEventId}
-            onChange={(e) => handleEventChange(e.target.value)}
-            className="appearance-none bg-transparent hover:text-sky-400 transition-colors cursor-pointer pr-4 focus:outline-none text-sky-400 uppercase"
-          >
-            {events.map((event) => (
-              <option key={event.id} value={event.id} className="bg-[#0a0a0b] text-white">
-                {event.title}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={12} className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-sky-400" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 z-10">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center h-[58px] px-4 py-2.5 bg-[#0A0A0C]/80 backdrop-blur-md border border-white/10 rounded-2xl shadow-sm">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              EVENTS
+            </div>
+           
+            
+          </div>
+          <span className="text-slate-700 font-light text-3xl">/</span>
         </div>
+        <EventSelectDropdown
+          events={events}
+          value={currentEventId}
+          onChange={handleEventChange}
+        />
       </div>
 
       {/* Right Side: Controls */}

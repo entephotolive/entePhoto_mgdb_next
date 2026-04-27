@@ -4,13 +4,13 @@
 import {
   AlertCircle,
   ImageIcon,
-  MousePointer2,
   UploadCloud,
   X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { EventListItem } from "@/types";
+import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 
 interface UploadWorkspaceProps {
   events: EventListItem[];
@@ -30,7 +30,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [showWarning, setShowWarning] = useState(events.length === 0);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
+
   const {
     items,
     addFiles,
@@ -40,6 +42,52 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     isUploading,
     setUploadContext,
   } = useGlobalUpload();
+
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (a.date && b.date) {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      return 0;
+    });
+  }, [events]);
+
+  useEffect(() => {
+    if (isInitialized || sortedEvents.length === 0) return;
+    
+    const storedEventId = localStorage.getItem("photo-ceremony-selected-event-id");
+    const isValidStored = storedEventId && sortedEvents.some(e => e.id === storedEventId);
+
+    const idToSelect = isValidStored ? storedEventId : sortedEvents[0].id;
+    
+    setSelectedEventId(idToSelect);
+    const ev = sortedEvents.find(e => e.id === idToSelect);
+    if (ev) {
+      setUploadContext({
+        eventId: idToSelect,
+        eventName: ev.title || "event",
+        uploadedBy: userId,
+      });
+    }
+    localStorage.setItem("photo-ceremony-selected-event-id", idToSelect);
+    setIsInitialized(true);
+  }, [isInitialized, sortedEvents, userId, setUploadContext]);
+
+  const handleEventChange = (newId: string) => {
+    setSelectedEventId(newId);
+    localStorage.setItem("photo-ceremony-selected-event-id", newId);
+    const selectedEvent = sortedEvents.find((e) => e.id === newId);
+    if (selectedEvent) {
+      setUploadContext({
+        eventId: newId,
+        eventName: selectedEvent.title || "event",
+        uploadedBy: userId,
+      });
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
@@ -53,46 +101,16 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             your vision into the digital darkroom.
           </p>
         </div>
-        <div className="md:text-right">
+        <div className="flex flex-col w-full md:w-auto md:items-end">
           <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">
             Select Event to Upload
           </label>
-          <div className="relative">
-            <select
-              value={selectedEventId}
-              onChange={(event) => {
-                const newId = event.target.value;
-                setSelectedEventId(newId);
-                const selectedEvent = events.find((e) => e.id === newId);
-                setUploadContext({
-                  eventId: newId,
-                  eventName: selectedEvent?.title || "event",
-                  uploadedBy: userId,
-                });
-              }}
-              className="w-full md:w-auto bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm pr-10 appearance-none focus:outline-none focus:ring-1 focus:ring-cyan-500/50 min-w-[200px] text-white"
-            >
-              {events.length ? (
-                events.map((item) => (
-                  <option
-                    key={item.id}
-                    value={item.id}
-                    className="bg-[#121214]"
-                  >
-                    {item.title}
-                  </option>
-                ))
-              ) : (
-                <option value="" className="bg-[#121214]">
-                  Create an event first
-                </option>
-              )}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex flex-col gap-0.5">
-              <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[4px] border-b-slate-400" />
-              <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400" />
-            </div>
-          </div>
+          <EventSelectDropdown 
+            events={sortedEvents}
+            value={selectedEventId}
+            onChange={handleEventChange}
+            isLoading={!isInitialized && events.length > 0}
+          />
         </div>
       </section>
 
