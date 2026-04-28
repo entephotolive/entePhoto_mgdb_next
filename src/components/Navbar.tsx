@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -8,11 +8,29 @@ import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { AnimateIcon } from "@/components/ui/animate-icon";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { scrollY } = useScroll();
+  const [hidden, setHidden] = useState(false);
   const pathname = usePathname();
+
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious() ?? 0;
+    
+    // Industry Standard: Hide on scroll down, Show on scroll up
+    if (latest > previous && latest > 150 && !open) {
+      setHidden(true);
+    } else if (latest < previous) {
+      setHidden(false);
+    }
+    
+    // Always show at top
+    if (latest < 10) {
+      setHidden(false);
+    }
+  });
 
   const eventMatch = pathname?.match(/^\/event\/([^/]+)/);
   const eventBasePath = eventMatch ? `/event/${eventMatch[1]}` : null;
@@ -41,10 +59,16 @@ export default function Navbar() {
   return (
     <>
       {/* Main Navbar */}
-      <header
-        className={`fixed top-4 left-1/2 z-[60] w-[90%] max-w-5xl -translate-x-1/2 rounded-2xl border border-white/20 bg-white/10 px-6 py-3 shadow-lg backdrop-blur-xl transition-all duration-300 ${
-          open ? "opacity-60 scale-[0.98]" : ""
-        }`}
+      <motion.header
+        initial={{ y: 0, x: "-50%" }}
+        animate={{ 
+          y: hidden ? -120 : 0,
+          x: "-50%",
+          opacity: hidden ? 0 : (open ? 0.6 : 1),
+          scale: open ? 0.98 : 1
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="fixed top-4 left-1/2 z-[60] w-[90%] max-w-5xl rounded-2xl border border-white/20 bg-white/10 px-6 py-3 shadow-lg backdrop-blur-xl"
       >
         <nav className="flex items-center justify-between">
           {/* Logo */}
@@ -103,7 +127,7 @@ export default function Navbar() {
             </AnimateIcon>
           </button>
         </nav>
-      </header>
+      </motion.header>
 
       {/* Mobile Drawer */}
       <AnimatePresence>
