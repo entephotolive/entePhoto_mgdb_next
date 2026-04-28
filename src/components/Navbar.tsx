@@ -29,6 +29,9 @@ export default function Navbar() {
     {
       name: "Studio",
       href: eventBasePath ? `${eventBasePath}/studio` : "/qr-scanner",
+    },{
+      name:"face scan",
+      href: eventBasePath? `${eventBasePath}/scan` : "/face-scan",
     },
   ];
 
