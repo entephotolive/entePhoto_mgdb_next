@@ -29,7 +29,7 @@ export async function connectToDatabase() {
 
   if (!globalCache.promise) {
     globalCache.promise = mongoose.connect(uri, {
-      dbName: "photo-ceremony",
+      dbName: "entephoto-db",
       bufferCommands: false,
     });
   }
