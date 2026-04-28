@@ -7,7 +7,7 @@ import { QrCode, X, CheckCircle2 } from "lucide-react";
 import jsQR from "jsqr";
 import bg from "@/assets/1st.jpg";
 
-/* ─── helper ──────────────────────────────────────────────────────────── */
+/* --- helper ------------------------ */
 function extractEventId(raw: string): string {
   try {
     const url = new URL(raw);
