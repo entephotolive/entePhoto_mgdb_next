@@ -1,10 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { AlertCircle, ImageIcon, MousePointer2, UploadCloud, X } from "lucide-react";
-import { useRef, useState } from "react";
+import {
+  AlertCircle,
+  ImageIcon,
+  UploadCloud,
+  X,
+} from "lucide-react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { EventListItem } from "@/types";
+import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 
 interface UploadWorkspaceProps {
   events: EventListItem[];
@@ -24,50 +30,87 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [showWarning, setShowWarning] = useState(events.length === 0);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? "");
-  const { items, addFiles, removeFile, clearAll, completedCount, isUploading, setUploadContext } = useGlobalUpload();
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  const {
+    items,
+    addFiles,
+    removeFile,
+    clearAll,
+    completedCount,
+    isUploading,
+    setUploadContext,
+  } = useGlobalUpload();
+
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (a.date && b.date) {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      return 0;
+    });
+  }, [events]);
+
+  useEffect(() => {
+    if (isInitialized || sortedEvents.length === 0) return;
+    
+    const storedEventId = localStorage.getItem("photo-ceremony-selected-event-id");
+    const isValidStored = storedEventId && sortedEvents.some(e => e.id === storedEventId);
+
+    const idToSelect = isValidStored ? storedEventId : sortedEvents[0].id;
+    
+    setSelectedEventId(idToSelect);
+    const ev = sortedEvents.find(e => e.id === idToSelect);
+    if (ev) {
+      setUploadContext({
+        eventId: idToSelect,
+        eventName: ev.title || "event",
+        uploadedBy: userId,
+      });
+    }
+    localStorage.setItem("photo-ceremony-selected-event-id", idToSelect);
+    setIsInitialized(true);
+  }, [isInitialized, sortedEvents, userId, setUploadContext]);
+
+  const handleEventChange = (newId: string) => {
+    setSelectedEventId(newId);
+    localStorage.setItem("photo-ceremony-selected-event-id", newId);
+    const selectedEvent = sortedEvents.find((e) => e.id === newId);
+    if (selectedEvent) {
+      setUploadContext({
+        eventId: newId,
+        eventName: selectedEvent.title || "event",
+        uploadedBy: userId,
+      });
+    }
+  };
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
       <section className="mb-6 sm:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
         <div>
-          <h2 className="text-2xl sm:text-4xl font-bold text-slate-100 mb-2 sm:mb-3 tracking-tight">Upload Artifacts</h2>
+          <h2 className="text-2xl sm:text-4xl font-bold text-slate-100 mb-2 sm:mb-3 tracking-tight">
+            Upload Artifacts
+          </h2>
           <p className="text-slate-500 max-w-md leading-relaxed">
-            Infuse the gallery with new moments. Select your event and bring your vision into the digital darkroom.
+            Infuse the gallery with new moments. Select your event and bring
+            your vision into the digital darkroom.
           </p>
         </div>
-        <div className="md:text-right">
-          <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">Select Event to Upload</label>
-          <div className="relative">
-            <select
-              value={selectedEventId}
-              onChange={(event) => {
-                const newId = event.target.value;
-                setSelectedEventId(newId);
-                const selectedEvent = events.find((e) => e.id === newId);
-                setUploadContext({
-                  eventId: newId,
-                  eventName: selectedEvent?.title || "event",
-                  uploadedBy: userId,
-                });
-              }}
-              className="w-full md:w-auto bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm pr-10 appearance-none focus:outline-none focus:ring-1 focus:ring-cyan-500/50 min-w-[200px] text-white"
-            >
-              {events.length ? (
-                events.map((item) => (
-                  <option key={item.id} value={item.id} className="bg-[#121214]">
-                    {item.title}
-                  </option>
-                ))
-              ) : (
-                <option value="" className="bg-[#121214]">Create an event first</option>
-              )}
-            </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex flex-col gap-0.5">
-              <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[4px] border-b-slate-400" />
-              <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-slate-400" />
-            </div>
-          </div>
+        <div className="flex flex-col w-full md:w-auto md:items-end">
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">
+            Select Event to Upload
+          </label>
+          <EventSelectDropdown 
+            events={sortedEvents}
+            value={selectedEventId}
+            onChange={handleEventChange}
+            isLoading={!isInitialized && events.length > 0}
+          />
         </div>
       </section>
 
@@ -107,8 +150,11 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             uploadedBy: userId,
           });
         }}
-        className={`w-full h-52 sm:h-80 border-2 border-dashed rounded-[24px] sm:rounded-[40px] flex flex-col items-center justify-center group transition-all cursor-pointer relative overflow-hidden ${isDragging ? "border-cyan-400 bg-cyan-400/10 scale-[1.02]" : "border-white/10 hover:border-cyan-500/30 bg-gradient-to-b from-white/[0.02] to-transparent"
-          }`}
+        className={`w-full h-52 sm:h-80 border-2 border-dashed rounded-[24px] sm:rounded-[40px] flex flex-col items-center justify-center group transition-all cursor-pointer relative overflow-hidden ${
+          isDragging
+            ? "border-cyan-400 bg-cyan-400/10 scale-[1.02]"
+            : "border-white/10 hover:border-cyan-500/30 bg-gradient-to-b from-white/[0.02] to-transparent"
+        }`}
       >
         <input
           ref={inputRef}
@@ -118,7 +164,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           className="hidden"
           onChange={(event) => {
             if (event.target.files) {
-              const selectedEvent = events.find((e) => e.id === selectedEventId);
+              const selectedEvent = events.find(
+                (e) => e.id === selectedEventId,
+              );
               if (selectedEvent && !isEventActive(selectedEvent)) {
                 setShowInactiveWarning(true);
                 // clear the input so it can be selected again if needed
@@ -137,9 +185,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         <div className="w-16 h-16 bg-cyan-500/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform relative z-10">
           <UploadCloud className="text-cyan-400" size={32} />
         </div>
-        <h3 className="text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10">Drag & Drop photos here</h3>
+        <h3 className="text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10">
+          Drag & Drop photos here
+        </h3>
         <p className="text-slate-500 text-sm mb-8 relative z-10">
-          or <span className="text-cyan-400 hover:underline">click to browse files</span>
+          or{" "}
+          <span className="text-cyan-400 hover:underline">
+            click to browse files
+          </span>
         </p>
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 relative z-10">
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
@@ -174,18 +227,31 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]"
             >
               <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3">
-                <img src={item.preview} alt={item.file.name} className="w-full h-full object-cover" />
+                <img
+                  src={item.preview}
+                  alt={item.file.name}
+                  className="w-full h-full object-cover"
+                />
 
                 {item.status === "uploading" && (
                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center flex-col p-4 backdrop-blur-sm">
                     <div className="relative w-20 h-20">
                       <svg className="w-full h-full" viewBox="0 0 100 100">
-                        <circle className="text-white/10 stroke-current" strokeWidth="4" fill="transparent" r="40" cx="50" cy="50" />
+                        <circle
+                          className="text-white/10 stroke-current"
+                          strokeWidth="4"
+                          fill="transparent"
+                          r="40"
+                          cx="50"
+                          cy="50"
+                        />
                         <circle
                           className="text-cyan-400 stroke-current transition-all duration-500"
                           strokeWidth="4"
                           strokeDasharray={2 * Math.PI * 40}
-                          strokeDashoffset={2 * Math.PI * 40 * (1 - (item.progress || 0) / 100)}
+                          strokeDashoffset={
+                            2 * Math.PI * 40 * (1 - (item.progress || 0) / 100)
+                          }
                           strokeLinecap="round"
                           fill="transparent"
                           r="40"
@@ -204,7 +270,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                     <div className="w-12 h-12 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-3">
                       <AlertCircle className="text-rose-500" size={24} />
                     </div>
-                    <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center">{item.error}</p>
+                    <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center">
+                      {item.error}
+                    </p>
                   </div>
                 )}
 
@@ -224,15 +292,23 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               </div>
               <div className="px-3 pb-3">
                 <div className="flex justify-between items-start mb-1">
-                  <p className="text-xs font-semibold text-slate-200 truncate pr-2">{item.file.name}</p>
+                  <p className="text-xs font-semibold text-slate-200 truncate pr-2">
+                    {item.file.name}
+                  </p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-[10px] text-slate-500 font-medium">
                     {(item.file.size / (1024 * 1024)).toFixed(1)} MB
                   </p>
-                  <span className={`text-[10px] font-bold uppercase tracking-tighter ${item.status === 'completed' ? 'text-cyan-400' :
-                      item.status === 'failed' ? 'text-rose-400' : 'text-slate-500'
-                    }`}>
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-tighter ${
+                      item.status === "completed"
+                        ? "text-cyan-400"
+                        : item.status === "failed"
+                          ? "text-rose-400"
+                          : "text-slate-500"
+                    }`}
+                  >
                     {item.status}
                   </span>
                 </div>
@@ -243,14 +319,15 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
       </section>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
-          <div className="flex-1 w-full md:w-auto">
-             {items.length > 0 && (
-                  <p className="text-xs text-slate-500 italic">
-                      {items.length} files queued. Click &quot;START UPLOAD&quot; on the widget to begin.
-                  </p>
-              )}
-           </div>
-       </div>
+        <div className="flex-1 w-full md:w-auto">
+          {items.length > 0 && (
+            <p className="text-xs text-slate-500 italic">
+              {items.length} files queued. Click &quot;START UPLOAD&quot; on the
+              widget to begin.
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Warning Modal for No Events */}
       {showWarning && (
@@ -264,9 +341,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               <AlertCircle size={24} className="text-rose-400" />
             </div>
             <div>
-              <h3 className="text-white font-bold text-lg mb-1">No Events Found</h3>
+              <h3 className="text-white font-bold text-lg mb-1">
+                No Events Found
+              </h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                You need to create an event first before you can upload photos. Please go to your events dashboard to set one up.
+                You need to create an event first before you can upload photos.
+                Please go to your events dashboard to set one up.
               </p>
             </div>
             <div className="mt-2">
@@ -293,9 +373,12 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               <AlertCircle size={24} className="text-amber-400" />
             </div>
             <div>
-              <h3 className="text-white font-bold text-lg mb-1">Event is Inactive</h3>
+              <h3 className="text-white font-bold text-lg mb-1">
+                Event is Inactive
+              </h3>
               <p className="text-slate-400 text-sm leading-relaxed">
-                This event is marked as inactive. Uploads are rejected for inactive events.
+                This event is marked as inactive. Uploads are rejected for
+                inactive events.
               </p>
             </div>
             <div className="mt-2">

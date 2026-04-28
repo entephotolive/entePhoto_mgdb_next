@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogTitle,
   DialogDescription,
+  DialogHeader,
 } from "@/components/ui/dialog";
 import {
   Tooltip,
@@ -25,13 +26,30 @@ interface PhotoLightboxProps {
   onClose: () => void;
 }
 
-function triggerDownload(url: string, name: string) {
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name || "photo";
-  a.target = "_blank";
-  a.rel = "noopener noreferrer";
-  a.click();
+async function triggerDownload(url: string, name: string) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Network response was not ok");
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = name || "photo.jpg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    console.error("Failed to download photo:", error);
+    // Fallback to the original method
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name || "photo";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.click();
+  }
 }
 
 function triggerShare(url: string, name: string) {
@@ -48,13 +66,16 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
     <Dialog open={!!photo} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="flex flex-col max-w-[95vw] items-center justify-center rounded-[32px] border-white/10 bg-black/95 p-2 shadow-2xl backdrop-blur-3xl md:max-w-6xl md:p-4 outline-none">
         {/* Accessibility: required by Radix, visually hidden */}
-        <DialogTitle className="sr-only">
-          {photo?.name ?? "Photo preview"}
-        </DialogTitle>
-        <DialogDescription className="sr-only">
-          Full screen photo preview with download and share options.
-        </DialogDescription>
+        <DialogHeader className="items-start text-left space-y-2 pb-4 border-b border-white/10">
+          <DialogTitle className="text-left text-xl md:text-2xl font-semibold tracking-tight text-white">
+            Captured Moment
+          </DialogTitle>
 
+          <DialogDescription className="text-left text-sm md:text-base text-white/60 max-w-md leading-relaxed">
+            A timeless frame from your live event collection, preserved in
+            premium clarity.
+          </DialogDescription>
+        </DialogHeader>
         {photo && (
           <div className="flex flex-col items-center gap-4 w-full">
             <img
@@ -76,7 +97,10 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
                       <Share2 size={18} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="border-white/20 bg-black text-white">
+                  <TooltipContent
+                    side="top"
+                    className="border-white/20 bg-black text-white"
+                  >
                     <p>Share</p>
                   </TooltipContent>
                 </Tooltip>
@@ -91,7 +115,10 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
                       <Download size={18} />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="border-white/20 bg-black text-white">
+                  <TooltipContent
+                    side="top"
+                    className="border-white/20 bg-black text-white"
+                  >
                     <p>Download</p>
                   </TooltipContent>
                 </Tooltip>

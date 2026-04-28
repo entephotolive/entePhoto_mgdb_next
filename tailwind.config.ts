@@ -105,7 +105,8 @@ const config: Config = {
         "pulse-slow": "pulse-slow 8s ease-in-out infinite",
       },
       fontFamily: {
-        sans: ["Geist Variable", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
     },

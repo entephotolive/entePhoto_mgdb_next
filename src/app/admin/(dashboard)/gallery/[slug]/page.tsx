@@ -38,10 +38,11 @@ export default async function FolderDetailPage({
     notFound();
   }
 
-  const folderName = meta?.name ?? "All Photos";
-  const photoCount = meta?.photoCount ?? photos.length;
+  const folderName       = meta?.name ?? "All Photos";
+  const photoCount       = meta?.photoCount ?? photos.length;
   const canonicalEventId = meta?.eventId ?? resolvedEventId;
-  const eventTitle = (event && typeof event !== "string" && !("error" in event)) ? event.title : "event";
+  const eventTitle       = (event && typeof event !== "string" && !("error" in event)) ? event.title : "event";
+  const eventDate        = (event && typeof event !== "string" && !("error" in event)) ? event.date  : undefined;
 
   return (
     <div className="min-h-screen">
@@ -81,6 +82,7 @@ export default async function FolderDetailPage({
         folderId={folderId}
         eventId={canonicalEventId}
         eventTitle={eventTitle}
+        eventDate={eventDate}
         userId={session.id}
       />
     </div>

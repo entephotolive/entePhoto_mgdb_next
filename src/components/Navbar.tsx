@@ -29,6 +29,9 @@ export default function Navbar() {
     {
       name: "Studio",
       href: eventBasePath ? `${eventBasePath}/studio` : "/qr-scanner",
+    },{
+      name:"face scan",
+      href: eventBasePath? `${eventBasePath}/scan` : "/face-scan",
     },
   ];
 
@@ -58,19 +61,19 @@ export default function Navbar() {
               style={{ width: "auto", height: "auto" }}
               priority
             />
-            <span className="font-semibold text-white">Ente photo</span>
+            <span className="font-heading font-bold text-lg md:text-xl tracking-tight text-white drop-shadow-md">Ente photo</span>
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-4 lg:gap-6 text-sm text-gray-300">
+          <div className="hidden md:flex items-center gap-4 lg:gap-6 text-[15px] text-gray-300">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`px-3 lg:px-4 py-2 rounded-full cursor-pointer transition ${
+                className={`font-heading font-medium tracking-wide px-3 lg:px-4 py-2 rounded-full cursor-pointer transition ${
                   isActive(link.href)
-                    ? "bg-white/20 text-white scale-105"
-                    : "hover:bg-white/10 hover:scale-105"
+                    ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)] scale-105"
+                    : "hover:bg-white/10 hover:text-white hover:scale-105"
                 }`}
               >
                 {link.name}
@@ -78,8 +81,8 @@ export default function Navbar() {
             ))}
 
             <div className="w-px h-6 bg-white/20 mx-2"></div>
-            <div className="flex items-center gap-2 text-sm text-red-400">
-              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+            <div className="flex items-center gap-2 font-heading text-xs font-bold uppercase tracking-widest text-red-400">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
               LIVE
             </div>
           </div>
@@ -129,9 +132,9 @@ export default function Navbar() {
                     key={link.name}
                     href={link.href}
                     onClick={() => setOpen(false)}
-                    className={`w-48 rounded-lg border border-white/20 px-4 py-2 text-center text-sm font-medium transition hover:scale-105 cursor-pointer ${
+                    className={`font-heading tracking-wide w-48 rounded-lg border border-white/20 px-4 py-2 text-center text-[15px] font-medium transition hover:scale-105 cursor-pointer ${
                       isActive(link.href)
-                        ? "bg-white/20 text-white shadow-md"
+                        ? "bg-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                         : "bg-white/10 text-gray-200 hover:bg-white/20 hover:text-white"
                     }`}
                   >
@@ -139,8 +142,8 @@ export default function Navbar() {
                   </Link>
                 ))}
 
-                <div className="mt-2 flex items-center gap-2 text-xs text-red-400">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+                <div className="mt-2 flex items-center gap-2 font-heading text-[11px] font-bold uppercase tracking-widest text-red-400">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]"></span>
                   LIVE
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/geist";
+import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
 
@@ -13,16 +13,16 @@ export const metadata = {
   },
 };
 import { SceneBackground } from "@/components/ui/scene-background";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-heading" });
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
+    <html lang="en" className={cn("font-sans", plusJakartaSans.variable, outfit.variable)}>
       <body className="font-sans antialiased">
         <SceneBackground
           intensity="medium"
