@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 
 export function GET(request: Request) {
   const url = new URL(request.url);
-  const host = "https://entephoto.co.in";
-  const redirectUri = `${host}/api/auth/callback/google`;
+  const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
