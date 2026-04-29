@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           Overview
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-white lg:text-4xl">
-          Welcome back{snapshot?.profile?.name ? `, ${snapshot.profile.name}` : ""} 👋
+          Welcome back{snapshot?.profile?.name ? `, ${snapshot.profile.name}` : ""} 
         </h1>
         <p className="mt-1 text-sm text-slate-500 max-w-xl">
           {snapshot?.profile?.studioName
