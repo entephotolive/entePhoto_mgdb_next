@@ -23,7 +23,7 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" className={cn("font-sans", plusJakartaSans.variable, outfit.variable)}>
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <SceneBackground
           intensity="medium"
           className="flex flex-col min-h-screen"
