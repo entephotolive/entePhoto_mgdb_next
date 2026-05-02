@@ -41,14 +41,17 @@ async function triggerDownload(url: string, name: string) {
     document.body.removeChild(a);
     URL.revokeObjectURL(objectUrl);
   } catch (error) {
-    console.error("Failed to download photo:", error);
-    // Fallback to the original method
+    console.error("Direct fetch failed, falling back to proxy download:", error);
+    
+    // Fallback: use our server-side proxy route to avoid CORS issues and force download
+    const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "photo.jpg")}`;
+    
     const a = document.createElement("a");
-    a.href = url;
-    a.download = name || "photo";
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
+    a.href = proxyUrl;
+    a.download = name || "photo.jpg";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   }
 }
 
@@ -64,42 +67,44 @@ function triggerShare(url: string, name: string) {
 export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
   return (
     <Dialog open={!!photo} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex flex-col max-w-[95vw] items-center justify-center rounded-[32px] border-white/10 bg-black/95 p-2 shadow-2xl backdrop-blur-3xl md:max-w-6xl md:p-4 outline-none">
-        {/* Accessibility: required by Radix, visually hidden */}
-        <DialogHeader className="items-start text-left space-y-2 pb-4 border-b border-white/10">
-          <DialogTitle className="text-left text-xl md:text-2xl font-semibold tracking-tight text-white">
+      <DialogContent className="flex flex-col gap-4 max-w-[95vw] w-full md:max-w-5xl rounded-[32px] border border-white/10 bg-white/5 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] backdrop-blur-3xl outline-none">
+        <DialogHeader className="w-full text-left space-y-1 pb-2 border-b border-white/10">
+          <DialogTitle className="text-xl md:text-2xl font-bold tracking-tight text-white drop-shadow-md">
             Captured Moment
           </DialogTitle>
-
-          <DialogDescription className="text-left text-sm md:text-base text-white/60 max-w-md leading-relaxed">
-            A timeless frame from your live event collection, preserved in
-            premium clarity.
+          <DialogDescription className="text-sm md:text-base text-white/70">
+            A timeless frame from your live event collection, preserved in premium clarity.
           </DialogDescription>
         </DialogHeader>
-        {photo && (
-          <div className="flex flex-col items-center gap-4 w-full">
-            <img
-              src={photo.url}
-              alt={photo.name}
-              className="max-h-[78vh] w-auto rounded-2xl object-contain"
-            />
 
+        {photo && (
+          <div className="flex flex-col items-center gap-5 w-full">
+            {/* Image Container */}
+            <div className="relative flex w-full justify-center items-center rounded-2xl bg-black/40 ring-1 ring-white/10 backdrop-blur-md overflow-hidden shadow-inner">
+              <img
+                src={photo.url}
+                alt={photo.name}
+                className="max-h-[68vh] w-auto object-contain"
+              />
+            </div>
+
+            {/* Actions Bar */}
             <TooltipProvider delayDuration={200}>
-              <div className="flex items-center gap-3 rounded-full border border-white/20 bg-black/50 px-4 py-2 shadow-[0_0_20px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+              <div className="flex items-center gap-4 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-[0_4px_24px_0_rgba(0,0,0,0.3)] backdrop-blur-2xl transition-all">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => triggerShare(photo.url, photo.name)}
-                      className="rounded-full text-white transition hover:scale-110 hover:bg-white/10 hover:text-gray-300"
+                      className="rounded-full h-11 w-11 text-zinc-200 transition-all hover:scale-105 hover:bg-white/20 hover:text-white"
                     >
-                      <Share2 size={18} />
+                      <Share2 size={20} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent
                     side="top"
-                    className="border-white/20 bg-black text-white"
+                    className="border border-white/20 bg-black/50 text-white rounded-lg px-3 py-1.5 text-xs font-medium backdrop-blur-xl"
                   >
                     <p>Share</p>
                   </TooltipContent>
@@ -110,14 +115,14 @@ export function PhotoLightbox({ photo, onClose }: PhotoLightboxProps) {
                     <Button
                       size="icon"
                       onClick={() => triggerDownload(photo.url, photo.name)}
-                      className="rounded-full bg-cyan-400 text-black shadow-[0_0_15px_rgba(34,211,238,0.5)] transition hover:scale-110 hover:bg-cyan-300"
+                      className="rounded-full h-11 w-11 bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all hover:scale-105 hover:bg-cyan-300"
                     >
-                      <Download size={18} />
+                      <Download size={20} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent
                     side="top"
-                    className="border-white/20 bg-black text-white"
+                    className="border border-white/20 bg-black/50 text-white rounded-lg px-3 py-1.5 text-xs font-medium backdrop-blur-xl"
                   >
                     <p>Download</p>
                   </TooltipContent>

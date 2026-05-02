@@ -20,7 +20,8 @@ export default function FaceScanPage() {
 
     async function startCamera() {
       if (typeof window === "undefined") return;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+        return;
 
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -31,7 +32,9 @@ export default function FaceScanPage() {
         }
       } catch (error: any) {
         if (error.name === "NotAllowedError") {
-          setErrorMsg("Camera permission denied. Please allow camera access and refresh.");
+          setErrorMsg(
+            "Camera permission denied. Please allow camera access and refresh.",
+          );
           setStatus("error");
         } else if (error.name === "NotFoundError") {
           setErrorMsg("No camera found on this device.");
@@ -69,7 +72,9 @@ export default function FaceScanPage() {
 
       const res = await fetch(dataUrl);
       const blob = await res.blob();
-      const imageFile = new File([blob], "scanned_face.jpg", { type: "image/jpeg" });
+      const imageFile = new File([blob], "scanned_face.jpg", {
+        type: "image/jpeg",
+      });
 
       const formData = new FormData();
       formData.append("image", imageFile);
@@ -83,13 +88,13 @@ export default function FaceScanPage() {
 
       // Save cookie
       document.cookie = `scan_response=${encodeURIComponent(
-        JSON.stringify(apiResponse.data)
+        JSON.stringify(apiResponse.data),
       )}; path=/; max-age=${60 * 60 * 24 * 30}`;
 
       if (apiResponse.data?.matched_images) {
         localStorage.setItem(
           "matched_images",
-          JSON.stringify(apiResponse.data.matched_images)
+          JSON.stringify(apiResponse.data.matched_images),
         );
       }
 
@@ -118,15 +123,15 @@ export default function FaceScanPage() {
     status === "success"
       ? "border-emerald-400"
       : status === "error"
-      ? "border-red-400"
-      : "border-cyan-400/30";
+        ? "border-red-400"
+        : "border-cyan-400/30";
 
   const glowClass =
     status === "success"
       ? "bg-emerald-400/10"
       : status === "error"
-      ? "bg-red-400/10"
-      : "bg-cyan-400/10";
+        ? "bg-red-400/10"
+        : "bg-cyan-400/10";
 
   return (
     <div
@@ -147,7 +152,9 @@ export default function FaceScanPage() {
             className="h-8 w-auto rounded-full object-cover sm:h-10"
             alt="Ente photo logo"
           />
-          <span className="text-sm font-semibold text-white sm:text-base">Ente photo</span>
+          <span className="text-sm font-semibold text-white sm:text-base">
+            Ente photo
+          </span>
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
@@ -161,14 +168,19 @@ export default function FaceScanPage() {
 
       {/* Main content */}
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
-
         {/* Title */}
-        <h1 className="text-3xl font-semibold sm:text-4xl">Identity Discovery</h1>
-        <p className="mb-10 text-sm text-gray-300">Biometric authentication active</p>
+        <h1 className="text-3xl font-semibold sm:text-4xl">
+          Identity Discovery
+        </h1>
+        <p className="mb-10 text-sm text-gray-300">
+          Biometric authentication active
+        </p>
 
         {/* Camera frame */}
         <div className="relative flex h-80 w-80 items-center justify-center sm:h-96 sm:w-96">
-          <div className={`absolute h-full w-full rounded-[3rem] blur-3xl transition-colors duration-700 ${glowClass}`} />
+          <div
+            className={`absolute h-full w-full rounded-[3rem] blur-3xl transition-colors duration-700 ${glowClass}`}
+          />
 
           <div
             className={`relative flex h-64 w-64 items-center justify-center overflow-hidden rounded-[2.5rem] border-2 bg-black/40 backdrop-blur sm:h-80 sm:w-80 transition-all duration-700 ${borderClass}`}
@@ -206,14 +218,23 @@ export default function FaceScanPage() {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
                   <path
                     className="opacity-75"
                     fill="currentColor"
                     d="M4 12a8 8 0 018-8v8z"
                   />
                 </svg>
-                <span className="text-xs text-cyan-300 tracking-widest">Analyzing…</span>
+                <span className="text-xs text-cyan-300 tracking-widest">
+                  Analyzing…
+                </span>
               </div>
             )}
 
@@ -227,9 +248,15 @@ export default function FaceScanPage() {
                   strokeWidth={2.5}
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
-                <span className="text-xs font-semibold text-emerald-300 tracking-widest">Match found!</span>
+                <span className="text-xs font-semibold text-emerald-300 tracking-widest">
+                  face detected ✓
+                </span>
               </div>
             )}
 
@@ -243,9 +270,15 @@ export default function FaceScanPage() {
                   strokeWidth={2}
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
-                <span className="text-[10px] leading-4 text-red-300 text-center">{errorMsg}</span>
+                <span className="text-[10px] leading-4 text-red-300 text-center">
+                  {errorMsg}
+                </span>
               </div>
             )}
 
@@ -257,28 +290,36 @@ export default function FaceScanPage() {
             {status === "success"
               ? "Redirecting to your gallery…"
               : status === "error"
-              ? "Tap below to retry"
-              : "Align your face to find your moments"}
+                ? "Tap below to retry"
+                : "Align your face to find your moments"}
           </div>
         </div>
 
         {/* CTA button */}
         <button
-          onClick={status === "error" ? () => { setStatus("idle"); setErrorMsg(""); } : handleScan}
+          onClick={
+            status === "error"
+              ? () => {
+                  setStatus("idle");
+                  setErrorMsg("");
+                }
+              : handleScan
+          }
           disabled={isScanning || status === "success"}
           className={`mt-14 rounded-full px-8 py-3 font-medium transition duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed
-            ${status === "error"
-              ? "bg-gradient-to-r from-red-500 to-orange-400"
-              : "bg-gradient-to-r from-pink-500 to-orange-400"
+            ${
+              status === "error"
+                ? "bg-gradient-to-r from-red-500 to-orange-400"
+                : "bg-gradient-to-r from-pink-500 to-orange-400"
             }`}
         >
           {isScanning
             ? "Scanning…"
             : status === "success"
-            ? "Matched ✓"
-            : status === "error"
-            ? "Try Again →"
-            : "Start Scan →"}
+              ? "Matched ✓"
+              : status === "error"
+                ? "Try Again →"
+                : "Start Scan →"}
         </button>
       </div>
     </div>
