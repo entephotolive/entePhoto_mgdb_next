@@ -131,22 +131,37 @@ function resolveImageUrl(rawUrl: unknown): string | null {
   if (typeof rawUrl !== "string" || rawUrl.trim().length === 0) return null;
 
   const normalized = rawUrl.trim().replace(/\\/g, "/");
-  if (/^https?:\/\//i.test(normalized)) return normalized;
+  let result = normalized;
 
-  let relative = normalized;
-  // If we only have a storage name like `public/<event>/<file>.jpg`, turn it into `/media/public/...`
-  if (!relative.startsWith("/") && relative.startsWith("public/")) {
-    relative = `/media/${relative}`;
-  } else if (!relative.startsWith("/") && relative.startsWith("media/")) {
-    relative = `/${relative}`;
-  } else if (!relative.startsWith("/")) {
-    relative = `/${relative}`;
+  if (!/^https?:\/\//i.test(normalized)) {
+    let relative = normalized;
+    // If we only have a storage name like `public/<event>/<file>.jpg`, turn it into `/media/public/...`
+    if (!relative.startsWith("/") && relative.startsWith("public/")) {
+      relative = `/media/${relative}`;
+    } else if (!relative.startsWith("/") && relative.startsWith("media/")) {
+      relative = `/${relative}`;
+    } else if (!relative.startsWith("/")) {
+      relative = `/${relative}`;
+    }
+
+    const base = process.env.NEXT_PUBLIC_PYTHON_API_URL?.replace(/\/+$/g, "");
+    if (base) {
+      result = `${base}${relative}`;
+    } else {
+      result = relative;
+    }
   }
 
-  const base = process.env.NEXT_PUBLIC_PYTHON_API_URL?.replace(/\/+$/g, "");
-  if (!base) return relative;
+  // Force HTTPS for non-local URLs to prevent Mixed Content errors
+  if (
+    result.startsWith("http://") &&
+    !result.includes("localhost") &&
+    !result.includes("127.0.0.1")
+  ) {
+    result = result.replace(/^http:\/\//i, "https://");
+  }
 
-  return `${base}${relative}`;
+  return result;
 }
 
 function resolveDocRawUrl(doc: any): string | null {
