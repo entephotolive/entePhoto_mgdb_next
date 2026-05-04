@@ -89,7 +89,7 @@ export default function FaceScanPage() {
       // Save cookie
       document.cookie = `scan_response=${encodeURIComponent(
         JSON.stringify(apiResponse.data),
-      )}; path=/; max-age=${60 * 60 * 24 * 30}`;
+      )}; path=/; max-age=${60 * 60 * 5}`;
 
       if (apiResponse.data?.matched_images) {
         localStorage.setItem(
