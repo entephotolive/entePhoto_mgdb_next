@@ -221,7 +221,10 @@ export default function BuildForEveryone() {
 
             {/* FIXED BUTTON POSITION */}
             <div className="mt-12 mt-auto">
-              <button onClick={() => router.push("/admin/login")}className="w-full py-4 rounded-xl bg-green-600 text-white font-semibold text-base hover:bg-green-700 transition">
+              <button 
+                onClick={() => router.push("/admin/login")} 
+                className="w-full py-4 rounded-xl bg-green-600 text-white font-semibold text-base hover:bg-green-700 transition"
+              >
                 Create Event →
               </button>
             </div>
@@ -229,12 +232,12 @@ export default function BuildForEveryone() {
         </div>
 
         {/* CTA */}
-        <motion.div variants={scaleIn} className="mt-24 flex justify-center">
-          <div
+        <motion.div id="whats-app" variants={scaleIn} className="mt-24 flex justify-center">
+          <div 
             className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-6 
           shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-gray-200/40 max-w-xl w-full text-center overflow-hidden"
           >
-            <div className="pointer-events-none absolute w-[220px] h-[160px] bg-blue-100 rounded-[60%] blur-2xl opacity-40 left-1/2 -translate-x-1/2 top-0"></div>
+            <div  className="pointer-events-none absolute w-[220px] h-[160px] bg-blue-100 rounded-[60%] blur-2xl opacity-40 left-1/2 -translate-x-1/2 top-0"></div>
 
             <div className="relative z-10">
               <motion.p

@@ -3,11 +3,13 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 import { Camera, ImageIcon, ScanFace, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 /* 🔥 WORD-BY-WORD HEADING */
 const headingWords = ["See", "Only", "Your", "Moments."];
 
 export default function Hero() {
+  const router = useRouter();
   const ref = useRef(null);
 
   const isInView = useInView(ref, {
@@ -23,7 +25,6 @@ export default function Hero() {
     >
       {/* ================= FLOATING ICONS ================= */}
       <div className="absolute inset-0 pointer-events-none z-10">
-
         {/* LEFT TOP */}
         <motion.div
           className="absolute left-[8%] top-[30%] flex flex-col items-center opacity-80"
@@ -112,7 +113,6 @@ export default function Hero() {
 
       {/* ================= MAIN CONTENT ================= */}
       <div className="max-w-6xl mx-auto px-6 text-center relative z-20">
-
         {/* 🔥 PREMIUM HEADING */}
         <motion.h1
           initial="hidden"
@@ -155,8 +155,8 @@ export default function Hero() {
           transition={{ delay: 0.6 }}
           className="mt-6 text-gray-500 text-lg max-w-xl mx-auto"
         >
-          Scan your face and instantly access only your photos from events.
-          No searching. No confusion.
+          Scan your face and instantly access only your photos from events. No
+          searching. No confusion.
         </motion.p>
 
         {/* BUTTONS */}
@@ -166,11 +166,20 @@ export default function Hero() {
           transition={{ delay: 0.8 }}
           className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4"
         >
-          <button className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full text-white font-semibold text-sm sm:text-base bg-gradient-to-r from-orange-400 to-purple-600 shadow-xl hover:scale-105 transition">
+          <button 
+            onClick={() => router.push("/qr-scanner")}
+            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full text-white font-semibold text-sm sm:text-base bg-gradient-to-r from-orange-400 to-purple-600 shadow-xl hover:scale-105 transition">
             Try It Now →
           </button>
 
-          <button className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full border border-purple-100 bg-white text-gray-700 font-semibold text-sm sm:text-base hover:bg-gray-50 transition">
+          <button
+            onClick={() => {
+              document
+                .getElementById("features")
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 rounded-full border border-purple-100 bg-white text-gray-700 font-semibold text-sm sm:text-base hover:bg-gray-50 transition"
+          >
             Learn More
           </button>
         </motion.div>
@@ -188,9 +197,7 @@ export default function Hero() {
             }}
             initial={{ opacity: 0, y: 80, scale: 0.9 }}
             animate={
-              isInView
-                ? { opacity: 1, y: 0, scale: 1 }
-                : { opacity: 0, y: 80 }
+              isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 80 }
             }
             transition={{ delay: i * 0.2, duration: 0.6 }}
           />
@@ -217,41 +224,58 @@ export default function Hero() {
       </motion.div>
 
       {/* bottom colors */}
-    <div className="absolute bottom-0 left-0 w-full h-[450px] pointer-events-none z-0">
+      <div className="absolute bottom-0 left-0 w-full h-[450px] pointer-events-none z-0">
+        {/* 🔥 center soft radial glow (NEW) */}
+        <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[70%] h-[250px] bg-gradient-radial from-purple-200/40 via-pink-100/20 to-transparent blur-[100px]" />
 
-      {/* 🔥 center soft radial glow (NEW) */}
-      <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[70%] h-[250px] bg-gradient-radial from-purple-200/40 via-pink-100/20 to-transparent blur-[100px]" />
+        {/* 🔥 subtle vertical depth fade (NEW) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-50/20 to-pink-100/40" />
 
-      {/* 🔥 subtle vertical depth fade (NEW) */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-50/20 to-pink-100/40" />
+        {/* LEFT SHAPE (same but slightly deeper) */}
+        <div className="absolute -bottom-10 -left-16 w-[450px] md:w-[600px] opacity-90">
+          <svg viewBox="0 0 200 200">
+            <path
+              fill="#E9D5FF"
+              d="M40,190 Q10,110 60,50 Q100,110 40,190"
+              fillOpacity="0.6"
+            />
+            <path
+              fill="#A855F7"
+              d="M20,180 Q-10,120 40,60 Q70,120 20,180"
+              fillOpacity="0.35"
+            />
+          </svg>
+        </div>
 
-      {/* LEFT SHAPE (same but slightly deeper) */}
-      <div className="absolute -bottom-10 -left-16 w-[450px] md:w-[600px] opacity-90">
-        <svg viewBox="0 0 200 200">
-          <path fill="#E9D5FF" d="M40,190 Q10,110 60,50 Q100,110 40,190" fillOpacity="0.6" />
-          <path fill="#A855F7" d="M20,180 Q-10,120 40,60 Q70,120 20,180" fillOpacity="0.35" />
-        </svg>
+        {/* RIGHT SHAPE */}
+        <div className="absolute -bottom-10 -right-16 w-[450px] md:w-[600px] opacity-90">
+          <svg viewBox="0 0 200 200">
+            <path
+              fill="#FFEDD5"
+              d="M160,190 Q190,110 140,50 Q100,110 160,190"
+              fillOpacity="0.6"
+            />
+            <path
+              fill="#F97316"
+              d="M180,180 Q210,120 160,60 Q130,120 180,180"
+              fillOpacity="0.35"
+            />
+          </svg>
+        </div>
+
+        {/* SOFT FLOOR */}
+        <div className="absolute bottom-0 w-full h-[220px] bg-gradient-to-t from-pink-100 via-purple-50 to-transparent opacity-90" />
+
+        {/* PURPLE GLOW (adjusted) */}
+        <div className="absolute bottom-[-60px] left-[-5%] w-[55%] h-[280px] bg-purple-300/40 rounded-full blur-[120px]" />
+
+        {/* ORANGE GLOW (adjusted) */}
+        <div className="absolute bottom-[-60px] right-[-5%] w-[55%] h-[280px] bg-orange-300/40 rounded-full blur-[120px]" />
       </div>
-
-      {/* RIGHT SHAPE */}
-      <div className="absolute -bottom-10 -right-16 w-[450px] md:w-[600px] opacity-90">
-        <svg viewBox="0 0 200 200">
-          <path fill="#FFEDD5" d="M160,190 Q190,110 140,50 Q100,110 160,190" fillOpacity="0.6" />
-          <path fill="#F97316" d="M180,180 Q210,120 160,60 Q130,120 180,180" fillOpacity="0.35" />
-        </svg>
-      </div>
-
-      {/* SOFT FLOOR */}
-      <div className="absolute bottom-0 w-full h-[220px] bg-gradient-to-t from-pink-100 via-purple-50 to-transparent opacity-90" />
-
-      {/* PURPLE GLOW (adjusted) */}
-      <div className="absolute bottom-[-60px] left-[-5%] w-[55%] h-[280px] bg-purple-300/40 rounded-full blur-[120px]" />
-
-      {/* ORANGE GLOW (adjusted) */}
-      <div className="absolute bottom-[-60px] right-[-5%] w-[55%] h-[280px] bg-orange-300/40 rounded-full blur-[120px]" />
-
-    </div>
-
+      
+      
     </section>
+    
+  
   );
 }
