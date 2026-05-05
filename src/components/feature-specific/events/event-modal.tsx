@@ -1,11 +1,20 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { X, Calendar, MapPin, Tag, Plus, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  X,
+  Calendar,
+  MapPin,
+  Tag,
+  Plus,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createEventAction } from "@/app/admin/(dashboard)/events/event.actions";
+import { createEventAction } from "@/app/photographer/(panel)/events/event.actions";
 
 interface EventModalProps {
   open: boolean;
@@ -13,12 +22,13 @@ interface EventModalProps {
   createdBy: string;
 }
 
-
-
 export function EventModal({ open, onClose, createdBy }: EventModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, startTransition] = useTransition();
-  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   function handleClose() {
     if (isPending) return;
@@ -52,7 +62,10 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
           window.location.reload();
         }, 1200);
       } else {
-        setFeedback({ type: "error", message: "error" in result ? result.error : "Failed to create event." });
+        setFeedback({
+          type: "error",
+          message: "error" in result ? result.error : "Failed to create event.",
+        });
       }
     });
   }
@@ -79,7 +92,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
           className={cn(
             "relative w-full max-w-lg rounded-2xl border border-white/10",
             "bg-[#0f1117] shadow-2xl shadow-black/60",
-            "animate-in fade-in zoom-in-95 duration-200"
+            "animate-in fade-in zoom-in-95 duration-200",
           )}
           onClick={(e) => e.stopPropagation()}
         >
@@ -90,10 +103,15 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
                 <Plus size={16} className="text-cyan-400" />
               </div>
               <div>
-                <h2 id="modal-title" className="text-base font-semibold text-white">
+                <h2
+                  id="modal-title"
+                  className="text-base font-semibold text-white"
+                >
                   Add New Event
                 </h2>
-                <p className="text-xs text-slate-500">Fill in the event details below</p>
+                <p className="text-xs text-slate-500">
+                  Fill in the event details below
+                </p>
               </div>
             </div>
             <button
@@ -107,11 +125,17 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
           </div>
 
           {/* Form */}
-          <form ref={formRef} onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-
+          <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            className="px-6 py-5 space-y-4"
+          >
             {/* Event Title */}
             <div className="space-y-1.5">
-              <label htmlFor="evt-title" className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+              <label
+                htmlFor="evt-title"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider"
+              >
                 <Tag size={11} />
                 Event Title
               </label>
@@ -128,7 +152,10 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
 
             {/* Date & Time */}
             <div className="space-y-1.5">
-              <label htmlFor="evt-date" className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+              <label
+                htmlFor="evt-date"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider"
+              >
                 <Calendar size={11} />
                 Date &amp; Time
               </label>
@@ -144,7 +171,10 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
 
             {/* Location */}
             <div className="space-y-1.5">
-              <label htmlFor="evt-location" className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider">
+              <label
+                htmlFor="evt-location"
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 uppercase tracking-wider"
+              >
                 <MapPin size={11} />
                 Location
               </label>
@@ -159,7 +189,6 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
               />
             </div>
 
-
             {/* Feedback */}
             {feedback && (
               <div
@@ -167,13 +196,14 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
                   "flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm border",
                   feedback.type === "success"
                     ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                    : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+                    : "bg-rose-500/10 border-rose-500/20 text-rose-400",
                 )}
               >
-                {feedback.type === "success"
-                  ? <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
-                  : <AlertCircle size={15} className="mt-0.5 shrink-0" />
-                }
+                {feedback.type === "success" ? (
+                  <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                )}
                 {feedback.message}
               </div>
             )}

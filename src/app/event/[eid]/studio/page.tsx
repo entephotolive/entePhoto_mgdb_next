@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getStudioByEventId } from "@/app/admin/(dashboard)/profile/action";
+import { getStudioByEventId } from "@/app/photographer/(panel)/profile/action";
 import { StudioView } from "./studio-view";
 
 interface Props {

@@ -18,14 +18,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateFolderAction, deleteFolderAction } from "@/app/admin/(dashboard)/gallery/action";
+import {
+  updateFolderAction,
+  deleteFolderAction,
+} from "@/app/photographer/(panel)/gallery/action";
 
 interface FolderActionsMenuProps {
   folderId: string;
   folderName: string;
 }
 
-export function FolderActionsMenu({ folderId, folderName }: FolderActionsMenuProps) {
+export function FolderActionsMenu({
+  folderId,
+  folderName,
+}: FolderActionsMenuProps) {
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [newName, setNewName] = useState(folderName);
@@ -135,7 +141,9 @@ export function FolderActionsMenu({ folderId, folderName }: FolderActionsMenuPro
                 className="bg-sky-500 hover:bg-sky-600 text-white border-0"
                 disabled={isSubmitting || !newName.trim()}
               >
-                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isSubmitting && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 Save changes
               </Button>
             </DialogFooter>
@@ -149,7 +157,11 @@ export function FolderActionsMenu({ folderId, folderName }: FolderActionsMenuPro
           <DialogHeader>
             <DialogTitle>Delete Folder</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Are you sure you want to delete <span className="text-white font-semibold">&quot;{folderName}&quot;</span>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <span className="text-white font-semibold">
+                &quot;{folderName}&quot;
+              </span>
+              ? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {errorMsg && <p className="text-sm text-red-500 mb-4">{errorMsg}</p>}
@@ -169,7 +181,9 @@ export function FolderActionsMenu({ folderId, folderName }: FolderActionsMenuPro
               className="bg-red-500 hover:bg-red-600 text-white border-0"
               disabled={isSubmitting}
             >
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSubmitting && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
               Delete Folder
             </Button>
           </DialogFooter>

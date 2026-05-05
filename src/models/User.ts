@@ -31,7 +31,6 @@ const userSchema = new Schema(
     avatarUrl: { type: String },
     role: {
       type: String,
-      enum: ["admin", "photographer"],
       default: "photographer",
       required: true,
     },

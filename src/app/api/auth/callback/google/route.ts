@@ -10,10 +10,12 @@ export async function GET(request: Request) {
     const error = url.searchParams.get("error");
 
     if (error || !code) {
-      return NextResponse.redirect(new URL("/login?error=Google authentication failed.", request.url));
+      return NextResponse.redirect(
+        new URL("/login?error=Google authentication failed.", request.url),
+      );
     }
 
-   const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+    const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
 
     // VERY IMPORTANT: Use the exact NextAuth default callback URL structure here
     const redirectUri = `${host}/api/auth/callback/google`;
@@ -46,9 +48,12 @@ export async function GET(request: Request) {
     const tokens = await tokenResponse.json();
 
     // 2. Fetch the user's profile information
-    const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
+    const userResponse = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      },
+    );
 
     if (!userResponse.ok) {
       throw new Error("Failed to fetch user profile from Google.");
@@ -67,7 +72,12 @@ export async function GET(request: Request) {
     let user = await UserModel.findOne({ email });
 
     if (!user) {
-      return NextResponse.redirect(new URL("/admin/login?error=You are not authorized to login. contact admin", request.url));
+      return NextResponse.redirect(
+        new URL(
+          "/photographer/login?error=You are not authorized to login. contact photographer",
+          request.url,
+        ),
+      );
     }
 
     const token = await signSessionToken({
@@ -76,18 +86,17 @@ export async function GET(request: Request) {
       email: user.email,
     });
 
-
-
     // 5. Create redirect response and set the JWT auth cookie
-    const response = NextResponse.redirect(`${host}/admin/dashboard`);
+    const response = NextResponse.redirect(`${host}/photographer/dashboard`);
     const cookieOptions = getAuthCookieOptions();
 
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
     return response;
-
   } catch (error) {
     console.error("Google Auth Error:", error);
-    return NextResponse.redirect(new URL("/login?error=Authentication error occurred.", request.url));
+    return NextResponse.redirect(
+      new URL("/login?error=Authentication error occurred.", request.url),
+    );
   }
 }

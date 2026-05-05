@@ -27,7 +27,7 @@ const METRIC_CONFIG = [
     bg: "bg-cyan-400/10",
     border: "border-cyan-400/20",
     glow: "shadow-[0_0_30px_rgba(34,211,238,0.08)]",
-    href: "/admin/events",
+    href: "/photographer/events",
   },
   {
     icon: FolderOpen,
@@ -35,7 +35,7 @@ const METRIC_CONFIG = [
     bg: "bg-violet-400/10",
     border: "border-violet-400/20",
     glow: "shadow-[0_0_30px_rgba(167,139,250,0.08)]",
-    href: "/admin/gallery",
+    href: "/photographer/gallery",
   },
   {
     icon: Users,
@@ -43,7 +43,7 @@ const METRIC_CONFIG = [
     bg: "bg-emerald-400/10",
     border: "border-emerald-400/20",
     glow: "shadow-[0_0_30px_rgba(52,211,153,0.08)]",
-    href: "/admin/gallery",
+    href: "/photographer/gallery",
   },
 ];
 export const metadata = {
@@ -59,14 +59,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8 pb-4">
-
       {/* ── Header ── */}
       <div className="flex flex-col gap-1 pt-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-cyan-400/70">
           Overview
         </p>
         <h1 className="text-3xl font-bold tracking-tight text-white lg:text-4xl">
-          Welcome back{snapshot?.profile?.name ? `, ${snapshot.profile.name}` : ""} 
+          Welcome back
+          {snapshot?.profile?.name ? `, ${snapshot.profile.name}` : ""}
         </h1>
         <p className="mt-1 text-sm text-slate-500 max-w-xl">
           {snapshot?.profile?.studioName
@@ -82,7 +82,6 @@ export default async function DashboardPage() {
           const Icon = cfg.icon;
           return (
             <Link key={metric.label} href={cfg.href}>
-              
               <Card
                 className={`group relative overflow-hidden border ${cfg.border} bg-white/[0.03] ${cfg.glow} hover:bg-white/[0.06] transition-all duration-300 cursor-pointer`}
               >
@@ -93,9 +92,7 @@ export default async function DashboardPage() {
                     >
                       <Icon className={`${cfg.color} h-5 w-5`} />
                     </div>
-                    <ArrowUpRight
-                      className="text-slate-600 group-hover:text-slate-400 transition-colors h-4 w-4"
-                    />
+                    <ArrowUpRight className="text-slate-600 group-hover:text-slate-400 transition-colors h-4 w-4" />
                   </div>
                   <div className="mt-4">
                     <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
@@ -104,7 +101,9 @@ export default async function DashboardPage() {
                     <p className={`mt-2 text-4xl font-bold ${cfg.color}`}>
                       {metric.value}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">{metric.delta}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {metric.delta}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -137,7 +136,6 @@ export default async function DashboardPage() {
 
       {/* ── Main Grid ── */}
       <section className="grid gap-6 xl:grid-cols-2">
-
         {/* Recent Events */}
         <Card className="border-white/[0.07] bg-white/[0.025]">
           <CardHeader className="pb-3">
@@ -151,7 +149,7 @@ export default async function DashboardPage() {
                 </CardTitle>
               </div>
               <Link
-                href="/admin/events"
+                href="/photographer/events"
                 className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
               >
                 View all
@@ -205,7 +203,7 @@ export default async function DashboardPage() {
                 <Calendar className="h-7 w-7 text-slate-700" />
                 <p className="text-sm text-slate-500">No events yet.</p>
                 <Link
-                  href="/admin/events"
+                  href="/photographer/events"
                   className="text-xs text-cyan-400 hover:underline"
                 >
                   Create your first event →
@@ -228,7 +226,7 @@ export default async function DashboardPage() {
                 </CardTitle>
               </div>
               <Link
-                href="/admin/gallery"
+                href="/photographer/gallery"
                 className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors"
               >
                 View all
@@ -289,7 +287,7 @@ export default async function DashboardPage() {
                   </CardTitle>
                 </div>
                 <Link
-                  href="/admin/profile"
+                  href="/photographer/profile"
                   className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
                 >
                   Edit profile
@@ -309,7 +307,7 @@ export default async function DashboardPage() {
                       className="h-14 w-14 rounded-2xl object-cover"
                     />
                   ) : (
-                    snapshot.profile.name?.charAt(0)?.toUpperCase() ?? "P"
+                    (snapshot.profile.name?.charAt(0)?.toUpperCase() ?? "P")
                   )}
                 </div>
 
@@ -352,4 +350,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Images } from "lucide-react";
 import { requireSession } from "@/lib/services/auth.service";
-import { listPhotosByFolder, getFolderMeta } from "@/lib/services/photo.service";
+import {
+  listPhotosByFolder,
+  getFolderMeta,
+} from "@/lib/services/photo.service";
 import { getEventById } from "@/lib/services/event.service";
 import { FolderPhotoGrid } from "@/components/feature-specific/gallery/folder-photo-grid";
 
@@ -31,25 +34,33 @@ export default async function FolderDetailPage({
     resolvedEventId || folderId !== "all"
       ? listPhotosByFolder(folderId, resolvedEventId).catch(() => [])
       : Promise.resolve([]),
-    resolvedEventId ? getEventById(resolvedEventId).catch(() => null) : Promise.resolve(null),
+    resolvedEventId
+      ? getEventById(resolvedEventId).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   if (!meta && folderId !== "all") {
     notFound();
   }
 
-  const folderName       = meta?.name ?? "All Photos";
-  const photoCount       = meta?.photoCount ?? photos.length;
+  const folderName = meta?.name ?? "All Photos";
+  const photoCount = meta?.photoCount ?? photos.length;
   const canonicalEventId = meta?.eventId ?? resolvedEventId;
-  const eventTitle       = (event && typeof event !== "string" && !("error" in event)) ? event.title : "event";
-  const eventDate        = (event && typeof event !== "string" && !("error" in event)) ? event.date  : undefined;
+  const eventTitle =
+    event && typeof event !== "string" && !("error" in event)
+      ? event.title
+      : "event";
+  const eventDate =
+    event && typeof event !== "string" && !("error" in event)
+      ? event.date
+      : undefined;
 
   return (
     <div className="min-h-screen">
       {/* ── Breadcrumb ── */}
       <nav className="mb-8 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
         <Link
-          href={`/admin/gallery${resolvedEventId ? `?eventId=${resolvedEventId}` : ""}`}
+          href={`/photographer/gallery${resolvedEventId ? `?eventId=${resolvedEventId}` : ""}`}
           className="transition-colors hover:text-slate-300"
         >
           Gallery

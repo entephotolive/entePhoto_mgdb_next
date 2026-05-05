@@ -12,5 +12,7 @@ export default async function EventsPage() {
   const session = await requireSession();
   const events = await listEvents(session.id).catch(() => []);
 
-  return <EventsClient events={events} isAdmin={true} userId={session.id} />;
+  return (
+    <EventsClient events={events} isphotographer={true} userId={session.id} />
+  );
 }

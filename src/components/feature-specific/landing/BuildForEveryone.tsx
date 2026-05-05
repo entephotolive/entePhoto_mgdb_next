@@ -222,7 +222,7 @@ export default function BuildForEveryone() {
             {/* FIXED BUTTON POSITION */}
             <div className="mt-12 mt-auto">
               <button 
-                onClick={() => router.push("/admin/login")} 
+                onClick={() => router.push("/photographer/login")} 
                 className="w-full py-4 rounded-xl bg-green-600 text-white font-semibold text-base hover:bg-green-700 transition"
               >
                 Create Event →
