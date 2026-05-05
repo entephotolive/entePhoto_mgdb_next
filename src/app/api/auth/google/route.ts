@@ -1,19 +1,13 @@
 import { NextResponse } from "next/server";
 
 export function GET(request: Request) {
-  const url = new URL(request.url);
-  const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
-
+  const host = process.env.NEXT_PUBLIC_APP_URL;
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
-  if (!clientId) {
-    return NextResponse.json(
-      { message: "Google Client ID is not configured." },
-      { status: 500 }
-    );
+  if (!host || !clientId) {
+    return NextResponse.json({ error: "Missing config" }, { status: 500 });
   }
 
-  // FIXED LINE
   const redirectUri = `${host}/api/auth/callback/google`;
 
   const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
