@@ -11,6 +11,7 @@ import {
   unregisterXhr,
   useUploadStore,
   UploadContext,
+  UploadQueueItem,
 } from "@/store/upload-store";
 import { api } from "@/app/api/api-client";
 
@@ -119,7 +120,7 @@ async function checkDuplicates(eventId: string, filenames: string[]) {
   return duplicateSet;
 }
 
-async function uploadSingleItem(item: (typeof useUploadStore.getState)["items"][number], context: UploadContext) {
+async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
   useUploadStore.getState()._setCurrentFileName(item.file.name);
   useUploadStore.getState()._updateItem(item.id, { status: "uploading", progress: 0, error: undefined });
 
