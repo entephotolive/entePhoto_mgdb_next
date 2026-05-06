@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 export function GET(request: Request) {
   const host = process.env.NEXT_PUBLIC_APP_URL;
   const clientId = process.env.GOOGLE_CLIENT_ID;
-
+  
   if (!host || !clientId) {
     return NextResponse.json({ error: "Missing config" }, { status: 500 });
   }
