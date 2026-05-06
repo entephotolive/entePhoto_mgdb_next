@@ -6,6 +6,7 @@ import {
   ImageIcon,
   UploadCloud,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
@@ -41,6 +42,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     completedCount,
     isUploading,
     setUploadContext,
+    retryUpload,
   } = useGlobalUpload();
 
   const sortedEvents = useMemo(() => {
@@ -266,13 +268,24 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                   </div>
                 )}
                 {item.status === "failed" && (
-                  <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-4 backdrop-blur-sm">
-                    <div className="w-12 h-12 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-3">
-                      <AlertCircle className="text-rose-500" size={24} />
+                  <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-4 backdrop-blur-sm z-10">
+                    <div className="w-10 h-10 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-2">
+                      <AlertCircle className="text-rose-500" size={20} />
                     </div>
-                    <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center">
+                    <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center mb-2">
                       {item.error}
                     </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        retryUpload(item.id);
+                      }}
+                      className="bg-rose-500/80 hover:bg-rose-500 text-white rounded-full p-2 transition-colors shadow-lg shadow-black/20"
+                      title="Retry Upload"
+                    >
+                      <RefreshCw size={14} />
+                    </button>
                   </div>
                 )}
 

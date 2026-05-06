@@ -21,8 +21,21 @@ export function useGlobalUpload() {
     await processUploadQueue(store.uploadContext);
   };
 
+  const retryUpload = async (id?: string) => {
+    if (!store.uploadContext) {
+      console.error("Cannot retry upload: missing upload context");
+      return;
+    }
+    if (id) {
+      store._updateItem(id, { status: "queued", error: undefined, progress: 0 });
+    }
+    store._setStatus("idle");
+    await processUploadQueue(store.uploadContext);
+  };
+
   return {
     ...store,
     startUpload,
+    retryUpload,
   };
 }
