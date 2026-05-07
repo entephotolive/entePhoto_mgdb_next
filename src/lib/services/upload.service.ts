@@ -152,8 +152,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
 
     const responseData = response.data;
     if (responseData && responseData.images_not_uploaded > 0) {
+      const expectedWebpName = item.file.name.replace(/\.[^/.]+$/, "") + ".webp";
       const reasonObj =
-        responseData.reason_why_not_uploaded?.find((r: any) => r.filename === item.file.name) ||
+        responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedWebpName) ||
         responseData.reason_why_not_uploaded?.[0];
       throw new Error(reasonObj?.reason || "Image not uploaded");
     }
@@ -216,12 +217,13 @@ export async function processUploadQueue(context: UploadContext) {
   store.setWidgetVisible(true);
 
   try {
-    const filenames = toUpload.map((i) => i.file.name);
+    const filenames = toUpload.map((i) => i.file.name.replace(/\.[^/.]+$/, "") + ".webp");
     const duplicateSet = await checkDuplicates(context.eventId, filenames);
 
     if (duplicateSet.size > 0) {
       toUpload.forEach((item) => {
-        if (duplicateSet.has(item.file.name)) {
+        const expectedWebpName = item.file.name.replace(/\.[^/.]+$/, "") + ".webp";
+        if (duplicateSet.has(expectedWebpName)) {
           useUploadStore.getState()._updateItem(item.id, {
             status: "duplicate",
             error: "File already exists",
