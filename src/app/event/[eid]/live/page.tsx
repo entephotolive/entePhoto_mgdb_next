@@ -20,7 +20,19 @@ interface MatchedPhoto {
 
 function getAttendeeId(): string | null {
   try {
-    return sessionStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
+    const fromSession = sessionStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
+    if (fromSession) return fromSession;
+    
+    const fromLocal = localStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
+    if (fromLocal) return fromLocal;
+
+    // Check cookie fallback
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(new RegExp('(^| )' + SCAN_ATTENDEE_SESSION_KEY + '=([^;]+)'));
+      if (match) return match[2];
+    }
+    
+    return null;
   } catch {
     return null;
   }
@@ -70,6 +82,17 @@ export default function LiveFeedPage() {
     }, 2000);
 
     return () => window.clearTimeout(timeoutId);
+  }, [photos]);
+
+  // Sync photos to localStorage for the gallery "My Photos" view
+  useEffect(() => {
+    try {
+      if (photos.length > 0) {
+        localStorage.setItem("matched_images", JSON.stringify(photos));
+      }
+    } catch (e) {
+      console.error("[live-feed] Failed to sync photos to localStorage", e);
+    }
   }, [photos]);
 
   // ─── WebSocket subscription ──────────────────────────────────────────────────

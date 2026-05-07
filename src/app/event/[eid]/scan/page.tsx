@@ -92,7 +92,9 @@ export default function FaceScanPage() {
       }
 
       sessionStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
-
+      localStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
+      document.cookie = `${SCAN_ATTENDEE_SESSION_KEY}=${attendeeId}; path=/; max-age=18000;`;
+      document.cookie = `scan_response=${attendeeId}; path=/; max-age=18000;`;
       setStatus("success");
 
       // Small delay so the user sees the success state, then redirect
