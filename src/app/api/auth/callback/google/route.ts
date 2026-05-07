@@ -17,7 +17,6 @@ export async function GET(request: Request) {
 
     const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
 
-    // VERY IMPORTANT: Use the exact NextAuth default callback URL structure here
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -26,7 +25,7 @@ export async function GET(request: Request) {
       throw new Error("Google OAuth credentials are not configured.");
     }
 
-    // 1. Exchange the authorization code for an access token
+    // Exchange code → token
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -42,7 +41,7 @@ export async function GET(request: Request) {
     if (!tokenResponse.ok) {
       const errData = await tokenResponse.text();
       console.error("Token exchange error:", errData);
-      throw new Error("Failed to exchange token with Google.");
+      throw new Error("Token exchange failed");
     }
 
     const tokens = await tokenResponse.json();
@@ -56,20 +55,20 @@ export async function GET(request: Request) {
     );
 
     if (!userResponse.ok) {
-      throw new Error("Failed to fetch user profile from Google.");
+      throw new Error("Failed to fetch user profile");
     }
 
     const googleUser = await userResponse.json();
 
     if (!googleUser.email) {
-      throw new Error("No primary email returned from Google.");
+      throw new Error("No email from Google");
     }
 
-    // 3. Upsert into database
+    // DB check
     await connectToDatabase();
     const email = googleUser.email.toLowerCase();
 
-    let user = await UserModel.findOne({ email });
+    const user = await UserModel.findOne({ email });
 
     if (!user) {
       return NextResponse.redirect(
@@ -80,6 +79,7 @@ export async function GET(request: Request) {
       );
     }
 
+    // Create session
     const token = await signSessionToken({
       sub: user._id.toString(),
       name: user.name,
@@ -90,6 +90,7 @@ export async function GET(request: Request) {
     const response = NextResponse.redirect(`${host}/photographer/dashboard`);
     const cookieOptions = getAuthCookieOptions();
 
+    const cookieOptions = getAuthCookieOptions();
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
     return response;
