@@ -106,11 +106,12 @@ export default function LiveFeedPage() {
       return;
     }
 
-    let pollTimerId = 0;
-    let reconnectTimerId = 0;
+    let pollTimerId: any = null;
+    let reconnectTimerId: any = null;
     let closedByCleanup = false;
 
     async function fetchMatchedPhotos(markNew: boolean) {
+      if (closedByCleanup) return;
       try {
         const res = await api.get("/api/my-photos/", {
           params: {
@@ -122,20 +123,29 @@ export default function LiveFeedPage() {
         const raw: any[] = res.data?.photos ?? res.data?.matched_images ?? [];
         const normalized = raw.map(normalizePhoto);
         setPhotos((prev) => (markNew ? mergeIncomingPhotos(prev, normalized, true) : normalized));
-        console.info(`[live-feed] Fetched ${normalized.length} matched photo(s).`);
+        console.debug(`[live-feed] Polling: Synced ${normalized.length} photo(s).`);
       } catch (error) {
-        console.error("[live-feed] Failed to fetch matched photos.", error);
+        console.error("[live-feed] Polling failed.", error);
       } finally {
         setLoading(false);
       }
     }
 
-    function schedulePolling() {
-      window.clearInterval(pollTimerId);
+    function startPolling() {
+      if (pollTimerId) return;
+      fetchMatchedPhotos(true); // Initial fetch
       pollTimerId = window.setInterval(() => {
         void fetchMatchedPhotos(true);
       }, LIVE_POLL_INTERVAL_MS);
-      console.info(`[live-feed] Polling fallback active every ${LIVE_POLL_INTERVAL_MS}ms.`);
+      console.info(`[live-feed] Polling fallback started.`);
+    }
+
+    function stopPolling() {
+      if (pollTimerId) {
+        window.clearInterval(pollTimerId);
+        pollTimerId = null;
+        console.info(`[live-feed] Polling stopped.`);
+      }
     }
 
     let wsUrl = "";
@@ -143,64 +153,68 @@ export default function LiveFeedPage() {
       const apiBase = new URL(process.env.NEXT_PUBLIC_PYTHON_API_URL || window.location.origin);
       apiBase.protocol = apiBase.protocol === "https:" ? "wss:" : "ws:";
       apiBase.pathname = `/ws/matches/${eid}/${attendeeId}/`;
-      apiBase.search = "";
-      apiBase.hash = "";
       wsUrl = apiBase.toString();
     } catch (error) {
-      console.error("[live-feed] Could not build websocket URL.", error);
-      void fetchMatchedPhotos(false);
-      schedulePolling();
+      console.error("[live-feed] URL build failed.", error);
+      startPolling();
       return;
     }
 
     async function connect() {
-      await fetchMatchedPhotos(false);
-
-      console.info(`[live-feed] Connecting websocket: ${wsUrl}`);
+      if (closedByCleanup) return;
+      
+      console.info(`[live-feed] Attempting WebSocket: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
       ws.onopen = () => {
-        console.info("[live-feed] Websocket connected.");
+        console.info("[live-feed] WebSocket connected ✓");
+        stopPolling();
+        // One-time sync on connect to catch anything missed during downtime
+        fetchMatchedPhotos(false);
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.debug("[live-feed] Websocket message received.", data);
           if (data.type === "new_photo" && data.photo) {
             const incoming = normalizePhoto(data.photo);
             setPhotos((prev) => mergeIncomingPhotos(prev, [incoming], true));
-          } else {
-            console.warn("[live-feed] Unhandled websocket payload.", data);
+            console.info("[live-feed] New photo received via WebSocket ✨");
           }
         } catch (error) {
-          console.error("[live-feed] Failed to parse websocket message.", error);
+          console.error("[live-feed] WS parse error.", error);
         }
       };
 
       ws.onerror = (event) => {
-        console.error("[live-feed] Websocket error.", event);
-        schedulePolling();
+        console.error("[live-feed] WebSocket error.", event);
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
         socketRef.current = null;
         if (closedByCleanup) return;
-        console.warn("[live-feed] Websocket closed. Reconnecting in 3s.");
-        schedulePolling();
+        
+        console.warn(`[live-feed] WebSocket closed (${e.code}). Falling back to polling.`);
+        startPolling();
+        
+        // Retry connection in 5s
         reconnectTimerId = window.setTimeout(() => {
+          console.info("[live-feed] Retrying WebSocket...");
           void connect();
-        }, 3000);
+        }, 5000);
       };
     }
 
-    void connect();
+    // Initial action: Fetch once, then try WebSocket
+    void fetchMatchedPhotos(false).then(() => {
+      void connect();
+    });
 
     return () => {
       closedByCleanup = true;
+      stopPolling();
       window.clearTimeout(reconnectTimerId);
-      window.clearInterval(pollTimerId);
       socketRef.current?.close();
     };
   }, [eid]);
