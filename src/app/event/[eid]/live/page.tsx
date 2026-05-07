@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/app/api/api-client";
 import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
 
+const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
+const LIVE_POLL_INTERVAL_MS = 3000;
+
 interface MatchedPhoto {
   image_id: number | string;
   image_url: string;
@@ -15,17 +18,37 @@ interface MatchedPhoto {
   isNew?: boolean;
 }
 
-function getAttendeeFromCookie(): string | null {
-  const cookies = document.cookie.split(";");
-  const match = cookies.find((c) => c.trim().startsWith("scan_response="));
-  if (!match) return null;
+function getAttendeeId(): string | null {
   try {
-    const raw = decodeURIComponent(match.split("=")[1]);
-    const data = JSON.parse(raw);
-    return data.attendee_id || data.id || null;
+    return sessionStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
   } catch {
     return null;
   }
+}
+
+function normalizePhoto(photo: any): MatchedPhoto {
+  return {
+    image_id: photo.id ?? photo.image_id,
+    image_url: photo.url ?? photo.image_url,
+    image_name: photo.image_name ?? `Photo ${photo.id ?? photo.image_id}`,
+  };
+}
+
+function mergeIncomingPhotos(
+  current: MatchedPhoto[],
+  incoming: MatchedPhoto[],
+  markNew: boolean,
+) {
+  const existingIds = new Set(current.map((photo) => String(photo.image_id)));
+  const fresh = incoming
+    .filter((photo) => !existingIds.has(String(photo.image_id)))
+    .map((photo) => (markNew ? { ...photo, isNew: true } : photo));
+
+  if (fresh.length === 0) {
+    return current;
+  }
+
+  return [...fresh, ...current];
 }
 
 export default function LiveFeedPage() {
@@ -37,103 +60,124 @@ export default function LiveFeedPage() {
   const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
-  // ─── Initial HTTP load ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (!eid) return;
+    if (!photos.some((photo) => photo.isNew)) return;
 
-    const attendeeId = getAttendeeFromCookie();
+    const timeoutId = window.setTimeout(() => {
+      setPhotos((prev) =>
+        prev.map((photo) => (photo.isNew ? { ...photo, isNew: false } : photo)),
+      );
+    }, 2000);
 
-    async function loadInitialPhotos() {
-      try {
-        const res = await api.get("/api/my-photos/", {
-          params: {
-            event_id: eid,
-            ...(attendeeId ? { scan_id: attendeeId } : {}),
-          },
-        });
-
-        const raw: any[] = res.data?.photos ?? res.data?.matched_images ?? [];
-        setPhotos(
-          raw.map((p) => ({
-            image_id: p.id ?? p.image_id,
-            image_url: p.url ?? p.image_url,
-            image_name: p.image_name ?? `Photo ${p.id ?? p.image_id}`,
-          }))
-        );
-      } catch {
-        // Fallback to localStorage cache
-        try {
-          const cached = localStorage.getItem("matched_images");
-          if (cached) setPhotos(JSON.parse(cached));
-        } catch {}
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadInitialPhotos();
-  }, [eid]);
-
-  // Persist to localStorage whenever photos update
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem("matched_images", JSON.stringify(photos));
-    }
-  }, [photos, loading]);
+    return () => window.clearTimeout(timeoutId);
+  }, [photos]);
 
   // ─── WebSocket subscription ──────────────────────────────────────────────────
   useEffect(() => {
     if (!eid) return;
 
-    const attendeeId = getAttendeeFromCookie();
-    if (!attendeeId) return;
+    const attendeeId = getAttendeeId();
+    if (!attendeeId) {
+      console.warn("[live-feed] Missing attendee id. Scan flow must complete before live updates can start.");
+      setLoading(false);
+      return;
+    }
 
-    const wsBase = process.env.NEXT_PUBLIC_PYTHON_API_URL!
-      .replace(/^http/, "ws")
-      .replace(/\/$/, "");
-    const wsUrl = `${wsBase}/ws/matches/${eid}/${attendeeId}/`;
+    let pollTimerId = 0;
+    let reconnectTimerId = 0;
+    let closedByCleanup = false;
 
-    function connect() {
+    async function fetchMatchedPhotos(markNew: boolean) {
+      try {
+        const res = await api.get("/api/my-photos/", {
+          params: {
+            event_id: eid,
+            scan_id: attendeeId,
+          },
+        });
+
+        const raw: any[] = res.data?.photos ?? res.data?.matched_images ?? [];
+        const normalized = raw.map(normalizePhoto);
+        setPhotos((prev) => (markNew ? mergeIncomingPhotos(prev, normalized, true) : normalized));
+        console.info(`[live-feed] Fetched ${normalized.length} matched photo(s).`);
+      } catch (error) {
+        console.error("[live-feed] Failed to fetch matched photos.", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function schedulePolling() {
+      window.clearInterval(pollTimerId);
+      pollTimerId = window.setInterval(() => {
+        void fetchMatchedPhotos(true);
+      }, LIVE_POLL_INTERVAL_MS);
+      console.info(`[live-feed] Polling fallback active every ${LIVE_POLL_INTERVAL_MS}ms.`);
+    }
+
+    let wsUrl = "";
+    try {
+      const apiBase = new URL(process.env.NEXT_PUBLIC_PYTHON_API_URL || window.location.origin);
+      apiBase.protocol = apiBase.protocol === "https:" ? "wss:" : "ws:";
+      apiBase.pathname = `/ws/matches/${eid}/${attendeeId}/`;
+      apiBase.search = "";
+      apiBase.hash = "";
+      wsUrl = apiBase.toString();
+    } catch (error) {
+      console.error("[live-feed] Could not build websocket URL.", error);
+      void fetchMatchedPhotos(false);
+      schedulePolling();
+      return;
+    }
+
+    async function connect() {
+      await fetchMatchedPhotos(false);
+
+      console.info(`[live-feed] Connecting websocket: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
+
+      ws.onopen = () => {
+        console.info("[live-feed] Websocket connected.");
+      };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          console.debug("[live-feed] Websocket message received.", data);
           if (data.type === "new_photo" && data.photo) {
-            const incoming: MatchedPhoto = {
-              image_id: data.photo.image_id,
-              image_url: data.photo.image_url,
-              image_name: data.photo.image_name,
-              isNew: true,
-            };
-            setPhotos((prev) => {
-              const exists = prev.some((p) => p.image_id === incoming.image_id);
-              return exists ? prev : [incoming, ...prev];
-            });
-
-            // Remove the "isNew" highlight after the animation plays
-            setTimeout(() => {
-              setPhotos((prev) =>
-                prev.map((p) =>
-                  p.image_id === incoming.image_id ? { ...p, isNew: false } : p
-                )
-              );
-            }, 2000);
+            const incoming = normalizePhoto(data.photo);
+            setPhotos((prev) => mergeIncomingPhotos(prev, [incoming], true));
+          } else {
+            console.warn("[live-feed] Unhandled websocket payload.", data);
           }
-        } catch {}
+        } catch (error) {
+          console.error("[live-feed] Failed to parse websocket message.", error);
+        }
+      };
+
+      ws.onerror = (event) => {
+        console.error("[live-feed] Websocket error.", event);
+        schedulePolling();
       };
 
       ws.onclose = () => {
-        reconnectTimer.current = window.setTimeout(connect, 3000);
+        socketRef.current = null;
+        if (closedByCleanup) return;
+        console.warn("[live-feed] Websocket closed. Reconnecting in 3s.");
+        schedulePolling();
+        reconnectTimerId = window.setTimeout(() => {
+          void connect();
+        }, 3000);
       };
     }
 
-    const reconnectTimer = { current: 0 };
-    connect();
+    void connect();
 
     return () => {
-      clearTimeout(reconnectTimer.current);
+      closedByCleanup = true;
+      window.clearTimeout(reconnectTimerId);
+      window.clearInterval(pollTimerId);
       socketRef.current?.close();
     };
   }, [eid]);
