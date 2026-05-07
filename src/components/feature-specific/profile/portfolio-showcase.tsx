@@ -1,8 +1,25 @@
 "use client";
 
-import { useOptimistic, useRef, useTransition, useState, useCallback } from "react";
-import { Plus, Upload, Info, Trash2, X, CheckCircle, XCircle } from "lucide-react";
-import { addPortfolioMoment, deletePortfolioMoment } from "@/app/admin/(dashboard)/profile/action";
+import {
+  useOptimistic,
+  useRef,
+  useTransition,
+  useState,
+  useCallback,
+} from "react";
+import {
+  Plus,
+  Upload,
+  Info,
+  Trash2,
+  X,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import {
+  addPortfolioMoment,
+  deletePortfolioMoment,
+} from "@/app/photographer/(panel)/profile/action";
 import { compressImage, PRESET_3MB } from "@/lib/utils/compress-image";
 import { PortfolioMoment } from "@/types";
 import { cn } from "@/lib/utils/cn";
@@ -10,7 +27,13 @@ import { cn } from "@/lib/utils/cn";
 // ─── Inline toast ─────────────────────────────────────────────────────────────
 type ToastState = { type: "success" | "error"; message: string } | null;
 
-function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
+function Toast({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastState;
+  onDismiss: () => void;
+}) {
   if (!toast) return null;
   return (
     <div
@@ -18,7 +41,7 @@ function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void 
         "fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-panel border text-sm font-medium",
         toast.type === "success"
           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-          : "bg-red-500/10 border-red-500/30 text-red-300"
+          : "bg-red-500/10 border-red-500/30 text-red-300",
       )}
     >
       {toast.type === "success" ? (
@@ -54,7 +77,10 @@ function DeleteModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       {/* Modal */}
       <div className="relative bg-[#141416] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-panel flex flex-col gap-4">
         <div className="flex items-center gap-3">
@@ -64,7 +90,8 @@ function DeleteModal({
           <div>
             <h3 className="text-white font-semibold text-sm">Delete Moment?</h3>
             <p className="text-slate-500 text-xs mt-0.5">
-              This will permanently remove the image from your portfolio and Cloudinary.
+              This will permanently remove the image from your portfolio and
+              Cloudinary.
             </p>
           </div>
         </div>
@@ -110,7 +137,7 @@ function MomentCard({
     <div
       className={cn(
         "group relative aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 transition-opacity",
-        deleting && "opacity-40 pointer-events-none"
+        deleting && "opacity-40 pointer-events-none",
       )}
     >
       {/* Image */}
@@ -144,7 +171,7 @@ function MomentCard({
           "flex items-center justify-center",
           "text-slate-400 hover:text-red-400 hover:bg-red-500/20 hover:border-red-500/40",
           "opacity-0 group-hover:opacity-100 transition-all duration-200",
-          "disabled:opacity-40"
+          "disabled:opacity-40",
         )}
       >
         {deleting ? (
@@ -167,7 +194,10 @@ type OptimisticAction =
   | { type: "add"; moment: PortfolioMoment }
   | { type: "delete"; id: string };
 
-export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseProps) {
+export function PortfolioShowcase({
+  userId,
+  initialMoments,
+}: PortfolioShowcaseProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isPending, startTransition] = useTransition();
   const [isCompressing, setIsCompressing] = useState(false);
@@ -182,15 +212,19 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
     initialMoments,
     (state: PortfolioMoment[], action: OptimisticAction) => {
       if (action.type === "add") return [action.moment, ...state];
-      if (action.type === "delete") return state.filter((m) => m.id !== action.id);
+      if (action.type === "delete")
+        return state.filter((m) => m.id !== action.id);
       return state;
-    }
+    },
   );
 
-  const showToast = useCallback((type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
+  const showToast = useCallback(
+    (type: "success" | "error", message: string) => {
+      setToast({ type, message });
+      setTimeout(() => setToast(null), 4000);
+    },
+    [],
+  );
 
   // ── Upload handler ──────────────────────────────────────────────────────────
   // Fix for "Body exceeded 1 MB limit":
@@ -208,14 +242,17 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
     try {
       compressed = await compressImage(file, PRESET_3MB);
     } catch {
-      showToast("error", "Could not compress this image. Please try another file.");
+      showToast(
+        "error",
+        "Could not compress this image. Please try another file.",
+      );
       setIsCompressing(false);
       return;
     }
     setIsCompressing(false);
 
     // ── Step 2: optimistic UI + server upload ────────────────────────────────
-    const tempId   = `temp-${Date.now()}`;
+    const tempId = `temp-${Date.now()}`;
     const localUrl = URL.createObjectURL(compressed);
 
     startTransition(async () => {
@@ -230,7 +267,10 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
       const result = await addPortfolioMoment(userId, fd);
 
       if (!result.ok) {
-        showToast("error", "error" in result ? result.error : "Portfolio upload failed.");
+        showToast(
+          "error",
+          "error" in result ? result.error : "Portfolio upload failed.",
+        );
         // Optimistic item reverts automatically when the transition ends
       } else {
         showToast("success", "Moment added to your portfolio!");
@@ -258,7 +298,10 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
       setDeletePendingId(null);
 
       if (!result.ok) {
-        showToast("error", "error" in result ? result.error : "Failed to delete moment.");
+        showToast(
+          "error",
+          "error" in result ? result.error : "Failed to delete moment.",
+        );
       } else {
         showToast("success", "Moment deleted successfully.");
       }
@@ -266,7 +309,7 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
   }
 
   // Disable all upload triggers while compressing OR while the server action is pending
-  const isBusy  = isCompressing || isPending;
+  const isBusy = isCompressing || isPending;
   const isEmpty = optimisticMoments.length === 0;
 
   return (
@@ -275,7 +318,9 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Great Moments</h2>
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              Great Moments
+            </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               Showcase your best shots from previous ceremonies.
             </p>
@@ -339,11 +384,18 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
                 {isBusy ? (
                   <span className="w-5 h-5 border-2 border-white/20 border-t-cyan-400 rounded-full animate-spin" />
                 ) : (
-                  <Upload size={18} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                  <Upload
+                    size={18}
+                    className="text-slate-500 group-hover:text-cyan-400 transition-colors"
+                  />
                 )}
               </div>
               <span className="text-[11px] text-slate-600 group-hover:text-slate-400 font-medium transition-colors uppercase tracking-wider">
-                {isCompressing ? "Compressing…" : isPending ? "Uploading…" : "Upload"}
+                {isCompressing
+                  ? "Compressing…"
+                  : isPending
+                    ? "Uploading…"
+                    : "Upload"}
               </span>
             </button>
           </div>
@@ -353,10 +405,11 @@ export function PortfolioShowcase({ userId, initialMoments }: PortfolioShowcaseP
         <div className="flex items-start gap-2.5 rounded-xl bg-cyan-500/5 border border-cyan-500/15 p-3.5">
           <Info size={14} className="text-cyan-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Your portfolio images are displayed in high resolution. For best results, use{" "}
-            <span className="text-cyan-400 font-medium">4:5 aspect ratio</span> images with
-            a minimum width of 1200px. These will be visible to potential clients on your public
-            profile.
+            Your portfolio images are displayed in high resolution. For best
+            results, use{" "}
+            <span className="text-cyan-400 font-medium">4:5 aspect ratio</span>{" "}
+            images with a minimum width of 1200px. These will be visible to
+            potential clients on your public profile.
           </p>
         </div>
 

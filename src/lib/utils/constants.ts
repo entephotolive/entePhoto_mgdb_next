@@ -1,33 +1,39 @@
-import { CalendarDays, FolderKanban, LayoutDashboard, UploadCloud, UserRound, Users } from "lucide-react";
+import {
+  CalendarDays,
+  FolderKanban,
+  LayoutDashboard,
+  UploadCloud,
+  UserRound,
+  Users,
+} from "lucide-react";
 import { UserRole } from "@/types";
 
 export const authCookieName = "photo_ceremony_session";
 
 export const dashboardNavItems = [
   {
-    href: "/admin/dashboard",
+    href: "/photographer/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
   },
   {
-    href: "/admin/events",
+    href: "/photographer/events",
     label: "Events",
     icon: CalendarDays,
   },
   {
-    href: "/admin/uploads",
+    href: "/photographer/uploads",
     label: "Uploads",
     icon: UploadCloud,
   },
   {
-    href: "/admin/gallery",
+    href: "/photographer/gallery",
     label: "Gallery",
     icon: FolderKanban,
   },
   {
-    href: "/admin/profile",
+    href: "/photographer/profile",
     label: "Profile",
     icon: UserRound,
   },
- 
 ];

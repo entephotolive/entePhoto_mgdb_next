@@ -9,15 +9,13 @@ export async function GET(request: Request) {
     const code = url.searchParams.get("code");
     const error = url.searchParams.get("error");
 
-    const host = process.env.NEXT_PUBLIC_APP_URL;
-
-    if (!host) {
-      throw new Error("NEXT_PUBLIC_APP_URL not set");
-    }
-
     if (error || !code) {
-      return NextResponse.redirect(`${host}/admin/login?error=Google authentication failed.`);
+      return NextResponse.redirect(
+        new URL("/login?error=Google authentication failed.", request.url),
+      );
     }
+
+    const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
 
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -48,10 +46,13 @@ export async function GET(request: Request) {
 
     const tokens = await tokenResponse.json();
 
-    // Get user info
-    const userResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${tokens.access_token}` },
-    });
+    // 2. Fetch the user's profile information
+    const userResponse = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      },
+    );
 
     if (!userResponse.ok) {
       throw new Error("Failed to fetch user profile");
@@ -70,7 +71,12 @@ export async function GET(request: Request) {
     const user = await UserModel.findOne({ email });
 
     if (!user) {
-      return NextResponse.redirect(`${host}/admin/login?error=Not authorized`);
+      return NextResponse.redirect(
+        new URL(
+          "/photographer/login?error=You are not authorized to login. contact photographer",
+          request.url,
+        ),
+      );
     }
 
     // Create session
@@ -80,17 +86,18 @@ export async function GET(request: Request) {
       email: user.email,
     });
 
-    const response = NextResponse.redirect(`${host}/admin/dashboard`);
+    // 5. Create redirect response and set the JWT auth cookie
+    const response = NextResponse.redirect(`${host}/photographer/dashboard`);
+    const cookieOptions = getAuthCookieOptions();
 
     const cookieOptions = getAuthCookieOptions();
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
     return response;
-
   } catch (error) {
     console.error("Google Auth Error:", error);
-
-    const host = process.env.NEXT_PUBLIC_APP_URL;
-    return NextResponse.redirect(`${host}/admin/login?error=Authentication failed`);
+    return NextResponse.redirect(
+      new URL("/login?error=Authentication error occurred.", request.url),
+    );
   }
 }

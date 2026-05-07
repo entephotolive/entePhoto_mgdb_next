@@ -2,7 +2,7 @@ import { requireSession } from "@/lib/services/auth.service";
 import {
   getProfile,
   getPortfolioMoments,
-} from "@/app/admin/(dashboard)/profile/action";
+} from "@/app/photographer/(panel)/profile/action";
 import { ProfileForm } from "@/components/feature-specific/profile/profile-form";
 import { PortfolioShowcase } from "@/components/feature-specific/profile/portfolio-showcase";
 import type { ProfileData } from "@/types";

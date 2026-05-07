@@ -12,7 +12,10 @@ import {
 import { cn } from "@/lib/utils/cn";
 import { AvatarUpload } from "@/components/feature-specific/profile/avatar-upload";
 import { SpecializationTags } from "@/components/feature-specific/profile/specialization-tags";
-import { updateProfile, uploadProfileImage } from "@/app/admin/(dashboard)/profile/action";
+import {
+  updateProfile,
+  uploadProfileImage,
+} from "@/app/photographer/(panel)/profile/action";
 import { ProfileData, SPECIALIZATION_OPTIONS } from "@/types";
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -21,7 +24,13 @@ type ToastState = {
   message: string;
 } | null;
 
-function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void }) {
+function Toast({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastState;
+  onDismiss: () => void;
+}) {
   if (!toast) return null;
   return (
     <div
@@ -30,7 +39,7 @@ function Toast({ toast, onDismiss }: { toast: ToastState; onDismiss: () => void 
         "animate-in slide-in-from-bottom-4 fade-in duration-300",
         toast.type === "success"
           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-          : "bg-red-500/10 border-red-500/30 text-red-300"
+          : "bg-red-500/10 border-red-500/30 text-red-300",
       )}
     >
       {toast.type === "success" ? (
@@ -72,7 +81,7 @@ function Field({
 const inputClass = cn(
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-200",
   "placeholder:text-slate-600 outline-none transition-all duration-200",
-  "focus:border-cyan-500/50 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.2)] focus:bg-white/[0.08]"
+  "focus:border-cyan-500/50 focus:shadow-[0_0_0_1px_rgba(34,211,238,0.2)] focus:bg-white/[0.08]",
 );
 
 // ─── ProfileForm ──────────────────────────────────────────────────────────────
@@ -85,10 +94,14 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
   // Form state
   const [name, setName] = useState(initialData.name ?? "");
   const [studioName, setStudioName] = useState(initialData.studioName ?? "");
-  const [studioLocation, setStudioLocation] = useState(initialData.studioLocation ?? "");
-  const [specialization, setSpecialization] = useState(initialData.specialization ?? "");
+  const [studioLocation, setStudioLocation] = useState(
+    initialData.studioLocation ?? "",
+  );
+  const [specialization, setSpecialization] = useState(
+    initialData.specialization ?? "",
+  );
   const [specializations, setSpecializations] = useState<string[]>(
-    initialData.specializations ?? []
+    initialData.specializations ?? [],
   );
   const [bio, setBio] = useState(initialData.bio ?? "");
 
@@ -105,10 +118,13 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
   // Specialization dropdown open state
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const showToast = useCallback((type: "success" | "error", message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
+  const showToast = useCallback(
+    (type: "success" | "error", message: string) => {
+      setToast({ type, message });
+      setTimeout(() => setToast(null), 4000);
+    },
+    [],
+  );
 
   // Called when user picks a new avatar file
   function handleAvatarSelected(file: File, preview: string) {
@@ -131,7 +147,12 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
         setAvatarUploading(false);
 
         if (!uploadResult.ok) {
-          showToast("error", "error" in uploadResult ? uploadResult.error : "Image upload failed.");
+          showToast(
+            "error",
+            "error" in uploadResult
+              ? uploadResult.error
+              : "Image upload failed.",
+          );
           return;
         }
 
@@ -154,7 +175,10 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
       if (result.ok) {
         showToast("success", "Profile updated successfully!");
       } else {
-        showToast("error", "error" in result ? result.error : "Failed to update profile.");
+        showToast(
+          "error",
+          "error" in result ? result.error : "Failed to update profile.",
+        );
       }
     });
   }
@@ -253,7 +277,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
               readOnly
               className={cn(
                 inputClass,
-                "pr-10 cursor-not-allowed opacity-60 select-none"
+                "pr-10 cursor-not-allowed opacity-60 select-none",
               )}
             />
             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500">
@@ -272,7 +296,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
               className={cn(
                 inputClass,
                 "flex items-center justify-between text-left",
-                !specialization && "text-slate-600"
+                !specialization && "text-slate-600",
               )}
             >
               <span>{specialization || "Select specialization"}</span>
@@ -280,7 +304,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
                 size={15}
                 className={cn(
                   "text-slate-500 transition-transform duration-200",
-                  dropdownOpen && "rotate-180"
+                  dropdownOpen && "rotate-180",
                 )}
               />
             </button>
@@ -309,7 +333,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
                       "w-full text-left px-4 py-2.5 text-sm transition-colors",
                       specialization === opt
                         ? "text-cyan-400 bg-cyan-500/10"
-                        : "text-slate-300 hover:bg-white/5"
+                        : "text-slate-300 hover:bg-white/5",
                     )}
                   >
                     {opt}
@@ -354,7 +378,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
             className={cn(
               "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-black",
               "bg-cyan-400 hover:bg-cyan-300 shadow-glow hover:shadow-glow-lg",
-              "transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              "transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed",
             )}
           >
             {isSaving ? (

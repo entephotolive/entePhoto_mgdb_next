@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     "overgreedily-unrecessive-adalyn.ngrok-free.dev",
     "10.248.238.166",
     "10.169.72.166",
+    "10.177.35.166"
   ],
   images: {
     remotePatterns: [

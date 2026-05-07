@@ -1,22 +1,43 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, CalendarDays, MapPin, User2, Clock, Search, LayoutGrid, List, Trash2, Loader2, ChevronRight, X, Camera, Copy, Check, Download, ExternalLink } from "lucide-react";
+import {
+  Plus,
+  CalendarDays,
+  MapPin,
+  User2,
+  Clock,
+  Search,
+  LayoutGrid,
+  List,
+  Trash2,
+  Loader2,
+  ChevronRight,
+  X,
+  Camera,
+  Copy,
+  Check,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils/cn";
 import { EventListItem } from "@/types";
 import { EventModal } from "./event-modal";
-import { deleteEventAction } from "@/app/admin/(dashboard)/events/event.actions";
+import { deleteEventAction } from "@/app/photographer/(panel)/events/event.actions";
 
 interface EventsClientProps {
   events: EventListItem[];
-  isAdmin: boolean;
+  isphotographer: boolean;
   userId: string;
 }
 
 type FilterTab = "all" | "active" | "completed" | "draft";
 
-const STATUS_META: Record<string, { label: string; dot: string; badge: string }> = {
+const STATUS_META: Record<
+  string,
+  { label: string; dot: string; badge: string }
+> = {
   active: {
     label: "Active",
     dot: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]",
@@ -70,13 +91,13 @@ function formatTime(iso: string) {
 // ── Event Card (Grid View) ─────────────────────────────────────────────────────
 function EventCard({
   event,
-  isAdmin,
+  isphotographer,
   onDelete,
   onView,
   deleting,
 }: {
   event: EventListItem;
-  isAdmin: boolean;
+  isphotographer: boolean;
   onDelete: (id: string) => void;
   onView: (event: EventListItem) => void;
   deleting: string | null;
@@ -90,15 +111,17 @@ function EventCard({
       className={cn(
         "group relative rounded-2xl border border-white/[0.07] bg-[#0f1117]",
         "hover:border-white/15 hover:bg-[#131621] transition-all duration-300",
-        "flex flex-col overflow-hidden"
+        "flex flex-col overflow-hidden",
       )}
     >
       {/* Colored top accent */}
       <div
         className={cn(
           "h-[3px] w-full",
-          status === "active" && "bg-gradient-to-r from-cyan-400 to-emerald-400",
-          status === "completed" && "bg-gradient-to-r from-blue-400 to-purple-400",
+          status === "active" &&
+            "bg-gradient-to-r from-cyan-400 to-emerald-400",
+          status === "completed" &&
+            "bg-gradient-to-r from-blue-400 to-purple-400",
           status === "draft" && "bg-gradient-to-r from-slate-600 to-slate-500",
         )}
       />
@@ -107,7 +130,12 @@ function EventCard({
       <div className="flex flex-col gap-4 p-5 flex-1">
         {/* Status badge */}
         <div className="flex items-center justify-between">
-          <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border", meta.badge)}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border",
+              meta.badge,
+            )}
+          >
             <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
@@ -154,14 +182,14 @@ function EventCard({
             "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all",
             status === "active"
               ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20"
-              : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10"
+              : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10",
           )}
         >
           {status === "completed" ? "View Gallery" : "Open Event"}
           <ChevronRight size={12} />
         </button>
 
-        {isAdmin && (
+        {isphotographer && (
           <button
             onClick={() => onDelete(event.id)}
             disabled={isDeleting}
@@ -183,13 +211,13 @@ function EventCard({
 // ── Event Row (List View) ──────────────────────────────────────────────────────
 function EventRow({
   event,
-  isAdmin,
+  isphotographer,
   onDelete,
   onView,
   deleting,
 }: {
   event: EventListItem;
-  isAdmin: boolean;
+  isphotographer: boolean;
   onDelete: (id: string) => void;
   onView: (event: EventListItem) => void;
   deleting: string | null;
@@ -210,7 +238,9 @@ function EventRow({
           <p className="text-sm font-semibold text-white truncate group-hover:text-cyan-300 transition-colors">
             {event.title}
           </p>
-          <p className="text-[11px] text-slate-600 truncate">{event.location}</p>
+          <p className="text-[11px] text-slate-600 truncate">
+            {event.location}
+          </p>
         </div>
       </div>
 
@@ -227,10 +257,15 @@ function EventRow({
 
       {/* Actions */}
       <div className="flex items-center gap-2 justify-end">
-        <span className={cn("hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border", meta.badge)}>
+        <span
+          className={cn(
+            "hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+            meta.badge,
+          )}
+        >
           {meta.label}
         </span>
-        {isAdmin && (
+        {isphotographer && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -253,7 +288,13 @@ function EventRow({
 }
 
 // ── View Event Modal ───────────────────────────────────────────────────────────
-function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClose: () => void }) {
+function ViewEventModal({
+  event,
+  onClose,
+}: {
+  event: EventListItem | null;
+  onClose: () => void;
+}) {
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -263,9 +304,10 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
   const meta = STATUS_META[status] ?? STATUS_META.active;
 
   const eventPath = `/event/${event.id}/gallery`;
-  const eventUrl = typeof window !== "undefined"
-    ? `${window.location.origin}${eventPath}`
-    : eventPath;
+  const eventUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${eventPath}`
+      : eventPath;
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(eventUrl);
@@ -298,11 +340,12 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div className="relative w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-
           {/* ── Header ── */}
           <div className="flex items-center justify-between px-7 pt-6 pb-5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
+              <span
+                className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)}
+              />
               <h2 className="text-[15px] font-semibold text-white truncate lowercase tracking-tight">
                 {event.title}
               </h2>
@@ -317,7 +360,6 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
 
           {/* ── Body: 2-column grid ── */}
           <div className="grid grid-cols-[1fr_auto] gap-6 px-7 pb-5">
-
             {/* Left — event details */}
             <div className="flex flex-col justify-center space-y-4">
               <div className="flex items-center gap-3 text-sm text-slate-300">
@@ -375,7 +417,9 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
                 title="Copy link"
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all",
-                  copied ? "text-emerald-400" : "text-slate-500 hover:text-white hover:bg-white/10"
+                  copied
+                    ? "text-emerald-400"
+                    : "text-slate-500 hover:text-white hover:bg-white/10",
                 )}
               >
                 {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -400,14 +444,11 @@ function ViewEventModal({ event, onClose }: { event: EventListItem | null; onClo
               Download QR Code
             </button>
           </div>
-
         </div>
       </div>
     </>
   );
 }
-
-
 
 // ── Delete Confirmation Modal ──────────────────────────────────────────────────
 function DeleteConfirmationModal({
@@ -437,8 +478,15 @@ function DeleteConfirmationModal({
             </div>
             <h2 className="text-xl font-bold text-white mb-2">Delete Event?</h2>
             <p className="text-sm text-slate-400 mb-6 leading-relaxed text-center">
-              Are you sure you want to delete <span className="text-slate-200 font-semibold italic">&quot;{event.title}&quot;</span>? <br />
-              <span className="text-rose-400/90 font-medium">Warning: This will remove the entire photo gallery associated with this event.</span>
+              Are you sure you want to delete{" "}
+              <span className="text-slate-200 font-semibold italic">
+                &quot;{event.title}&quot;
+              </span>
+              ? <br />
+              <span className="text-rose-400/90 font-medium">
+                Warning: This will remove the entire photo gallery associated
+                with this event.
+              </span>
             </p>
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <button
@@ -468,10 +516,15 @@ function DeleteConfirmationModal({
 }
 
 // ── Main Client Component ──────────────────────────────────────────────────────
-export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
+export function EventsClient({
+  events,
+  isphotographer,
+  userId,
+}: EventsClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewEvent, setViewEvent] = useState<EventListItem | null>(null);
-  const [confirmDeleteEvent, setConfirmDeleteEvent] = useState<EventListItem | null>(null);
+  const [confirmDeleteEvent, setConfirmDeleteEvent] =
+    useState<EventListItem | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterTab>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -522,7 +575,11 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
   return (
     <>
       {/* Modal */}
-      <EventModal open={modalOpen} onClose={() => setModalOpen(false)} createdBy={userId} />
+      <EventModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        createdBy={userId}
+      />
       <ViewEventModal event={viewEvent} onClose={() => setViewEvent(null)} />
       <DeleteConfirmationModal
         event={confirmDeleteEvent}
@@ -545,14 +602,14 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
           </p>
         </div>
 
-        {isAdmin && (
+        {isphotographer && (
           <button
             id="add-event-btn"
             onClick={() => setModalOpen(true)}
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0",
               "bg-cyan-500 text-black hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20",
-              "active:scale-95"
+              "active:scale-95",
             )}
           >
             <Plus size={16} />
@@ -565,7 +622,10 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
         {/* Search */}
         <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+          />
           <input
             id="event-search"
             type="text"
@@ -575,7 +635,7 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
             className={cn(
               "w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-white/5 border border-white/[0.07]",
               "text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1",
-              "focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all"
+              "focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all",
             )}
           />
         </div>
@@ -586,7 +646,9 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
             onClick={() => setViewMode("grid")}
             className={cn(
               "flex items-center justify-center h-7 w-7 rounded-md transition-all",
-              viewMode === "grid" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+              viewMode === "grid"
+                ? "bg-white/10 text-white"
+                : "text-slate-600 hover:text-slate-400",
             )}
             aria-label="Grid view"
           >
@@ -596,7 +658,9 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
             onClick={() => setViewMode("list")}
             className={cn(
               "flex items-center justify-center h-7 w-7 rounded-md transition-all",
-              viewMode === "list" ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"
+              viewMode === "list"
+                ? "bg-white/10 text-white"
+                : "text-slate-600 hover:text-slate-400",
             )}
             aria-label="List view"
           >
@@ -615,14 +679,16 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all shrink-0",
               filter === tab.key
                 ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent"
+                : "text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent",
             )}
           >
             {tab.label}
             <span
               className={cn(
                 "text-[10px] px-1.5 py-0.5 rounded-full font-bold",
-                filter === tab.key ? "bg-cyan-500/20 text-cyan-400" : "bg-white/5 text-slate-600"
+                filter === tab.key
+                  ? "bg-cyan-500/20 text-cyan-400"
+                  : "bg-white/5 text-slate-600",
               )}
             >
               {counts[tab.key]}
@@ -643,11 +709,11 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
           <p className="text-sm text-slate-600 max-w-xs">
             {search
               ? "Try adjusting your search or filter criteria."
-              : isAdmin
-                ? "Click \"Add New Event\" to create your first photography event."
-                : "Once an admin creates events, they will appear here."}
+              : isphotographer
+                ? 'Click "Add New Event" to create your first photography event.'
+                : "Once an photographer creates events, they will appear here."}
           </p>
-          {isAdmin && !search && (
+          {isphotographer && !search && (
             <button
               onClick={() => setModalOpen(true)}
               className="mt-5 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all"
@@ -663,32 +729,37 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
             <EventCard
               key={event.id}
               event={event}
-              isAdmin={isAdmin}
+              isphotographer={isphotographer}
               onDelete={() => handleDeleteClick(event)}
               onView={setViewEvent}
               deleting={deleting}
             />
           ))}
 
-          {/* Create new event card — admin only */}
-          {isAdmin && (
+          {/* Create new event card — photographer only */}
+          {isphotographer && (
             <button
               onClick={() => setModalOpen(true)}
               className={cn(
                 "group relative flex flex-col items-center justify-center gap-3",
                 "rounded-2xl border border-dashed border-white/10 bg-white/[0.02]",
                 "hover:border-cyan-500/30 hover:bg-cyan-500/[0.03] transition-all duration-300",
-                "min-h-[200px] cursor-pointer"
+                "min-h-[200px] cursor-pointer",
               )}
             >
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 border border-white/10 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-all">
-                <Plus size={20} className="text-slate-500 group-hover:text-cyan-400 transition-colors" />
+                <Plus
+                  size={20}
+                  className="text-slate-500 group-hover:text-cyan-400 transition-colors"
+                />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-500 group-hover:text-cyan-400 transition-colors">
                   Create Event
                 </p>
-                <p className="text-xs text-slate-600 text-center">Register a new session</p>
+                <p className="text-xs text-slate-600 text-center">
+                  Register a new session
+                </p>
               </div>
             </button>
           )}
@@ -698,16 +769,24 @@ export function EventsClient({ events, isAdmin, userId }: EventsClientProps) {
         <div className="rounded-2xl border border-white/[0.07] bg-[#0f1117] overflow-hidden">
           {/* List header */}
           <div className="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1.8fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-white/[0.06]">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Event</span>
-            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-slate-600">Date</span>
-            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-slate-600">Created by</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 text-right">Actions</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+              Event
+            </span>
+            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-slate-600">
+              Date
+            </span>
+            <span className="hidden sm:block text-[10px] font-bold uppercase tracking-widest text-slate-600">
+              Created by
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 text-right">
+              Actions
+            </span>
           </div>
           {filtered.map((event) => (
             <EventRow
               key={event.id}
               event={event}
-              isAdmin={isAdmin}
+              isphotographer={isphotographer}
               onDelete={() => handleDeleteClick(event)}
               onView={setViewEvent}
               deleting={deleting}

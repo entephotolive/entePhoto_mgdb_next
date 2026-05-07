@@ -12,7 +12,7 @@ export function GalleryFolders({ folders, eventId }: GalleryFoldersProps) {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {folders.map((folder) => {
-        const href = `/admin/gallery/${folder.id}${eventId ? `?eventId=${eventId}` : ""}`;
+        const href = `/photographer/gallery/${folder.id}${eventId ? `?eventId=${eventId}` : ""}`;
 
         return (
           <div
@@ -51,7 +51,10 @@ export function GalleryFolders({ folders, eventId }: GalleryFoldersProps) {
 
               {/* CRUD Dropdown — client island */}
               {folder.id !== "all" && (
-                <FolderActionsMenu folderId={folder.id} folderName={folder.title} />
+                <FolderActionsMenu
+                  folderId={folder.id}
+                  folderName={folder.title}
+                />
               )}
             </div>
           </div>

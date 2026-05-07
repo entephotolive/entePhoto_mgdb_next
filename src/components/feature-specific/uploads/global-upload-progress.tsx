@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Loader2,
   MousePointer2,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
@@ -32,6 +33,7 @@ export function GlobalUploadProgress() {
     clearCompleted,
     clearAll,
     startUpload,
+    retryUpload,
   } = useGlobalUpload();
 
   // ── Browser Leave Protection ────────────────────────────────────
@@ -178,6 +180,16 @@ export function GlobalUploadProgress() {
                             className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform"
                             size={14}
                           />
+                        </button>
+                      )}
+
+                      {(uploadStatus === "partial" || uploadStatus === "failed") && (
+                        <button
+                          onClick={() => retryUpload()}
+                          className="flex-1 py-2 bg-amber-400 hover:bg-amber-300 text-black rounded-lg text-xs font-bold transition-all transform active:scale-95 flex items-center justify-center gap-2 group/btn"
+                        >
+                          <RefreshCw size={14} className="group-hover/btn:rotate-180 transition-transform duration-500" />
+                          RETRY FAILED
                         </button>
                       )}
                       

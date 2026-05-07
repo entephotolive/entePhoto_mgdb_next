@@ -11,7 +11,7 @@ export default function TermsOfServicePage() {
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex items-center justify-between mb-12">
           <Link
-            href="/admin/login"
+            href="/photographer/login"
             className="text-cyan-400 hover:text-cyan-300 transition-colors text-sm font-medium flex items-center gap-2"
           >
             &larr; Back to Login

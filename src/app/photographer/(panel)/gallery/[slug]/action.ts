@@ -5,7 +5,6 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { PhotoModel } from "@/models/Photo";
 import { revalidatePath } from "next/cache";
 
-
 export async function updatePhotoStatus(
   photoId: string,
   status: "approved" | "rejected" | "pending",
@@ -14,7 +13,7 @@ export async function updatePhotoStatus(
     await requireSession();
     await connectToDatabase();
     await PhotoModel.findByIdAndUpdate(photoId, { status });
-    revalidatePath("/admin/gallery");
+    revalidatePath("/photographer/gallery");
     return { ok: true };
   } catch (error) {
     console.error("[updatePhotoStatus]", error);

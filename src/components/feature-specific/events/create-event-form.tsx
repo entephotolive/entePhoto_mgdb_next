@@ -31,8 +31,15 @@ export function CreateEventForm({ createdBy }: CreateEventFormProps) {
       }),
     });
 
-    const result = (await response.json().catch(() => null)) as { message?: string } | null;
-    setMessage(result?.message ?? (response.ok ? "Event created. Refresh to see latest data." : "Unable to create event."));
+    const result = (await response.json().catch(() => null)) as {
+      message?: string;
+    } | null;
+    setMessage(
+      result?.message ??
+        (response.ok
+          ? "Event created. Refresh to see latest data."
+          : "Unable to create event."),
+    );
 
     if (response.ok) {
       event.currentTarget.reset();
@@ -43,7 +50,9 @@ export function CreateEventForm({ createdBy }: CreateEventFormProps) {
     <Card className="space-y-4">
       <div>
         <p className="text-lg font-semibold text-white">Create event</p>
-        <p className="text-sm text-slate-400">Admins can create events for the full team.</p>
+        <p className="text-sm text-slate-400">
+          photographers can create events for the full team.
+        </p>
       </div>
       <form className="grid gap-4 md:grid-cols-3" onSubmit={handleSubmit}>
         <Input name="title" placeholder="Summer reception" required />
