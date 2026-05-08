@@ -93,16 +93,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
-      <section className="mb-6 sm:mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
-        <div>
-          <h2 className="text-2xl sm:text-4xl font-bold text-slate-100 mb-2 sm:mb-3 tracking-tight">
-            Upload Artifacts
-          </h2>
-          <p className="text-slate-500 max-w-md leading-relaxed">
-            Infuse the gallery with new moments. Select your event and bring
-            your vision into the digital darkroom.
-          </p>
-        </div>
+      <section className="mb-6 sm:mb-10 flex flex-col md:flex-row md:items-end justify-end gap-4 sm:gap-6">
         <div className="flex flex-col w-full md:w-auto md:items-end">
           <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">
             Select Event to Upload

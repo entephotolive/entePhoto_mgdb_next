@@ -16,8 +16,8 @@ export default async function UploadsPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Upload pipeline"
-        title="Drag, review, and register image batches"
+        eyebrow="Upload Center"
+        title="Upload Your Event Photos"
 
       />
       <UploadWorkspace events={events} userId={session.id} />
