@@ -185,7 +185,7 @@ function EventCard({
               : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10",
           )}
         >
-          {status === "completed" ? "View Gallery" : "Open Event"}
+          View details 
           <ChevronRight size={12} />
         </button>
 

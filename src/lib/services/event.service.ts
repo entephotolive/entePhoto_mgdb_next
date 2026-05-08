@@ -11,7 +11,9 @@ const eventInputSchema = z.object({
 });
 
 export async function listEvents(userId: string) {
-  await connectToDatabase();
+  const conn = await connectToDatabase();
+  const db = conn.connection.db;
+  if (!db) return [];
 
   const query = { createdBy: userId };
 
@@ -20,19 +22,43 @@ export async function listEvents(userId: string) {
     .sort({ date: 1 })
     .lean();
 
-  return events.map(
-    (event) =>
-      ({
-        id: event._id.toString(),
+  const photosColl = db.collection("photos");
+  const facesColl = db.collection("image_with_face");
+
+  const eventsWithCounts = await Promise.all(
+    events.map(async (event) => {
+      const eventIdStr = event._id.toString();
+      const eventIdObj = event._id;
+
+      const filter = {
+        $or: [
+          { eventId: eventIdStr },
+          { event_id: eventIdStr },
+          { eventId: eventIdObj },
+          { event_id: eventIdObj },
+        ],
+      };
+
+      const [pCount, fCount] = await Promise.all([
+        photosColl.countDocuments(filter),
+        facesColl.countDocuments(filter),
+      ]);
+
+      return {
+        id: eventIdStr,
         title: event.title,
         date: event.date.toISOString(),
         location: event.location,
+        photoCount: pCount + fCount,
         createdBy: {
           id: (event.createdBy as any)?._id?.toString?.() ?? userId,
           name: (event.createdBy as any)?.name ?? "Unknown",
         },
-      }) satisfies EventListItem,
+      };
+    }),
   );
+
+  return eventsWithCounts as EventListItem[];
 }
 
 export async function createEvent(input: unknown) {
