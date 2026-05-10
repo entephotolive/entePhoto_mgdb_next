@@ -89,6 +89,33 @@ function formatTime(iso: string) {
   });
 }
 
+function EventDetailList({ event }: { event: EventListItem }) {
+  return (
+    <div className="flex flex-col justify-center space-y-4">
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <CalendarDays size={15} className="shrink-0 text-slate-500" />
+        <span>{formatDate(event.date)}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <Clock size={15} className="shrink-0 text-slate-500" />
+        <span>{formatTime(event.date)}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <MapPin size={15} className="shrink-0 text-slate-500" />
+        <span>{event.location}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <User2 size={15} className="shrink-0 text-slate-500" />
+        <span>Created by {event.createdBy.name}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <Camera size={15} className="shrink-0 text-slate-500" />
+        <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Event Card (Grid View) ─────────────────────────────────────────────────────
 function EventCard({
   event,
@@ -130,7 +157,7 @@ function EventCard({
       {/* Card body */}
       <div className="flex flex-col gap-2.5 sm:gap-4 p-3.5 sm:p-5 flex-1">
         {/* Status badge */}
-        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
+        <div className="flex flex-col justify-between gap-2 xs:flex-row xs:items-center">
           <span
             className={cn(
               "inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-semibold border w-fit",
@@ -140,7 +167,6 @@ function EventCard({
             <span className={cn("w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
-         
         </div>
 
         {/* Title */}
@@ -178,7 +204,7 @@ function EventCard({
               : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10",
           )}
         >
-          Details 
+          Details
           <ChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
 
@@ -332,13 +358,21 @@ function ViewEventModal({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative w-full max-w-3xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-details-title"
+          className="relative flex max-h-[min(92vh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
+        >
 
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-7 pt-6 pb-5">
+          <div className="flex items-center justify-between px-4 pb-5 pt-5 sm:px-7 sm:pt-6">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
-              <h2 className="text-[15px] font-semibold text-white truncate lowercase tracking-tight">
+              <h2
+                id="event-details-title"
+                className="text-[15px] font-semibold text-white truncate lowercase tracking-tight"
+              >
                 {event.title}
               </h2>
             </div>
@@ -355,6 +389,7 @@ function ViewEventModal({
             <div className="grid grid-cols-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1">
               <button
                 onClick={() => setMobileSection("details")}
+                type="button"
                 className={cn(
                   "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
                   mobileSection === "details"
@@ -365,7 +400,8 @@ function ViewEventModal({
                 Details
               </button>
               <button
-                onClick={() => setMobileSection("te")}
+                onClick={() => setMobileSection("template")}
+                type="button"
                 className={cn(
                   "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
                   mobileSection === "template"
@@ -379,83 +415,45 @@ function ViewEventModal({
           </div>
 
           {/* ── Body ── */}
-          <div className="hidden px-7 pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
-            <div className="flex min-w-0 flex-col justify-center space-y-4">
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <CalendarDays size={15} className="text-slate-500 shrink-0" />
-                <span>{formatDate(event.date)}</span>
+          <div className="overflow-y-auto">
+            <div className="hidden px-7 pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
+              <div className="min-w-0">
+                <EventDetailList event={event} />
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <Clock size={15} className="text-slate-500 shrink-0" />
-                <span>{formatTime(event.date)}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <MapPin size={15} className="text-slate-500 shrink-0" />
-                <span>{event.location}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <User2 size={15} className="text-slate-500 shrink-0" />
-                <span>Created by {event.createdBy.name}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <Camera size={15} className="text-slate-500 shrink-0" />
-                <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+
+              <div className="shrink-0">
+                <QrTemplateCard
+                  eventUrl={eventUrl}
+                  eventSlug={eventSlug}
+                  profile={profile}
+                />
               </div>
             </div>
 
-            <div className="shrink-0">
-              <QrTemplateCard
-                eventUrl={eventUrl}
-                eventSlug={eventSlug}
-                profile={profile}
-              />
-            </div>
-          </div>
-
-          <div className="overflow-hidden px-4 pb-5 sm:hidden">
-            <div
-              className="flex w-[200%] transition-transform duration-300 ease-out"
-              style={{
-                transform:
-                  mobileSection === "details"
-                    ? "translateX(0%)"
-                    : "translateX(-50%)",
-              }}
-            >
-              <div className="w-1/2 pr-3">
-                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
-                  <div className="flex flex-col justify-center space-y-4">
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <CalendarDays size={15} className="text-slate-500 shrink-0" />
-                      <span>{formatDate(event.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <Clock size={15} className="text-slate-500 shrink-0" />
-                      <span>{formatTime(event.date)}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <MapPin size={15} className="text-slate-500 shrink-0" />
-                      <span>{event.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <User2 size={15} className="text-slate-500 shrink-0" />
-                      <span>Created by {event.createdBy.name}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <Camera size={15} className="text-slate-500 shrink-0" />
-                      <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
-                    </div>
+            <div className="overflow-hidden px-4 pb-5 sm:hidden">
+              <div
+                className="flex w-[200%] transition-transform duration-300 ease-out"
+                style={{
+                  transform:
+                    mobileSection === "details"
+                      ? "translateX(0%)"
+                      : "translateX(-50%)",
+                }}
+              >
+                <div className="w-1/2 pr-3">
+                  <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                    <EventDetailList event={event} />
                   </div>
                 </div>
-              </div>
 
-              <div className="w-1/2 pl-3">
-                <div className="flex justify-center rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
-                  <QrTemplateCard
-                    eventUrl={eventUrl}
-                    eventSlug={eventSlug}
-                    profile={profile}
-                  />
+                <div className="w-1/2 pl-3">
+                  <div className="flex justify-center rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                    <QrTemplateCard
+                      eventUrl={eventUrl}
+                      eventSlug={eventSlug}
+                      profile={profile}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -632,6 +630,7 @@ export function EventsClient({
         createdBy={userId}
       />
       <ViewEventModal
+        key={viewEvent?.id ?? "no-event"}
         event={viewEvent}
         onClose={() => setViewEvent(null)}
         photographerProfile={photographerProfile}
@@ -661,7 +660,7 @@ export function EventsClient({
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Group 1: Buttons (Add Event + View Toggle) */}
-          <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
+        <div className="flex w-full items-center gap-3 sm:order-2 sm:w-auto">
             {isphotographer && (
               <button
                 id="add-event-btn"
@@ -770,7 +769,7 @@ export function EventsClient({
               ? "Try adjusting your search or filter criteria."
               : isphotographer
                 ? 'Click "Add New Event" to create your first photography event.'
-                : "Once an photographer creates events, they will appear here."}
+                : "Once a photographer creates events, they will appear here."}
           </p>
           {isphotographer && !search && (
             <button
