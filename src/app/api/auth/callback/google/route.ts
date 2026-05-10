@@ -11,11 +11,14 @@ export async function GET(request: Request) {
 
     if (error || !code) {
       return NextResponse.redirect(
-        new URL("/login?error=Google authentication failed.", request.url),
+        new URL(
+          "/photographer/login?error=Google authentication failed.",
+          request.url,
+        ),
       );
     }
 
-    const host = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+    const host = process.env.NEXT_PUBLIC_APP_URL;
 
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;

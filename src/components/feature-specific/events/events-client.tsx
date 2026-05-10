@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Plus,
   CalendarDays,
@@ -17,19 +17,20 @@ import {
   Camera,
   Copy,
   Check,
-  Download,
   ExternalLink,
 } from "lucide-react";
-import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils/cn";
-import { EventListItem } from "@/types";
+import { EventListItem, PhotographerProfile } from "@/types";
 import { EventModal } from "./event-modal";
 import { deleteEventAction } from "@/app/photographer/(panel)/events/event.actions";
+import { QrTemplateCard } from "./qr-template-card";
 
 interface EventsClientProps {
   events: EventListItem[];
   isphotographer: boolean;
   userId: string;
+  /** Profile sourced from the User collection via fetchProfileById */
+  photographerProfile?: PhotographerProfile;
 }
 
 type FilterTab = "all" | "active" | "completed" | "draft";
@@ -283,12 +284,13 @@ function EventRow({
 function ViewEventModal({
   event,
   onClose,
+  photographerProfile,
 }: {
   event: EventListItem | null;
   onClose: () => void;
+  photographerProfile?: PhotographerProfile;
 }) {
   const [copied, setCopied] = useState(false);
-  const qrRef = useRef<HTMLDivElement>(null);
 
   if (!event) return null;
 
@@ -301,24 +303,22 @@ function ViewEventModal({
       ? `${window.location.origin}${eventPath}`
       : eventPath;
 
+  const eventSlug = event.title.toLowerCase().replace(/\s+/g, "-");
+
+  /** Normalised profile — guarantees all fields exist for QrTemplateCard */
+  const profile: PhotographerProfile = {
+    name:          photographerProfile?.name          ?? "",
+    email:         photographerProfile?.email         ?? "",
+    studioName:    photographerProfile?.studioName    ?? "",
+    studioLocation:photographerProfile?.studioLocation?? "",
+    bio:           photographerProfile?.bio           ?? "",
+    avatarUrl:     photographerProfile?.avatarUrl     ?? "",
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(eventUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    const svg = qrRef.current?.querySelector("svg");
-    if (!svg) return;
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const blob = new Blob([clone.outerHTML], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `qr-${event.title.toLowerCase().replace(/\s+/g, "-")}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -331,13 +331,12 @@ function ViewEventModal({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="relative w-full max-w-3xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
           {/* ── Header ── */}
           <div className="flex items-center justify-between px-7 pt-6 pb-5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span
-                className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)}
-              />
+              <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
               <h2 className="text-[15px] font-semibold text-white truncate lowercase tracking-tight">
                 {event.title}
               </h2>
@@ -345,14 +344,16 @@ function ViewEventModal({
             <button
               onClick={onClose}
               className="text-slate-500 hover:text-white transition-colors shrink-0"
+              aria-label="Close event details"
             >
               <X size={17} />
             </button>
           </div>
 
-          {/* ── Body: 2-column grid ── */}
-          <div className="grid grid-cols-[1fr_auto] gap-6 px-7 pb-5">
-            {/* Left — event details */}
+          {/* ── Body ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 px-7 pb-5">
+
+            {/* Left — event metadata */}
             <div className="flex flex-col justify-center space-y-4">
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <CalendarDays size={15} className="text-slate-500 shrink-0" />
@@ -376,30 +377,21 @@ function ViewEventModal({
               </div>
             </div>
 
-            {/* Right — QR code */}
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div ref={qrRef} className="bg-white rounded-2xl p-4 shadow-xl">
-                <QRCode
-                  value={eventUrl}
-                  size={168}
-                  bgColor="#ffffff"
-                  fgColor="#020617"
-                  level="H"
-                  style={{ display: "block" }}
-                />
-              </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                Scan to open gallery
-              </p>
+            {/* Right — QR template card (preview + download) */}
+            <div className="shrink-0">
+              <QrTemplateCard
+                eventUrl={eventUrl}
+                eventSlug={eventSlug}
+                profile={profile}
+              />
             </div>
           </div>
 
           {/* ── Divider ── */}
           <div className="mx-7 border-t border-white/[0.06]" />
 
-          {/* ── Footer: URL pill + download ── */}
-          <div className="px-7 py-5 space-y-3">
-            {/* URL pill */}
+          {/* ── Footer — URL pill ── */}
+          <div className="px-7 py-5">
             <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-4 py-2.5">
               <code className="flex-1 text-[12px] text-slate-300 truncate font-mono">
                 {eventPath}
@@ -426,16 +418,8 @@ function ViewEventModal({
                 <ExternalLink size={13} />
               </a>
             </div>
-
-            {/* Download button */}
-            <button
-              onClick={handleDownload}
-              className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1a2a2a] border border-cyan-500/20 text-cyan-400 text-sm font-semibold hover:bg-cyan-500/10 transition-all"
-            >
-              <Download size={14} />
-              Download QR Code
-            </button>
           </div>
+
         </div>
       </div>
     </>
@@ -512,6 +496,7 @@ export function EventsClient({
   events,
   isphotographer,
   userId,
+  photographerProfile,
 }: EventsClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewEvent, setViewEvent] = useState<EventListItem | null>(null);
@@ -572,7 +557,11 @@ export function EventsClient({
         onClose={() => setModalOpen(false)}
         createdBy={userId}
       />
-      <ViewEventModal event={viewEvent} onClose={() => setViewEvent(null)} />
+      <ViewEventModal
+        event={viewEvent}
+        onClose={() => setViewEvent(null)}
+        photographerProfile={photographerProfile}
+      />
       <DeleteConfirmationModal
         event={confirmDeleteEvent}
         onClose={() => setConfirmDeleteEvent(null)}
