@@ -323,9 +323,9 @@ export function QrTemplateCard({ eventUrl, eventSlug, profile }: QrTemplateCardP
       const dataUrl = await toPng(exportRoot, {
         cacheBust: true,
         backgroundColor: "#05070d",
-        pixelRatio: 2,
-        canvasWidth: CARD_W * 2,
-        canvasHeight: CARD_H * 2,
+        pixelRatio: 1,
+        canvasWidth: CARD_W,
+        canvasHeight: CARD_H,
         width: CARD_W,
         height: CARD_H,
         skipAutoScale: true,
