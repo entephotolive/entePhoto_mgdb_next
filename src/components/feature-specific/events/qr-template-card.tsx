@@ -67,27 +67,6 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-async function waitForImages(node: HTMLElement): Promise<void> {
-  const images = Array.from(node.querySelectorAll("img"));
-
-  await Promise.all(images.map((image) => {
-    if (image.complete && image.naturalWidth > 0) {
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve) => {
-      const done = () => {
-        image.removeEventListener("load", done);
-        image.removeEventListener("error", done);
-        resolve();
-      };
-
-      image.addEventListener("load", done, { once: true });
-      image.addEventListener("error", done, { once: true });
-    });
-  }));
-}
-
 function waitForNextPaint(): Promise<void> {
   return new Promise((resolve) => {
     requestAnimationFrame(() => {
@@ -116,7 +95,6 @@ function CardCanvas({
 }) {
   const displayName = profile.studioName.trim() || profile.name.trim() || "Studio";
   const displayEmail = profile.email.trim() || "hello@studio.com";
-  const displayLocation = profile.studioLocation.trim() || "Luxury Photography Studio";
   const fallbackMark = getLogoFallback(displayName);
 
   return (
@@ -236,7 +214,7 @@ function CardCanvas({
 export function QrTemplateCard({ eventUrl, eventSlug, profile }: QrTemplateCardProps) {
   const previewQrRef = useRef<HTMLDivElement>(null);
   const exportQrRef = useRef<HTMLDivElement>(null);
-  const exportCardRef = useRef<HTMLDivElement>(null);
+  const exportCardRootRef = useRef<HTMLDivElement>(null);
   const qrBuildRef = useRef<Promise<void> | null>(null);
 
   const [isDownloading, setIsDownloading] = useState(false);
@@ -330,26 +308,27 @@ export function QrTemplateCard({ eventUrl, eventSlug, profile }: QrTemplateCardP
   }, [eventUrl]);
 
   const handleDownload = useCallback(async () => {
-    if (!exportCardRef.current) return;
-
     setIsDownloading(true);
 
     try {
       await qrBuildRef.current;
-      await waitForImages(exportCardRef.current);
       await waitForNextPaint();
+      const exportRoot = exportCardRootRef.current;
 
-      const domToImage = await import("dom-to-image-more");
-      const dataUrl = await domToImage.toPng(exportCardRef.current, {
+      if (!exportRoot) {
+        throw new Error("Template component is not ready yet.");
+      }
+
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(exportRoot, {
         cacheBust: true,
-        bgcolor: "#05070d",
-        quality: 1,
+        backgroundColor: "#05070d",
+        pixelRatio: 2,
+        canvasWidth: CARD_W * 2,
+        canvasHeight: CARD_H * 2,
         width: CARD_W,
         height: CARD_H,
-        style: {
-          transform: "none",
-          transformOrigin: "top left",
-        },
+        skipAutoScale: true,
       });
 
       const anchor = document.createElement("a");
@@ -370,7 +349,7 @@ export function QrTemplateCard({ eventUrl, eventSlug, profile }: QrTemplateCardP
         className="pointer-events-none fixed -left-[9999px] top-0"
         aria-hidden="true"
       >
-        <div ref={exportCardRef}>
+        <div ref={exportCardRootRef}>
           <CardCanvas
             qrRef={exportQrRef}
             profile={profile}
