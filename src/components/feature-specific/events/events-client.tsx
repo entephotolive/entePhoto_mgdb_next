@@ -291,6 +291,7 @@ function ViewEventModal({
   photographerProfile?: PhotographerProfile;
 }) {
   const [copied, setCopied] = useState(false);
+  const [mobileSection, setMobileSection] = useState<"details" | "template">("details");
 
   if (!event) return null;
 
@@ -350,11 +351,36 @@ function ViewEventModal({
             </button>
           </div>
 
-          {/* ── Body ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 px-7 pb-5">
+          <div className="px-4 pb-4 sm:hidden">
+            <div className="grid grid-cols-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1">
+              <button
+                onClick={() => setMobileSection("details")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
+                  mobileSection === "details"
+                    ? "bg-cyan-500/12 text-cyan-400"
+                    : "text-slate-500",
+                )}
+              >
+                Details
+              </button>
+              <button
+                onClick={() => setMobileSection("te")}
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
+                  mobileSection === "template"
+                    ? "bg-cyan-500/12 text-cyan-400"
+                    : "text-slate-500",
+                )}
+              >
+                Template
+              </button>
+            </div>
+          </div>
 
-            {/* Left — event metadata */}
-            <div className="flex flex-col justify-center space-y-4">
+          {/* ── Body ── */}
+          <div className="hidden px-7 pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
+            <div className="flex min-w-0 flex-col justify-center space-y-4">
               <div className="flex items-center gap-3 text-sm text-slate-300">
                 <CalendarDays size={15} className="text-slate-500 shrink-0" />
                 <span>{formatDate(event.date)}</span>
@@ -377,7 +403,6 @@ function ViewEventModal({
               </div>
             </div>
 
-            {/* Right — QR template card (preview + download) */}
             <div className="shrink-0">
               <QrTemplateCard
                 eventUrl={eventUrl}
@@ -387,12 +412,61 @@ function ViewEventModal({
             </div>
           </div>
 
+          <div className="overflow-hidden px-4 pb-5 sm:hidden">
+            <div
+              className="flex w-[200%] transition-transform duration-300 ease-out"
+              style={{
+                transform:
+                  mobileSection === "details"
+                    ? "translateX(0%)"
+                    : "translateX(-50%)",
+              }}
+            >
+              <div className="w-1/2 pr-3">
+                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <div className="flex flex-col justify-center space-y-4">
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <CalendarDays size={15} className="text-slate-500 shrink-0" />
+                      <span>{formatDate(event.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <Clock size={15} className="text-slate-500 shrink-0" />
+                      <span>{formatTime(event.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <MapPin size={15} className="text-slate-500 shrink-0" />
+                      <span>{event.location}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <User2 size={15} className="text-slate-500 shrink-0" />
+                      <span>Created by {event.createdBy.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <Camera size={15} className="text-slate-500 shrink-0" />
+                      <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="w-1/2 pl-3">
+                <div className="flex justify-center rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                  <QrTemplateCard
+                    eventUrl={eventUrl}
+                    eventSlug={eventSlug}
+                    profile={profile}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ── Divider ── */}
-          <div className="mx-7 border-t border-white/[0.06]" />
+          <div className="mx-4 border-t border-white/[0.06] sm:mx-7" />
 
           {/* ── Footer — URL pill ── */}
-          <div className="px-7 py-5">
-            <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-4 py-2.5">
+          <div className="px-4 py-5 sm:px-7">
+            <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-3 py-2.5 sm:px-4">
               <code className="flex-1 text-[12px] text-slate-300 truncate font-mono">
                 {eventPath}
               </code>
