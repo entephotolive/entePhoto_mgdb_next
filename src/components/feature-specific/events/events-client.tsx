@@ -127,47 +127,39 @@ function EventCard({
       />
 
       {/* Card body */}
-      <div className="flex flex-col gap-4 p-5 flex-1">
+      <div className="flex flex-col gap-2.5 sm:gap-4 p-3.5 sm:p-5 flex-1">
         {/* Status badge */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border",
+              "inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-semibold border w-fit",
               meta.badge,
             )}
           >
-            <span className={cn("w-1.5 h-1.5 rounded-full", meta.dot)} />
+            <span className={cn("w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
-          {/* Photo count pill */}
-          {event.photoCount !== undefined && (
-            <span className="text-[10px] font-medium text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">
-              {event.photoCount.toLocaleString()} photos
-            </span>
-          )}
+         
         </div>
 
         {/* Title */}
         <div>
-          <h3 className="text-base font-bold text-white leading-snug group-hover:text-cyan-300 transition-colors line-clamp-2">
+          <h3 className="text-xs sm:text-base font-bold text-white leading-snug group-hover:text-cyan-300 transition-colors line-clamp-2">
             {event.title}
           </h3>
         </div>
 
         {/* Metadata */}
-        <div className="space-y-2 mt-auto">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <CalendarDays size={12} className="shrink-0 text-slate-600" />
-            <span>{formatDate(event.date)}</span>
-            <span className="text-slate-700">·</span>
-            <Clock size={11} className="shrink-0 text-slate-600" />
-            <span>{formatTime(event.date)}</span>
+        <div className="space-y-1.5 mt-auto">
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-500">
+            <CalendarDays size={10} className="shrink-0 text-slate-600 sm:w-3 sm:h-3" />
+            <span className="truncate">{formatDate(event.date)}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <MapPin size={12} className="shrink-0 text-slate-600" />
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-500">
+            <MapPin size={10} className="shrink-0 text-slate-600 sm:w-3 sm:h-3" />
             <span className="truncate">{event.location}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
             <User2 size={12} className="shrink-0 text-slate-600" />
             <span className="truncate">{event.createdBy.name}</span>
           </div>
@@ -175,31 +167,31 @@ function EventCard({
       </div>
 
       {/* Card footer */}
-      <div className="px-5 pb-5 flex items-center justify-between gap-2">
+      <div className="px-3.5 pb-3.5 sm:px-5 sm:pb-5 flex items-center justify-between gap-2">
         <button
           onClick={() => onView(event)}
           className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all",
+            "flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-semibold transition-all",
             status === "active"
               ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20"
               : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10",
           )}
         >
-          {status === "completed" ? "View Gallery" : "Open Event"}
-          <ChevronRight size={12} />
+          Details 
+          <ChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
 
         {isphotographer && (
           <button
             onClick={() => onDelete(event.id)}
             disabled={isDeleting}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 border border-white/[0.06] transition-all"
+            className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 border border-white/[0.06] transition-all"
             aria-label={`Delete ${event.title}`}
           >
             {isDeleting ? (
-              <Loader2 size={13} className="animate-spin" />
+              <Loader2 size={12} className="animate-spin sm:w-[13px] sm:h-[13px]" />
             ) : (
-              <Trash2 size={13} />
+              <Trash2 size={12} className="sm:w-[13px] sm:h-[13px]" />
             )}
           </button>
         )}
@@ -588,8 +580,9 @@ export function EventsClient({
         isDeleting={!!deleting}
       />
 
-      {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
+      {/* ── Page Header & Controls ── */}
+      <div className="flex flex-col gap-6 mb-8">
+        {/* Title Section */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400 mb-1.5">
             Event Management
@@ -602,70 +595,73 @@ export function EventsClient({
           </p>
         </div>
 
-        {isphotographer && (
-          <button
-            id="add-event-btn"
-            onClick={() => setModalOpen(true)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0",
-              "bg-cyan-500 text-black hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20",
-              "active:scale-95",
+        {/* Actions Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          {/* Group 1: Buttons (Add Event + View Toggle) */}
+          <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
+            {isphotographer && (
+              <button
+                id="add-event-btn"
+                onClick={() => setModalOpen(true)}
+                className={cn(
+                  "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap",
+                  "bg-cyan-500 text-black hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/20",
+                  "active:scale-95",
+                )}
+              >
+                <Plus size={16} />
+                Add Event
+              </button>
             )}
-          >
-            <Plus size={16} />
-            Add New Event
-          </button>
-        )}
-      </div>
 
-      {/* ── Controls Row ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
-          />
-          <input
-            id="event-search"
-            type="text"
-            placeholder="Search events or locations..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn(
-              "w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-white/5 border border-white/[0.07]",
-              "text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1",
-              "focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all",
-            )}
-          />
-        </div>
+            {/* View toggle */}
+            <div className="flex items-center bg-white/5 rounded-xl p-1 border border-white/[0.07] shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "flex items-center justify-center h-8 w-8 rounded-lg transition-all",
+                  viewMode === "grid"
+                    ? "bg-white/10 text-white"
+                    : "text-slate-600 hover:text-slate-400",
+                )}
+                aria-label="Grid view"
+              >
+                <LayoutGrid size={15} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center justify-center h-8 w-8 rounded-lg transition-all",
+                  viewMode === "list"
+                    ? "bg-white/10 text-white"
+                    : "text-slate-600 hover:text-slate-400",
+                )}
+                aria-label="List view"
+              >
+                <List size={15} />
+              </button>
+            </div>
+          </div>
 
-        {/* View toggle */}
-        <div className="flex items-center bg-white/5 rounded-lg p-1 border border-white/[0.07] shrink-0">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={cn(
-              "flex items-center justify-center h-7 w-7 rounded-md transition-all",
-              viewMode === "grid"
-                ? "bg-white/10 text-white"
-                : "text-slate-600 hover:text-slate-400",
-            )}
-            aria-label="Grid view"
-          >
-            <LayoutGrid size={14} />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={cn(
-              "flex items-center justify-center h-7 w-7 rounded-md transition-all",
-              viewMode === "list"
-                ? "bg-white/10 text-white"
-                : "text-slate-600 hover:text-slate-400",
-            )}
-            aria-label="List view"
-          >
-            <List size={14} />
-          </button>
+          {/* Group 2: Search (Full width on mobile, fills remaining on desktop) */}
+          <div className="relative flex-1 sm:order-1">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+            />
+            <input
+              id="event-search"
+              type="text"
+              placeholder="Search events or locations..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(
+                "w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-white/5 border border-white/[0.07]",
+                "text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1",
+                "focus:ring-cyan-500/50 focus:border-cyan-500/30 transition-all",
+              )}
+            />
+          </div>
         </div>
       </div>
 
@@ -724,7 +720,7 @@ export function EventsClient({
           )}
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((event) => (
             <EventCard
               key={event.id}
@@ -744,20 +740,20 @@ export function EventsClient({
                 "group relative flex flex-col items-center justify-center gap-3",
                 "rounded-2xl border border-dashed border-white/10 bg-white/[0.02]",
                 "hover:border-cyan-500/30 hover:bg-cyan-500/[0.03] transition-all duration-300",
-                "min-h-[200px] cursor-pointer",
+                "min-h-[160px] sm:min-h-[200px] cursor-pointer",
               )}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 border border-white/10 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-all">
+              <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white/5 border border-white/10 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/20 transition-all">
                 <Plus
-                  size={20}
+                  size={18}
                   className="text-slate-500 group-hover:text-cyan-400 transition-colors"
                 />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-500 group-hover:text-cyan-400 transition-colors">
+              <div className="px-2">
+                <p className="text-xs sm:text-sm font-semibold text-slate-500 group-hover:text-cyan-400 transition-colors">
                   Create Event
                 </p>
-                <p className="text-xs text-slate-600 text-center">
+                <p className="hidden sm:block text-[10px] text-slate-600 text-center">
                   Register a new session
                 </p>
               </div>

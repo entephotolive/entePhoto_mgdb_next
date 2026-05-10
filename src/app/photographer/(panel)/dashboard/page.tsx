@@ -38,12 +38,12 @@ const METRIC_CONFIG = [
     href: "/photographer/gallery",
   },
   {
-    icon: Users,
+    icon: ImageIcon,
     color: "text-emerald-400",
     bg: "bg-emerald-400/10",
     border: "border-emerald-400/20",
     glow: "shadow-[0_0_30px_rgba(52,211,153,0.08)]",
-    href: "/photographer/gallery",
+    href: null, // No click needed
   },
 ];
 export const metadata = {
@@ -80,35 +80,43 @@ export default async function DashboardPage() {
         {snapshot?.metrics.map((metric, i) => {
           const cfg = METRIC_CONFIG[i];
           const Icon = cfg.icon;
-          return (
-            <Link key={metric.label} href={cfg.href}>
-              <Card
-                className={`group relative overflow-hidden border ${cfg.border} bg-white/[0.03] ${cfg.glow} hover:bg-white/[0.06] transition-all duration-300 cursor-pointer`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div
-                      className={`${cfg.bg} ${cfg.border} border rounded-xl p-2.5`}
-                    >
-                      <Icon className={`${cfg.color} h-5 w-5`} />
-                    </div>
-                    <ArrowUpRight className="text-slate-600 group-hover:text-slate-400 transition-colors h-4 w-4" />
+          
+          const CardContentWrapper = () => (
+            <Card
+              className={`group relative h-full overflow-hidden border ${cfg.border} bg-white/[0.03] ${cfg.glow} ${cfg.href ? "hover:bg-white/[0.06] cursor-pointer" : "cursor-default"} transition-all duration-300`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`${cfg.bg} ${cfg.border} border rounded-xl p-2.5`}
+                  >
+                    <Icon className={`${cfg.color} h-5 w-5`} />
                   </div>
-                  <div className="mt-4">
-                    <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
-                      {metric.label}
-                    </p>
-                    <p className={`mt-2 text-4xl font-bold ${cfg.color}`}>
-                      {metric.value}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {metric.delta}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  {cfg.href && <ArrowUpRight className="text-slate-600 group-hover:text-slate-400 transition-colors h-4 w-4" />}
+                </div>
+                <div className="mt-4">
+                  <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
+                    {metric.label}
+                  </p>
+                  <p className={`mt-2 text-4xl font-bold ${cfg.color}`}>
+                    {metric.value}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {metric.delta}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           );
+
+          if (cfg.href) {
+            return (
+              <Link key={metric.label} href={cfg.href}>
+                <CardContentWrapper />
+              </Link>
+            );
+          }
+          return <CardContentWrapper key={metric.label} />;
         }) ?? (
           <div className="col-span-3">
             <Card className="border-dashed border-white/10 bg-white/[0.02]">
@@ -145,7 +153,7 @@ export default async function DashboardPage() {
                   Recent Events
                 </p>
                 <CardTitle className="mt-1 text-lg font-semibold text-white">
-                  Upcoming &amp; Active
+                  Event Activity
                 </CardTitle>
               </div>
               <Link
@@ -157,44 +165,59 @@ export default async function DashboardPage() {
               </Link>
             </div>
           </CardHeader>
-          <CardContent className="space-y-2 pt-0">
+          <CardContent className="space-y-3 pt-0">
             {snapshot?.recentEvents.length ? (
-              snapshot.recentEvents.map((event) => {
+              snapshot.recentEvents.map((event: any) => {
                 const eventDate = new Date(event.date);
-                const isUpcoming = eventDate > now;
+                const diffInMs = now.getTime() - eventDate.getTime();
+                const diffInHours = diffInMs / (1000 * 60 * 60);
+
+                let status = "Past";
+                let statusClass = "border-slate-500/30 bg-white/[0.04] text-slate-500";
+
+                if (diffInHours >= -24 && diffInHours <= 24) {
+                  status = "Ongoing";
+                  statusClass = "border-cyan-400/30 bg-cyan-400/10 text-cyan-400";
+                } else if (diffInHours < -24) {
+                  status = "Upcoming";
+                  statusClass = "border-emerald-400/30 bg-emerald-400/10 text-emerald-400";
+                }
+
                 return (
                   <div
                     key={event.id}
-                    className="group flex items-start gap-3 rounded-xl bg-white/[0.03] border border-white/[0.05] p-3 hover:bg-white/[0.06] hover:border-white/10 transition-all duration-200"
+                    className="group flex items-start gap-4 rounded-2xl bg-white/[0.02] border border-white/[0.05] p-4 hover:bg-white/[0.04] hover:border-white/10 transition-all duration-300"
                   >
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
-                      <Calendar className="h-4 w-4 text-cyan-400" />
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 border border-cyan-400/20">
+                      <Calendar className="h-5 w-5 text-cyan-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">
-                        {event.title}
-                      </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span className="flex items-center gap-1 text-[11px] text-slate-500">
-                          <MapPin className="h-3 w-3" />
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-white truncate">
+                          {event.title}
+                        </p>
+                        <Badge
+                          className={`${statusClass} text-[9px] font-bold uppercase tracking-wider shrink-0`}
+                          variant="outline"
+                        >
+                          {status}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                          <MapPin className="h-3 w-3 text-slate-600" />
                           {event.location}
                         </span>
-                        <span className="flex items-center gap-1 text-[11px] text-slate-500">
-                          <Clock className="h-3 w-3" />
+                        <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+                          <Clock className="h-3 w-3 text-slate-600" />
                           {formatShortDate(event.date)}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-cyan-400/80">
+                          <ImageIcon className="h-3 w-3" />
+                          {event.photoCount || 0} Photos
                         </span>
                       </div>
                     </div>
-                    <Badge
-                      className={
-                        isUpcoming
-                          ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400 text-[10px] shrink-0"
-                          : "border-slate-500/30 bg-white/[0.04] text-slate-500 text-[10px] shrink-0"
-                      }
-                      variant="outline"
-                    >
-                      {isUpcoming ? "Upcoming" : "Past"}
-                    </Badge>
                   </div>
                 );
               })

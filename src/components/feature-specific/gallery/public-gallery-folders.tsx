@@ -1,22 +1,47 @@
+"use client";
+
 import Link from "next/link";
 import { Images } from "lucide-react";
+import { useState, useEffect } from "react";
 
 interface PublicGalleryFoldersProps {
   folders: any[];
   eventId: string;
 }
 
-export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersProps) {
+export function PublicGalleryFolders({
+  folders,
+  eventId,
+}: PublicGalleryFoldersProps) {
+  const [myPhotosCover, setMyPhotosCover] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("matched_images");
+      if (saved) {
+        const photos = JSON.parse(saved);
+        if (Array.isArray(photos) && photos.length > 0) {
+          setMyPhotosCover(photos[0].image_url || photos[0].url);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load my-photos cover", e);
+    }
+  }, []);
+
   // Inject a virtual "My Photos" folder at the top if it isn't already present
   const myPhotosFolder = {
     id: "my-photos",
     title: "My Photos",
     photoCount: null, // we don't know the count server-side
-    coverUrl: null,
+    coverUrl: myPhotosCover,
     isVirtual: true,
   };
 
-  const allFolders = [myPhotosFolder, ...folders.filter((f) => f.id !== "all" && f.id !== "my-photos")];
+  const allFolders = [
+    myPhotosFolder,
+    ...folders.filter((f) => f.id !== "all" && f.id !== "my-photos"),
+  ];
 
   return (
     <div className="grid grid-cols-2 gap-4 sm:gap-8 lg:grid-cols-3">
@@ -43,7 +68,10 @@ export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersP
                     {folder.isVirtual ? (
                       <span className="text-3xl sm:text-5xl">🪪</span>
                     ) : (
-                      <Images size={32} className="text-slate-600 opacity-20 sm:w-12 sm:h-12" />
+                      <Images
+                        size={32}
+                        className="text-slate-600 opacity-20 sm:w-12 sm:h-12"
+                      />
                     )}
                   </div>
                 )}
@@ -64,7 +92,9 @@ export function PublicGalleryFolders({ folders, eventId }: PublicGalleryFoldersP
                 <div className="flex items-center gap-2 text-slate-500 font-bold uppercase tracking-widest text-[10px]">
                   <Images size={12} className="opacity-50" />
                   <span>
-                    {folder.isVirtual ? "YOUR MATCHED CAPTURES" : `${folder.photoCount} PHOTOS`}
+                    {folder.isVirtual
+                      ? "YOUR MATCHED CAPTURES"
+                      : `${folder.photoCount} PHOTOS`}
                   </span>
                 </div>
               </Link>

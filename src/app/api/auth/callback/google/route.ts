@@ -89,8 +89,6 @@ export async function GET(request: Request) {
     // 5. Create redirect response and set the JWT auth cookie
     const response = NextResponse.redirect(`${host}/photographer/dashboard`);
     const cookieOptions = getAuthCookieOptions();
-
-    const cookieOptions = getAuthCookieOptions();
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
     return response;

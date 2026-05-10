@@ -7,6 +7,7 @@ import bg from "@/assets/1st.jpg";
 import { api } from "@/app/api/api-client";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error";
+const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
 
 export default function FaceScanPage() {
   const params = useParams();
@@ -68,7 +69,6 @@ export default function FaceScanPage() {
 
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      localStorage.setItem("user_scanned_photo", dataUrl);
 
       const res = await fetch(dataUrl);
       const blob = await res.blob();
@@ -86,18 +86,15 @@ export default function FaceScanPage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Save cookie
-      document.cookie = `scan_response=${encodeURIComponent(
-        JSON.stringify(apiResponse.data),
-      )}; path=/; max-age=${60 * 60 * 5}`;
-
-      if (apiResponse.data?.matched_images) {
-        localStorage.setItem(
-          "matched_images",
-          JSON.stringify(apiResponse.data.matched_images),
-        );
+      const attendeeId = apiResponse.data?.attendee_id ?? apiResponse.data?.id;
+      if (!attendeeId) {
+        throw new Error("Scan succeeded but attendee id was missing from response.");
       }
 
+      sessionStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
+      localStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
+      document.cookie = `${SCAN_ATTENDEE_SESSION_KEY}=${attendeeId}; path=/; max-age=18000;`;
+      document.cookie = `scan_response=${attendeeId}; path=/; max-age=18000;`;
       setStatus("success");
 
       // Small delay so the user sees the success state, then redirect
@@ -255,7 +252,7 @@ export default function FaceScanPage() {
                   />
                 </svg>
                 <span className="text-xs font-semibold text-emerald-300 tracking-widest">
-                  face detected ✓
+                  face detected
                 </span>
               </div>
             )}
