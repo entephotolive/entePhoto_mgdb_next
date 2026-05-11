@@ -25,7 +25,7 @@ export function AdminLoginForm() {
     setIsPending(true);
 
     try {
-      window.location.href = "/api/auth/google/admin";
+      window.location.href = "/api/auth/google?role=admin";
     } catch {
       setError("Failed to initialize Google Sign-In.");
       setIsPending(false);

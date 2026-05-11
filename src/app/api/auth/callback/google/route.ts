@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { UserModel } from "@/models/User";
+import { AdminModel } from "@/models/Admin";
 import { signSessionToken, getAuthCookieOptions } from "@/lib/utils/auth";
 
 export async function GET(request: Request) {
@@ -8,18 +9,29 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
     const error = url.searchParams.get("error");
+    const stateStr = url.searchParams.get("state");
+
+    let role = "photographer";
+    try {
+      if (stateStr) {
+        const state = JSON.parse(stateStr);
+        role = state.role || "photographer";
+      }
+    } catch (e) {
+      console.error("Failed to parse state:", e);
+    }
+
+    const isAdmin = role === "admin";
+    const loginPath = isAdmin ? "/admin/login" : "/photographer/login";
+    const dashboardPath = isAdmin ? "/admin" : "/photographer/dashboard";
 
     if (error || !code) {
       return NextResponse.redirect(
-        new URL(
-          "/photographer/login?error=Google authentication failed.",
-          request.url,
-        ),
+        new URL(`${loginPath}?error=Google authentication failed.`, request.url)
       );
     }
 
     const host = process.env.NEXT_PUBLIC_APP_URL;
-
     const redirectUri = `${host}/api/auth/callback/google`;
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -49,12 +61,12 @@ export async function GET(request: Request) {
 
     const tokens = await tokenResponse.json();
 
-    // 2. Fetch the user's profile information
+    // Fetch user profile
     const userResponse = await fetch(
       "https://www.googleapis.com/oauth2/v2/userinfo",
       {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
-      },
+      }
     );
 
     if (!userResponse.ok) {
@@ -62,35 +74,38 @@ export async function GET(request: Request) {
     }
 
     const googleUser = await userResponse.json();
-
     if (!googleUser.email) {
       throw new Error("No email from Google");
     }
 
-    // DB check
     await connectToDatabase();
     const email = googleUser.email.toLowerCase();
 
-    const user = await UserModel.findOne({ email });
+    let authenticatedUser = null;
 
-    if (!user) {
+    if (isAdmin) {
+      authenticatedUser = await AdminModel.findOne({ email });
+    } else {
+      authenticatedUser = await UserModel.findOne({ email });
+    }
+
+    if (!authenticatedUser) {
+      const authError = isAdmin 
+        ? "You are not authorized to login as admin." 
+        : "You are not authorized to login. contact admin";
       return NextResponse.redirect(
-        new URL(
-          "/photographer/login?error=You are not authorized to login. contact admin",
-          request.url,
-        ),
+        new URL(`${loginPath}?error=${authError}`, request.url)
       );
     }
 
     // Create session
     const token = await signSessionToken({
-      sub: user._id.toString(),
-      name: user.name,
-      email: user.email,
+      sub: authenticatedUser._id.toString(),
+      name: authenticatedUser.name,
+      email: authenticatedUser.email,
     });
 
-    // 5. Create redirect response and set the JWT auth cookie
-    const response = NextResponse.redirect(`${host}/photographer/dashboard`);
+    const response = NextResponse.redirect(`${host}${dashboardPath}`);
     const cookieOptions = getAuthCookieOptions();
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 
@@ -98,7 +113,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Google Auth Error:", error);
     return NextResponse.redirect(
-      new URL("/login?error=Authentication error occurred.", request.url),
+      new URL("/login?error=Authentication error occurred.", request.url)
     );
   }
 }

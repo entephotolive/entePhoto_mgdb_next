@@ -56,11 +56,11 @@ export default async function UsersPage() {
                         <Avatar className="h-10 w-10 border border-white/10">
                           <AvatarImage src={user.avatarUrl} />
                           <AvatarFallback className="bg-emerald-500/10 text-emerald-400">
-                            {user.name.charAt(0)}
+                            {user.name?.charAt(0) || "P"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{user.name}</p>
+                          <p className="font-medium">{user.name || "Photographer"}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
                             <Mail className="h-3 w-3" />
                             {user.email}
