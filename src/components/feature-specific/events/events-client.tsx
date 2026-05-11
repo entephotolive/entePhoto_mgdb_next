@@ -409,7 +409,7 @@ function ViewEventModal({
                     : "text-slate-500",
                 )}
               >
-                Template
+                qr-code
               </button>
             </div>
           </div>

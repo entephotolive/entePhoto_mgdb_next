@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getCurrentSession } from "@/lib/services/auth.service";
+import { getCurrentPhotographerSession } from "@/lib/services/auth.service";
 
 export default async function HomePage() {
-  const session = await getCurrentSession();
+  const session = await getCurrentPhotographerSession();
   redirect(session ? "/photographer/dashboard" : "/photographer/login");
 }
