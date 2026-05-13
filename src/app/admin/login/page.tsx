@@ -1,6 +1,13 @@
+import { redirect } from "next/navigation";
 import { AdminLoginForm } from "@/components/feature-specific/auth/admin-login-form";
+import { getCurrentAdminSession } from "@/lib/services/auth.service";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const session = await getCurrentAdminSession();
+  if (session) {
+    redirect("/admin");
+  }
+
   return (
     <div className="flex flex-1 items-center justify-center p-4">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">

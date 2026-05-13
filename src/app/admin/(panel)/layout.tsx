@@ -4,6 +4,7 @@ import { getCurrentAdminSession } from "@/lib/services/auth.service";
 import { ShieldCheck, Users, LayoutDashboard, Settings, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { LogoutButton } from "@/components/feature-specific/auth/logout-button";
 
 export default async function AdminPanelLayout({
   children,
@@ -59,13 +60,7 @@ export default async function AdminPanelLayout({
               <p className="truncate text-xs text-slate-500">{session.email}</p>
             </div>
           </div>
-          <Link
-            href="/api/auth/logout"
-            className="flex items-center gap-3 rounded-lg px-4 py-3 text-red-400 transition-colors hover:bg-red-500/10"
-          >
-            <LogOut className="h-5 w-5" />
-            Sign Out
-          </Link>
+          <LogoutButton redirectPath="/admin/login" />
         </div>
       </nav>
 
