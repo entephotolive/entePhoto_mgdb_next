@@ -18,6 +18,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InfiniteScroll } from "@/components/shared/infinite-scroll";
 import { fetchUsersPage, updateUserApproval, type ApprovalFilter } from "./actions";
+import { PhotographerOverviewModal } from "./photographer-overview-modal";
+import { BarChart3 } from "lucide-react";
 
 // ─── Filter tabs config ───────────────────────────────────────────────────────
 const FILTERS: { label: string; value: ApprovalFilter; icon: React.ElementType; color: string }[] =
@@ -34,6 +36,9 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
   const [hasMore, setHasMore] = useState(initialUsers.length >= 20);
   const [isLoading, setIsLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // ─── Modal state ──────────────────────────────────────────────────────────
+  const [overviewUser, setOverviewUser] = useState<any | null>(null);
 
   // ─── Switch filter ──────────────────────────────────────────────────────────
   const handleFilterChange = useCallback((newFilter: ApprovalFilter) => {
@@ -151,19 +156,20 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                 users.map((user) => (
                   <tr
                     key={user._id}
-                    className="group hover:bg-white/[0.02] transition-colors"
+                    className="group hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    onClick={() => setOverviewUser(user)}
                   >
                     {/* Photographer info */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border border-white/10">
+                        <Avatar className="h-10 w-10 border border-white/10 group-hover:border-cyan-500/50 transition-colors">
                           <AvatarImage src={user.avatarUrl} />
                           <AvatarFallback className="bg-emerald-500/10 text-emerald-400">
                             {user.name?.charAt(0) || "P"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{user.name || "Photographer"}</p>
+                          <p className="font-medium group-hover:text-cyan-400 transition-colors">{user.name || "Photographer"}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
                             <Mail className="h-3 w-3" />
                             {user.email}
@@ -229,7 +235,15 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
 
                     {/* Approve / Reject */}
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setOverviewUser(user)}
+                          title="View Statistics"
+                          className="flex items-center justify-center rounded-lg bg-white/5 p-2 text-slate-400 border border-white/5 transition hover:bg-white/10 hover:text-cyan-400"
+                        >
+                          <BarChart3 className="h-4 w-4" />
+                        </button>
+
                         {!user.isApproved ? (
                           <button
                             onClick={() => handleApproval(user._id, true)}
@@ -266,6 +280,13 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
           />
         </div>
       </Card>
+
+      {/* ── Overview Modal ── */}
+      <PhotographerOverviewModal
+        user={overviewUser}
+        isOpen={!!overviewUser}
+        onClose={() => setOverviewUser(null)}
+      />
     </div>
   );
 }
