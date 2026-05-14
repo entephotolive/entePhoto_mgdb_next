@@ -18,13 +18,11 @@ const reveal: Variants = {
     opacity: 0,
     y: 60,
     scale: 0.95,
-    filter: "blur(8px)",
   },
   show: {
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: "blur(0px)",
     transition: {
       duration: 0.3,
       ease: "easeOut",
@@ -39,7 +37,7 @@ export default function Why() {
     <section id="why" className="py-32 text-center px-6 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
 
       {/* Glow */}
-      <div className="absolute w-[420px] h-[260px] bg-blue-100 rounded-[60%] blur-3xl opacity-40 left-1/2 -translate-x-1/2 top-16 pointer-events-none"></div>
+      <div className="absolute w-[420px] h-[260px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/40 to-transparent left-1/2 -translate-x-1/2 top-16 pointer-events-none"></div>
 
       <motion.div
   className="max-w-3xl mx-auto relative z-10"

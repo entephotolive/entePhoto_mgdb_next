@@ -92,7 +92,7 @@ export default function BuildForEveryone() {
             shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-gray-200/40 overflow-hidden
             flex flex-col"
           >
-            <div className="pointer-events-none absolute w-[300px] h-[240px] bg-blue-100 rounded-[60%] blur-2xl opacity-60 right-6 top-16"></div>
+            <div className="pointer-events-none absolute w-[300px] h-[240px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/60 to-transparent right-6 top-16"></div>
 
             <div className="relative z-10 grid lg:grid-cols-2 gap-6 items-center">
               <div className="text-left">
@@ -162,7 +162,7 @@ export default function BuildForEveryone() {
             shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-gray-200/40 overflow-hidden
             flex flex-col"
           >
-            <div className="pointer-events-none absolute w-[320px] h-[260px] bg-green-100 rounded-[60%] blur-2xl opacity-60 left-6 top-16"></div>
+            <div className="pointer-events-none absolute w-[320px] h-[260px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-100/60 to-transparent left-6 top-16"></div>
 
             <div className="relative z-10 grid lg:grid-cols-2 gap-6 items-center">
               <div className="text-left">
@@ -237,7 +237,7 @@ export default function BuildForEveryone() {
             className="relative bg-white/80 backdrop-blur-sm rounded-2xl px-8 py-6 
           shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-gray-200/40 max-w-xl w-full text-center overflow-hidden"
           >
-            <div  className="pointer-events-none absolute w-[220px] h-[160px] bg-blue-100 rounded-[60%] blur-2xl opacity-40 left-1/2 -translate-x-1/2 top-0"></div>
+            <div  className="pointer-events-none absolute w-[220px] h-[160px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/40 to-transparent left-1/2 -translate-x-1/2 top-0"></div>
 
             <div className="relative z-10">
               <motion.p

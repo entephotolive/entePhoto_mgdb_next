@@ -9,8 +9,8 @@ export default function About() {
 
      
       <div className="absolute inset-0 -z-10">
-        <div className="absolute w-[500px] h-[500px] bg-blue-200/40 blur-[120px] top-[-100px] left-[-100px]" />
-        <div className="absolute w-[400px] h-[400px] bg-purple-200/40 blur-[120px] bottom-[-100px] right-[-100px]" />
+        <div className="absolute w-[500px] h-[500px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-200/40 to-transparent top-[-100px] left-[-100px]" />
+        <div className="absolute w-[400px] h-[400px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-200/40 to-transparent bottom-[-100px] right-[-100px]" />
       </div>
 
       <div className="max-w-5xl mx-auto text-center">

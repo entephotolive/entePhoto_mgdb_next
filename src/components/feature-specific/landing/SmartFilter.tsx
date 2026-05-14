@@ -162,7 +162,7 @@ export default function SmartFilter() {
         {/* RIGHT */}
         <div className="relative flex justify-center items-center">
           {/* glow */}
-          <div className="absolute w-[220px] sm:w-[280px] md:w-[340px] h-[220px] sm:h-[280px] md:h-[340px] bg-[#8b5e3c]/10 blur-[100px] rounded-full" />
+          <div className="absolute w-[220px] sm:w-[280px] md:w-[340px] h-[220px] sm:h-[280px] md:h-[340px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#8b5e3c]/20 to-transparent rounded-full" />
 
           {/* FLOATING IMAGES */}
           {floatingPhotos.map((p, i) => (

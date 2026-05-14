@@ -226,7 +226,7 @@ export default function Hero() {
       {/* bottom colors */}
       <div className="absolute bottom-0 left-0 w-full h-[450px] pointer-events-none z-0">
         {/* 🔥 center soft radial glow (NEW) */}
-        <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[70%] h-[250px] bg-gradient-radial from-purple-200/40 via-pink-100/20 to-transparent blur-[100px]" />
+        <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[70%] h-[250px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-200/40 via-pink-100/20 to-transparent" />
 
         {/* 🔥 subtle vertical depth fade (NEW) */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-50/20 to-pink-100/40" />
@@ -267,10 +267,10 @@ export default function Hero() {
         <div className="absolute bottom-0 w-full h-[220px] bg-gradient-to-t from-pink-100 via-purple-50 to-transparent opacity-90" />
 
         {/* PURPLE GLOW (adjusted) */}
-        <div className="absolute bottom-[-60px] left-[-5%] w-[55%] h-[280px] bg-purple-300/40 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-60px] left-[-5%] w-[55%] h-[280px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-300/40 to-transparent rounded-full" />
 
         {/* ORANGE GLOW (adjusted) */}
-        <div className="absolute bottom-[-60px] right-[-5%] w-[55%] h-[280px] bg-orange-300/40 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-60px] right-[-5%] w-[55%] h-[280px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-orange-300/40 to-transparent rounded-full" />
       </div>
       
       

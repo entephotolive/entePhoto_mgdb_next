@@ -29,7 +29,7 @@ export default function Contact() {
     <section id="contact" className="py-32 px-6 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden">
 
       {/* Glow */}
-      <div className="absolute w-[500px] h-[300px] bg-blue-100 rounded-[60%] blur-3xl opacity-40 left-0 top-10 pointer-events-none"></div>
+      <div className="absolute w-[500px] h-[300px] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/40 to-transparent left-0 top-10 pointer-events-none"></div>
 
       <motion.div
         className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-center relative z-10"
