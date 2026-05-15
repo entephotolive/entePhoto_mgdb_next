@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { getCurrentAdminSession } from "@/lib/services/auth.service";
 import {
   ShieldCheck,
@@ -18,6 +19,13 @@ const NAV_ITEMS = [
   { href: "/admin/users", label: "Photographers", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminPanelLayout({
   children,

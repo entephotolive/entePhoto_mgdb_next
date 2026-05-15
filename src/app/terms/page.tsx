@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { supportEmail } from "@/lib/seo";
 
-export const metadata = {
-  title: "Terms of Service — Ente photo",
-  description: "Terms of Service for Ente photo application.",
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Terms of Service for Ente Photo event photo sharing services.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsOfServicePage() {
@@ -23,7 +28,7 @@ export default function TermsOfServicePage() {
             Terms of Service
           </h1>
           <p className="text-sm text-cyan-500/80 font-medium tracking-widest uppercase mb-8">
-            Effective Date: [Add Date]
+            Effective Date: May 15, 2026
           </p>
 
           <p className="text-lg text-slate-400 leading-relaxed">
@@ -151,10 +156,10 @@ export default function TermsOfServicePage() {
               <p className="text-slate-400 flex items-center gap-2">
                 <span>📧 Email:</span>
                 <a
-                  href="mailto:[your email]"
+                  href={`mailto:${supportEmail}`}
                   className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
                 >
-                  [your email]
+                  {supportEmail}
                 </a>
               </p>
             </section>
