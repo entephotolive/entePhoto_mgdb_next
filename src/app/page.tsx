@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default async function HomePage() {
-  redirect("/landing");
+
+export default function Page() {
+  redirect("https://www.entephoto.co.in");
 }
