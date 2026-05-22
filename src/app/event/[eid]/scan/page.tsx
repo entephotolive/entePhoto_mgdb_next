@@ -145,13 +145,11 @@ export default function FaceScanPage() {
       <div className="fixed top-4 left-1/2 z-50 flex w-[95%] max-w-6xl -translate-x-1/2 items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-4 py-2 shadow-lg backdrop-blur-xl sm:w-[85%] sm:px-6 sm:py-3 md:w-[70%] lg:w-[55%]">
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <img
-            src="/logo.jpeg"
-            className="h-8 w-auto rounded-full object-cover sm:h-10"
+            src="/entephoto.png"
+            className="h-10 w-auto rounded-full object-cover sm:h-10"
             alt="Ente photo logo"
           />
-          <span className="text-sm font-semibold text-white sm:text-base">
-            Ente photo
-          </span>
+          
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
