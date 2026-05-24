@@ -1,4 +1,5 @@
-import { requireSession } from "@/lib/services/auth.service";
+import { getCurrentPhotographerSession } from "@/lib/services/auth.service";
+import { redirect } from "next/navigation";
 import { listEvents } from "@/lib/services/event.service";
 import { fetchProfileById } from "@/lib/services/profile.service";
 import { EventsClient } from "@/components/feature-specific/events/events-client";
@@ -10,7 +11,10 @@ export const metadata = {
 };
 
 export default async function EventsPage() {
-  const session = await requireSession();
+  const session = await getCurrentPhotographerSession();
+  if (!session) {
+    redirect("/login");
+  }
   const [events, profile] = await Promise.all([
     listEvents(session.id).catch(() => []),
     fetchProfileById(session.id).catch(() => null),
