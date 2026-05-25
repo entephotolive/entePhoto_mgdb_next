@@ -272,6 +272,11 @@ export async function updateFolder(
   try {
     await connectToDatabase();
     
+    const existing = await FolderModel.findOne({ _id: folderId, createdBy: userId });
+    if (existing && existing.name.toLowerCase() === "cover photo") {
+      throw new Error("Cannot rename the Cover Photo folder.");
+    }
+    
     let slug = name.trim().toLowerCase()
       .replace(/[^\p{L}\p{N}]+/gu, "-")
       .replace(/^-+|-+$/g, "");
@@ -296,6 +301,10 @@ export async function updateFolder(
 export async function deleteFolder(folderId: string, userId: string) {
   try {
     await connectToDatabase();
+    const existing = await FolderModel.findOne({ _id: folderId, createdBy: userId });
+    if (existing && existing.name.toLowerCase() === "cover photo") {
+      throw new Error("Cannot delete the Cover Photo folder.");
+    }
     return await FolderModel.findOneAndDelete({ _id: folderId, createdBy: userId });
   } catch (error) {
     console.error(error);

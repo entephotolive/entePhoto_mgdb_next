@@ -38,6 +38,10 @@ export function FolderActionsMenu({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  if (folderName.toLowerCase() === "cover photo") {
+    return null;
+  }
+
   const handleRename = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim() || newName === folderName) {

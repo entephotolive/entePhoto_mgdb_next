@@ -20,3 +20,17 @@ export async function updatePhotoStatus(
     return { ok: false, error: "Failed to update status" };
   }
 }
+
+export async function deletePhotoAction(photoId: string) {
+  try {
+    await requireSession();
+    await connectToDatabase();
+    await PhotoModel.findByIdAndDelete(photoId);
+    revalidatePath("/photographer/gallery");
+    return { ok: true };
+  } catch (error) {
+    console.error("[deletePhotoAction]", error);
+    return { ok: false, error: "Failed to delete photo" };
+  }
+}
+
