@@ -69,7 +69,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
             </button>
             {/* User avatar chip — mobile header */}
             <div className="lg:hidden w-8 h-8 rounded-full bg-slate-800 border border-white/10 text-cyan-400 font-bold text-xs flex items-center justify-center shrink-0">
-              {user.name.charAt(0).toUpperCase()}
+              {user.name?.charAt(0).toUpperCase() || "P"}
             </div>
           </div>
         </header>

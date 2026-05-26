@@ -100,6 +100,7 @@ export async function getCurrentSession() {
 
   try {
     const payload = await verifySessionToken(token);
+  
 
     return {
       id: payload.sub,
@@ -107,6 +108,51 @@ export async function getCurrentSession() {
       email: payload.email,
     } satisfies SessionUser;
   } catch {
+    return null;
+  }
+}
+
+/**
+ * Gets the current session and verifies the admin exists in the database.
+ */
+export async function getCurrentAdminSession() {
+  const session = await getCurrentSession();
+  if (!session) return null;
+
+  try {
+    const { AdminModel } = await import("@/models/Admin");
+    await connectToDatabase();
+    const admin = await AdminModel.findOne({ email: session.email.toLowerCase() });
+    
+    if (!admin) {
+      return null;
+    }
+    
+    return session;
+  } catch (error) {
+    console.error("Error verifying admin session:", error);
+    return null;
+  }
+}
+
+/**
+ * Gets the current session and verifies the photographer (user) exists in the database.
+ */
+export async function getCurrentPhotographerSession() {
+  const session = await getCurrentSession();
+  if (!session) return null;
+
+  try {
+    await connectToDatabase();
+    const user = await UserModel.findOne({ email: session.email.toLowerCase() });
+    
+    if (!user) {
+      return null;
+    }
+    
+    return session;
+  } catch (error) {
+    console.error("Error verifying photographer session:", error);
     return null;
   }
 }

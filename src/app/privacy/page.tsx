@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { supportEmail } from "@/lib/seo";
 
-export const metadata = {
-  title: "Privacy Policy — Ente photo",
-  description: "Privacy Policy for Ente photo application.",
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "Privacy Policy for Ente Photo event photo sharing services.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPolicyPage() {
@@ -23,7 +28,7 @@ export default function PrivacyPolicyPage() {
             Privacy Policy
           </h1>
           <p className="text-sm text-cyan-500/80 font-medium tracking-widest uppercase mb-8">
-            Effective Date: [Add Date]
+            Effective Date: May 15, 2026
           </p>
 
           <p className="text-lg text-slate-400 leading-relaxed">
@@ -146,7 +151,7 @@ export default function PrivacyPolicyPage() {
               <p className="mt-4 text-slate-400">
                 To request data deletion, contact us at:{" "}
                 <strong className="text-cyan-400">
-                  photo.ceremony.msm@gmail.com
+                  {supportEmail}
                 </strong>
               </p>
             </section>
@@ -172,10 +177,10 @@ export default function PrivacyPolicyPage() {
               <p className="text-slate-400 flex items-center gap-2">
                 <span>📧 Email:</span>
                 <a
-                  href="mailto:photo.ceremony.msm@gmail.com"
+                  href={`mailto:${supportEmail}`}
                   className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors"
                 >
-                  photo.ceremony.msm@gmail.com
+                  {supportEmail}
                 </a>
               </p>
             </section>

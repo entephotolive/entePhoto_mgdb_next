@@ -95,6 +95,7 @@ export default async function FolderDetailPage({
         eventTitle={eventTitle}
         eventDate={eventDate}
         userId={session.id}
+        folderName={folderName}
       />
     </div>
   );

@@ -380,3 +380,15 @@ export async function getFolderMeta(
     eventId,
   };
 }
+
+/** Delete a photo by ID */
+export async function deletePhoto(photoId: string) {
+  try {
+    await connectToDatabase();
+    return await PhotoModel.findOneAndDelete({ _id: photoId });
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+

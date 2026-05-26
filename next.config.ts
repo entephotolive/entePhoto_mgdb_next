@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["qr-code-styling"],
   // Raise the Server Action body limit to 4 MB as a safety net.
   // The primary fix is client-side compression (lib/utils/compress-image.ts),
   // which shrinks images to ~150–700 KB before they hit this limit.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Plus,
   CalendarDays,
@@ -17,19 +17,20 @@ import {
   Camera,
   Copy,
   Check,
-  Download,
   ExternalLink,
 } from "lucide-react";
-import QRCode from "react-qr-code";
 import { cn } from "@/lib/utils/cn";
-import { EventListItem } from "@/types";
+import { EventListItem, PhotographerProfile } from "@/types";
 import { EventModal } from "./event-modal";
 import { deleteEventAction } from "@/app/photographer/(panel)/events/event.actions";
+import { QrTemplateCard } from "./qr-template-card";
 
 interface EventsClientProps {
   events: EventListItem[];
   isphotographer: boolean;
   userId: string;
+  /** Profile sourced from the User collection via fetchProfileById */
+  photographerProfile?: PhotographerProfile;
 }
 
 type FilterTab = "all" | "active" | "completed" | "draft";
@@ -88,6 +89,33 @@ function formatTime(iso: string) {
   });
 }
 
+function EventDetailList({ event }: { event: EventListItem }) {
+  return (
+    <div className="flex flex-col justify-center space-y-4">
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <CalendarDays size={15} className="shrink-0 text-slate-500" />
+        <span>{formatDate(event.date)}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <Clock size={15} className="shrink-0 text-slate-500" />
+        <span>{formatTime(event.date)}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <MapPin size={15} className="shrink-0 text-slate-500" />
+        <span>{event.location}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <User2 size={15} className="shrink-0 text-slate-500" />
+        <span>Created by {event.createdBy.name}</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <Camera size={15} className="shrink-0 text-slate-500" />
+        <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Event Card (Grid View) ─────────────────────────────────────────────────────
 function EventCard({
   event,
@@ -129,7 +157,7 @@ function EventCard({
       {/* Card body */}
       <div className="flex flex-col gap-2.5 sm:gap-4 p-3.5 sm:p-5 flex-1">
         {/* Status badge */}
-        <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2">
+        <div className="flex flex-col justify-between gap-2 xs:flex-row xs:items-center">
           <span
             className={cn(
               "inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[11px] font-semibold border w-fit",
@@ -139,7 +167,6 @@ function EventCard({
             <span className={cn("w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full", meta.dot)} />
             {meta.label}
           </span>
-         
         </div>
 
         {/* Title */}
@@ -177,7 +204,7 @@ function EventCard({
               : "bg-white/5 text-slate-400 border border-white/10 hover:bg-white/10",
           )}
         >
-          Details 
+          Details
           <ChevronRight size={10} className="sm:w-3 sm:h-3" />
         </button>
 
@@ -283,12 +310,14 @@ function EventRow({
 function ViewEventModal({
   event,
   onClose,
+  photographerProfile,
 }: {
   event: EventListItem | null;
   onClose: () => void;
+  photographerProfile?: PhotographerProfile;
 }) {
   const [copied, setCopied] = useState(false);
-  const qrRef = useRef<HTMLDivElement>(null);
+  const [mobileSection, setMobileSection] = useState<"details" | "template">("details");
 
   if (!event) return null;
 
@@ -301,24 +330,22 @@ function ViewEventModal({
       ? `${window.location.origin}${eventPath}`
       : eventPath;
 
+  const eventSlug = event.title.toLowerCase().replace(/\s+/g, "-");
+
+  /** Normalised profile — guarantees all fields exist for QrTemplateCard */
+  const profile: PhotographerProfile = {
+    name:          photographerProfile?.name          ?? "",
+    email:         photographerProfile?.email         ?? "",
+    studioName:    photographerProfile?.studioName    ?? "",
+    studioLocation:photographerProfile?.studioLocation?? "",
+    bio:           photographerProfile?.bio           ?? "",
+    avatarUrl:     photographerProfile?.avatarUrl     ?? "",
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(eventUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    const svg = qrRef.current?.querySelector("svg");
-    if (!svg) return;
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const blob = new Blob([clone.outerHTML], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `qr-${event.title.toLowerCase().replace(/\s+/g, "-")}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -331,76 +358,113 @@ function ViewEventModal({
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-details-title"
+          className="relative flex max-h-[min(92vh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0d0f14] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
+        >
+
           {/* ── Header ── */}
-          <div className="flex items-center justify-between px-7 pt-6 pb-5">
+          <div className="flex items-center justify-between px-4 pb-5 pt-5 sm:px-7 sm:pt-6">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span
-                className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)}
-              />
-              <h2 className="text-[15px] font-semibold text-white truncate lowercase tracking-tight">
+              <span className={cn("w-2.5 h-2.5 rounded-full shrink-0", meta.dot)} />
+              <h2
+                id="event-details-title"
+                className="text-[15px] font-semibold text-white truncate lowercase tracking-tight"
+              >
                 {event.title}
               </h2>
             </div>
             <button
               onClick={onClose}
               className="text-slate-500 hover:text-white transition-colors shrink-0"
+              aria-label="Close event details"
             >
               <X size={17} />
             </button>
           </div>
 
-          {/* ── Body: 2-column grid ── */}
-          <div className="grid grid-cols-[1fr_auto] gap-6 px-7 pb-5">
-            {/* Left — event details */}
-            <div className="flex flex-col justify-center space-y-4">
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <CalendarDays size={15} className="text-slate-500 shrink-0" />
-                <span>{formatDate(event.date)}</span>
+          <div className="px-4 pb-4 sm:hidden">
+            <div className="grid grid-cols-2 rounded-xl border border-white/[0.07] bg-white/[0.03] p-1">
+              <button
+                onClick={() => setMobileSection("details")}
+                type="button"
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
+                  mobileSection === "details"
+                    ? "bg-cyan-500/12 text-cyan-400"
+                    : "text-slate-500",
+                )}
+              >
+                Details
+              </button>
+              <button
+                onClick={() => setMobileSection("template")}
+                type="button"
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs font-semibold transition-all",
+                  mobileSection === "template"
+                    ? "bg-cyan-500/12 text-cyan-400"
+                    : "text-slate-500",
+                )}
+              >
+                qr-scanner
+              </button>
+            </div>
+          </div>
+
+          {/* ── Body ── */}
+          <div className="overflow-y-auto">
+            <div className="hidden px-7 pb-5 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-6">
+              <div className="min-w-0">
+                <EventDetailList event={event} />
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <Clock size={15} className="text-slate-500 shrink-0" />
-                <span>{formatTime(event.date)}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <MapPin size={15} className="text-slate-500 shrink-0" />
-                <span>{event.location}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <User2 size={15} className="text-slate-500 shrink-0" />
-                <span>Created by {event.createdBy.name}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-300">
-                <Camera size={15} className="text-slate-500 shrink-0" />
-                <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+
+              <div className="shrink-0">
+                <QrTemplateCard
+                  eventUrl={eventUrl}
+                  eventSlug={eventSlug}
+                  profile={profile}
+                />
               </div>
             </div>
 
-            {/* Right — QR code */}
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div ref={qrRef} className="bg-white rounded-2xl p-4 shadow-xl">
-                <QRCode
-                  value={eventUrl}
-                  size={168}
-                  bgColor="#ffffff"
-                  fgColor="#020617"
-                  level="H"
-                  style={{ display: "block" }}
-                />
+            <div className="overflow-hidden px-4 pb-5 sm:hidden">
+              <div
+                className="flex w-[200%] transition-transform duration-300 ease-out"
+                style={{
+                  transform:
+                    mobileSection === "details"
+                      ? "translateX(0%)"
+                      : "translateX(-50%)",
+                }}
+              >
+                <div className="w-1/2 pr-3">
+                  <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                    <EventDetailList event={event} />
+                  </div>
+                </div>
+
+                <div className="w-1/2 pl-3">
+                  <div className="flex justify-center rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4">
+                    <QrTemplateCard
+                      eventUrl={eventUrl}
+                      eventSlug={eventSlug}
+                      profile={profile}
+                    />
+                  </div>
+                </div>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-                Scan to open gallery
-              </p>
             </div>
           </div>
 
           {/* ── Divider ── */}
-          <div className="mx-7 border-t border-white/[0.06]" />
+          <div className="mx-4 border-t border-white/[0.06] sm:mx-7" />
 
-          {/* ── Footer: URL pill + download ── */}
-          <div className="px-7 py-5 space-y-3">
-            {/* URL pill */}
-            <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-4 py-2.5">
+          {/* ── Footer — URL pill ── */}
+          <div className="px-4 py-5 sm:px-7">
+            <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.07] px-3 py-2.5 sm:px-4">
               <code className="flex-1 text-[12px] text-slate-300 truncate font-mono">
                 {eventPath}
               </code>
@@ -426,16 +490,8 @@ function ViewEventModal({
                 <ExternalLink size={13} />
               </a>
             </div>
-
-            {/* Download button */}
-            <button
-              onClick={handleDownload}
-              className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1a2a2a] border border-cyan-500/20 text-cyan-400 text-sm font-semibold hover:bg-cyan-500/10 transition-all"
-            >
-              <Download size={14} />
-              Download QR Code
-            </button>
           </div>
+
         </div>
       </div>
     </>
@@ -512,6 +568,7 @@ export function EventsClient({
   events,
   isphotographer,
   userId,
+  photographerProfile,
 }: EventsClientProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewEvent, setViewEvent] = useState<EventListItem | null>(null);
@@ -572,7 +629,12 @@ export function EventsClient({
         onClose={() => setModalOpen(false)}
         createdBy={userId}
       />
-      <ViewEventModal event={viewEvent} onClose={() => setViewEvent(null)} />
+      <ViewEventModal
+        key={viewEvent?.id ?? "no-event"}
+        event={viewEvent}
+        onClose={() => setViewEvent(null)}
+        photographerProfile={photographerProfile}
+      />
       <DeleteConfirmationModal
         event={confirmDeleteEvent}
         onClose={() => setConfirmDeleteEvent(null)}
@@ -598,7 +660,7 @@ export function EventsClient({
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           {/* Group 1: Buttons (Add Event + View Toggle) */}
-          <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
+        <div className="flex w-full items-center gap-3 sm:order-2 sm:w-auto">
             {isphotographer && (
               <button
                 id="add-event-btn"
@@ -707,7 +769,7 @@ export function EventsClient({
               ? "Try adjusting your search or filter criteria."
               : isphotographer
                 ? 'Click "Add New Event" to create your first photography event.'
-                : "Once an photographer creates events, they will appear here."}
+                : "Once a photographer creates events, they will appear here."}
           </p>
           {isphotographer && !search && (
             <button

@@ -57,11 +57,11 @@ export function DesktopSidebar({ user }: DesktopSidebarProps) {
       <div className="mt-auto pt-6 border-t border-white/5">
         <div className="flex items-center gap-3 p-2 bg-white/5 rounded-2xl hover:bg-white/10 transition cursor-default">
           <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center bg-slate-800 text-cyan-400 font-bold shrink-0">
-            {user.name.charAt(0).toUpperCase()}
+            {user.name?.charAt(0).toUpperCase() || "P"}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-slate-200 truncate">
-              {user.name}
+              {user.name || "Photographer"}
             </p>
             <p className="text-[10px] text-slate-500 uppercase tracking-wider truncate">
               photographer

@@ -1,9 +1,17 @@
 import Footer from "@/components/Footer";
+import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
 
 
 export const viewport = {
   themeColor: "#020617",
+};
+
+export const metadata: Metadata = {
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 const eventTheme: CSSProperties = {

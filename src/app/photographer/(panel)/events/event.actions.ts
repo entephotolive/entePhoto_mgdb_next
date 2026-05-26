@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createEvent, deleteEvent, updateEvent } from "@/lib/services/event.service";
 import { requireSession } from "@/lib/services/auth.service";
-import { api } from "@/app/api/api-client";
 
 
 // ── Zod Schemas ────────────────────────────────────────────────────────────────
@@ -154,13 +153,3 @@ export async function deleteEventAction(eventId: string): Promise<ActionResult> 
     return { success: false, error: message };
   }
 }
-
-
-
-export const createWedding = async (data) => {
-  const res = await api.post("/create-wedding/", data, {
-    headers: { "Content-Type": "application/json" },
-  });
-
-  return res.data;
-};
