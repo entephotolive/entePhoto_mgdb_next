@@ -3,9 +3,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Camera, X, ZoomIn, Loader2 } from "lucide-react";
+import { AlertCircle, Camera, X, ZoomIn, Loader2, Trash2 } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
+import { deletePhotoAction } from "@/app/photographer/(panel)/gallery/[slug]/action";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
+import { applyWatermark } from "@/lib/utils/watermark";
 
 // ─── Active-window helper (mirrors upload-workspace.tsx) ─────────────────────
 function isEventActive(eventDate: string | undefined): boolean {
@@ -24,6 +26,7 @@ interface FolderPhotoGridProps {
   /** ISO date string of the event – used to enforce the 24-hour upload window */
   eventDate?: string;
   userId: string;
+  folderName?: string;
 }
 
 export function FolderPhotoGrid({
@@ -33,10 +36,12 @@ export function FolderPhotoGrid({
   eventTitle,
   eventDate,
   userId,
+  folderName = "",
 }: FolderPhotoGridProps) {
   const router = useRouter();
   const [lightbox, setLightbox] = useState<PhotoItem | null>(null);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { items, addFiles, removeFile, completedCount } = useGlobalUpload();
@@ -51,7 +56,7 @@ export function FolderPhotoGrid({
   }, [completedCount, router]);
 
   // ─── Upload handler – blocks if event is outside its 24-hour window ───────
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
     if (!isEventActive(eventDate)) {
@@ -60,7 +65,19 @@ export function FolderPhotoGrid({
       return;
     }
 
-    addFiles(e.target.files, {
+    const filesToUpload = Array.from(e.target.files);
+    const isCover = folderName.toLowerCase() === "cover photo";
+
+    if (isCover && filesToUpload.length > 0) {
+      try {
+        const watermarkedFile = await applyWatermark(filesToUpload[0], "/name_logo.png");
+        filesToUpload[0] = watermarkedFile;
+      } catch (err) {
+        console.error("Failed to apply watermark", err);
+      }
+    }
+
+    addFiles(filesToUpload, {
       eventId,
       eventName: eventTitle,
       uploadedBy: userId,
@@ -70,18 +87,29 @@ export function FolderPhotoGrid({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleDeletePhoto = async (photoId: string) => {
+    setIsDeleting(photoId);
+    const res = await deletePhotoAction(photoId);
+    if (res.ok) {
+      router.refresh();
+    }
+    setIsDeleting(null);
+  };
+
   const active = isEventActive(eventDate);
+  const isCoverPhotoFolder = folderName.toLowerCase() === "cover photo";
+  const hideUploadBar = isCoverPhotoFolder && (photos.length > 0 || items.length > 0);
 
   return (
     <div>
       {/* ── Upload Bar ── */}
-      {folderId !== "all" && (
+      {folderId !== "all" && !hideUploadBar && (
         <div className="mb-8 flex items-center gap-3">
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            multiple
+            multiple={!isCoverPhotoFolder}
             className="hidden"
             onChange={handleUpload}
             id="photo-upload-input"
@@ -177,12 +205,25 @@ export function FolderPhotoGrid({
                   loading="lazy"
                   style={{ display: "block" }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-center gap-4 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
                   <button
                     onClick={() => setLightbox(photo)}
                     className="rounded-full bg-white/20 p-3 backdrop-blur-sm transition-transform hover:scale-110"
+                    title="View Photo"
                   >
                     <ZoomIn size={20} className="text-white" />
+                  </button>
+                  <button
+                    onClick={() => handleDeletePhoto(photo.id)}
+                    disabled={isDeleting === photo.id}
+                    className="rounded-full bg-red-500/80 p-3 backdrop-blur-sm transition-transform hover:scale-110"
+                    title="Delete Photo"
+                  >
+                    {isDeleting === photo.id ? (
+                      <Loader2 size={20} className="text-white animate-spin" />
+                    ) : (
+                      <Trash2 size={20} className="text-white" />
+                    )}
                   </button>
                 </div>
               </div>

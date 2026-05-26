@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
-const redirect_url = process.env.NEXT_PUBLIC_LANDING_PAGE_URL || "https://www.entephoto.co.in";
-
+const redirectUrl = process.env.NEXT_PUBLIC_LANDING_PAGE_URL;
 
 export default function Page() {
-  redirect(redirect_url!);
+  redirect(redirectUrl || "https://www.entephoto.co.in");
 }

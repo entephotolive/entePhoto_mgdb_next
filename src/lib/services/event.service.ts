@@ -2,6 +2,7 @@ import { z } from "zod";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { EventModel } from "@/models/Event";
 import { EventListItem } from "@/types";
+import { createFolder } from "@/lib/services/folder.service";
 
 const eventInputSchema = z.object({
   title: z.string().min(3),
@@ -69,6 +70,9 @@ export async function createEvent(input: unknown) {
     ...payload,
     date: new Date(payload.date),
   });
+
+  // Automatically create the Cover Photo folder
+  await createFolder("Cover Photo", event._id.toString(), payload.createdBy);
 
   return {
     id: event._id.toString(),
