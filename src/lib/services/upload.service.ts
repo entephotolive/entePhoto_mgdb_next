@@ -19,64 +19,140 @@ const DUPLICATE_CHECK_BATCH_SIZE = 100;
 const MOBILE_UPLOAD_CONCURRENCY = 2;
 const DESKTOP_UPLOAD_CONCURRENCY = 6;
 
+/** Maximum safe canvas pixel area on iOS Safari (4 Megapixels) */
+const IOS_CANVAS_MAX_PIXELS = 4_000_000;
+
+/** Read EXIF orientation tag from a JPEG file (returns 1–8, defaults to 1) */
+async function readExifOrientation(file: File): Promise<number> {
+  try {
+    if (!file.type.includes("jpeg") && !file.type.includes("jpg")) return 1;
+    const buffer = await file.slice(0, 65536).arrayBuffer();
+    const view = new DataView(buffer);
+    if (view.getUint16(0) !== 0xffd8) return 1;
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+      const marker = view.getUint16(offset); offset += 2;
+      if (marker === 0xffe1) {
+        if (view.getUint32(offset + 2) !== 0x45786966) return 1;
+        const tiffBase = offset + 8;
+        const le = view.getUint16(tiffBase) === 0x4949;
+        const ifdOffset = view.getUint32(tiffBase + 4, le);
+        const ifdStart = tiffBase + ifdOffset;
+        if (ifdStart + 2 > view.byteLength) return 1;
+        const entries = view.getUint16(ifdStart, le);
+        for (let i = 0; i < entries; i++) {
+          const e = ifdStart + 2 + i * 12;
+          if (e + 12 > view.byteLength) break;
+          if (view.getUint16(e, le) === 0x0112) {
+            return view.getUint16(e + 8, le);
+          }
+        }
+        return 1;
+      } else if ((marker & 0xff00) !== 0xff00) {
+        break;
+      } else {
+        if (offset + 2 > view.byteLength) break;
+        offset += view.getUint16(offset);
+      }
+    }
+  } catch { /* silently ignored */ }
+  return 1;
+}
+
 /**
  * Resize & compress an image using the Canvas API before upload.
- * - Max dimension: 2560px (2K Resolution). Sharp enough for all screens.
- * - Output: WebP at 90% quality (High-end social media standard).
- * - Keeps the original filename.
+ *
+ * iOS-safe fixes applied:
+ *  1. Reads EXIF orientation and rotates the canvas so portrait iPhone shots
+ *     are never sideways after upload.
+ *  2. Clamps the canvas to ≤ 4 Megapixels so iOS Safari never crashes or
+ *     produces a blank output (the old bug that caused 9 MB files).
+ *  3. Always outputs image/jpeg (NOT WebP) because iOS Safari cannot encode
+ *     WebP via canvas.toBlob — it silently falls back to PNG, which is huge.
+ *  4. Falls back to returning the original file on any error so uploads
+ *     are never permanently blocked.
+ *
+ * Max dimension: 2560 px · Quality: 0.90
  */
 async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
 
-  return new Promise((resolve) => {
-    const img = new window.Image();
+  try {
+    // ── 1. Read EXIF orientation (JPEG only) ────────────────────────────
+    const orientation = await readExifOrientation(file);
+    const isRotated90 = orientation >= 5 && orientation <= 8;
+
+    // ── 2. Load the image ───────────────────────────────────────────────
     const url = URL.createObjectURL(file);
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const el = new window.Image();
+      el.onload = () => res(el);
+      el.onerror = () => rej(new Error("load failed"));
+      el.src = url;
+    }).finally(() => URL.revokeObjectURL(url));
 
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const { naturalWidth: w, naturalHeight: h } = img;
-      
-      // If the image is already smaller than our limit, don't downscale it,
-      // just re-encode it to WebP to save space.
-      const scale = Math.min(1, maxSizePx / Math.max(w, h));
+    const srcW = img.naturalWidth;
+    const srcH = img.naturalHeight;
 
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(w * scale);
-      canvas.height = Math.round(h * scale);
+    // Logical dimensions after applying orientation rotation
+    const logicW = isRotated90 ? srcH : srcW;
+    const logicH = isRotated90 ? srcW : srcH;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(file); return; }
-      
-      // Use high-quality image smoothing
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high";
-      
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    // ── 3. Scale to fit within maxSizePx AND iOS canvas pixel cap ───────
+    const maxDimScale = Math.min(1, maxSizePx / Math.max(logicW, logicH));
+    const pixelScale = Math.min(1, Math.sqrt(IOS_CANVAS_MAX_PIXELS / (logicW * logicH)));
+    const scale = Math.min(maxDimScale, pixelScale);
 
-      // Convert to WebP for superior quality-to-size ratio
-      canvas.toBlob(
-        (blob) => {
-          canvas.width = 0;
-          canvas.height = 0;
-          img.src = "";
-          if (!blob) { resolve(file); return; }
-          // Change extension to .webp but keep original name base
-          const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
-          resolve(new File([blob], newFileName, { type: "image/webp", lastModified: file.lastModified }));
-        },
-        "image/webp",
-        quality,
-      );
-    };
+    const canvasW = Math.round(logicW * scale);
+    const canvasH = Math.round(logicH * scale);
 
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      img.src = "";
-      resolve(file);
-    };
-    img.src = url;
-  });
+    // ── 4. Draw with EXIF rotation applied ──────────────────────────────
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // Apply EXIF orientation transform
+    switch (orientation) {
+      case 2: ctx.transform(-1, 0, 0,  1, canvasW, 0);       break;
+      case 3: ctx.transform(-1, 0, 0, -1, canvasW, canvasH); break;
+      case 4: ctx.transform( 1, 0, 0, -1, 0, canvasH);       break;
+      case 5: ctx.transform( 0, 1, 1,  0, 0, 0);             break;
+      case 6: ctx.transform( 0, 1,-1,  0, canvasH, 0);       break;
+      case 7: ctx.transform( 0,-1,-1,  0, canvasW, canvasH); break;
+      case 8: ctx.transform( 0,-1, 1,  0, 0, canvasW);       break;
+    }
+    // Scale after the rotation transform
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0, srcW, srcH);
+
+    // ── 5. Encode as JPEG ────────────────────────────────────────────────
+    // WebP is NOT used here because iOS Safari's canvas.toBlob silently falls
+    // back to PNG when it can't encode WebP, which produces files that are
+    // LARGER than the original (the exact 3 MB → 9 MB bug reported).
+    const outputMime = "image/jpeg";
+    const blob = await new Promise<Blob | null>((res) =>
+      canvas.toBlob(res, outputMime, quality)
+    );
+
+    // Release canvas memory
+    canvas.width = 0;
+    canvas.height = 0;
+
+    if (!blob) return file;
+
+    const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+    return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
+  } catch {
+    return file; // Always fall back to original on any error
+  }
 }
+
 
 function getUploadConcurrency() {
   if (typeof window === "undefined") return DESKTOP_UPLOAD_CONCURRENCY;
@@ -152,9 +228,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
 
     const responseData = response.data;
     if (responseData && responseData.images_not_uploaded > 0) {
-      const expectedWebpName = item.file.name.replace(/\.[^/.]+$/, "") + ".webp";
+      const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
       const reasonObj =
-        responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedWebpName) ||
+        responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedName) ||
         responseData.reason_why_not_uploaded?.[0];
       throw new Error(reasonObj?.reason || "Image not uploaded");
     }
@@ -217,13 +293,13 @@ export async function processUploadQueue(context: UploadContext) {
   store.setWidgetVisible(true);
 
   try {
-    const filenames = toUpload.map((i) => i.file.name.replace(/\.[^/.]+$/, "") + ".webp");
+    const filenames = toUpload.map((i) => i.file.name.replace(/\.[^/.]+$/, "") + ".jpg");
     const duplicateSet = await checkDuplicates(context.eventId, filenames);
 
     if (duplicateSet.size > 0) {
       toUpload.forEach((item) => {
-        const expectedWebpName = item.file.name.replace(/\.[^/.]+$/, "") + ".webp";
-        if (duplicateSet.has(expectedWebpName)) {
+        const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+        if (duplicateSet.has(expectedName)) {
           useUploadStore.getState()._updateItem(item.id, {
             status: "duplicate",
             error: "File already exists",
