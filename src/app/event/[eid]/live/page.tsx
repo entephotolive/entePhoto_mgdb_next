@@ -7,7 +7,7 @@ import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/app/api/api-client";
 import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
-
+ 
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
 const LIVE_POLL_INTERVAL_MS = 3000;
 
