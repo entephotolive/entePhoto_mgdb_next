@@ -7,6 +7,7 @@ import { AlertCircle, Camera, X, ZoomIn, Loader2, Trash2 } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
 import { deletePhotoAction } from "@/app/photographer/(panel)/gallery/[slug]/action";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
+import { applyWatermark } from "@/lib/utils/watermark";
 
 // ─── Active-window helper (mirrors upload-workspace.tsx) ─────────────────────
 function isEventActive(eventDate: string | undefined): boolean {
@@ -55,7 +56,7 @@ export function FolderPhotoGrid({
   }, [completedCount, router]);
 
   // ─── Upload handler – blocks if event is outside its 24-hour window ───────
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
     if (!isEventActive(eventDate)) {
@@ -64,7 +65,19 @@ export function FolderPhotoGrid({
       return;
     }
 
-    addFiles(e.target.files, {
+    const filesToUpload = Array.from(e.target.files);
+    const isCover = folderName.toLowerCase() === "cover photo";
+
+    if (isCover && filesToUpload.length > 0) {
+      try {
+        const watermarkedFile = await applyWatermark(filesToUpload[0], "/name_logo.png");
+        filesToUpload[0] = watermarkedFile;
+      } catch (err) {
+        console.error("Failed to apply watermark", err);
+      }
+    }
+
+    addFiles(filesToUpload, {
       eventId,
       eventName: eventTitle,
       uploadedBy: userId,
