@@ -10,6 +10,8 @@ import {
   Users,
   Settings,
   ShieldCheck,
+  CreditCard,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { LogoutButton } from "@/components/feature-specific/auth/logout-button";
@@ -19,6 +21,8 @@ import { LogoutButton } from "@/components/feature-specific/auth/logout-button";
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/users", label: "Photographers", icon: Users },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/coupons", label: "Coupons", icon: Ticket },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

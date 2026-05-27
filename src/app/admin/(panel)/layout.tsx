@@ -7,6 +7,9 @@ import {
   Users,
   LayoutDashboard,
   Settings,
+  CreditCard,
+  Ticket,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { LogoutButton } from "@/components/feature-specific/auth/logout-button";
@@ -17,6 +20,9 @@ import { AdminMobileNav } from "@/components/feature-specific/auth/admin-mobile-
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/users", label: "Photographers", icon: Users },
+  { href: "/admin/payments", label: "Payments", icon: CreditCard },
+  { href: "/admin/coupons", label: "Coupons", icon: Ticket },
+  { href: "/admin/reports", label: "Reports", icon: MessageSquare },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

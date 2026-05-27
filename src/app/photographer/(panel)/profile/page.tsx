@@ -5,6 +5,9 @@ import {
 } from "@/app/photographer/(panel)/profile/action";
 import { ProfileForm } from "@/components/feature-specific/profile/profile-form";
 import { PortfolioShowcase } from "@/components/feature-specific/profile/portfolio-showcase";
+import { PaymentHistory } from "@/components/feature-specific/profile/payment-history";
+import { connectToDatabase } from "@/lib/db/mongodb";
+import { PaymentModel } from "@/models/Payment";
 import type { ProfileData } from "@/types";
 
 export const metadata = {
@@ -29,13 +32,28 @@ export default async function ProfilePage() {
     avatarUrl: "",
   };
 
-  // Fetch both in parallel
-  const [dbProfile, moments] = await Promise.all([
+  // Connect to DB and fetch profile, portfolio moments, and payment history in parallel
+  await connectToDatabase();
+  const [dbProfile, moments, dbPayments] = await Promise.all([
     getProfile(session.id),
     getPortfolioMoments(session.id),
+    PaymentModel.find({ createdBy: session.id }).sort({ createdAt: -1 }).lean(),
   ]);
 
   if (dbProfile) profile = dbProfile;
+
+  // Serialize Payments safely for Client Component boundaries
+  const serializedPayments = dbPayments.map((p: any) => ({
+    _id: p._id.toString(),
+    invoiceNumber: p.invoiceNumber,
+    orderId: p.orderId,
+    paymentId: p.paymentId,
+    amount: p.amount,
+    currency: p.currency,
+    serviceType: p.serviceType,
+    eventTitle: p.eventTitle,
+    createdAt: p.createdAt.toISOString(),
+  }));
 
   return (
     <div className="w-full flex flex-col gap-6 pb-10">
@@ -56,6 +74,13 @@ export default async function ProfilePage() {
 
         {/* Right — Portfolio Showcase (client) — real moments from DB */}
         <PortfolioShowcase userId={session.id} initialMoments={moments} />
+
+        {/* Full width bottom — Payment and Billing logs */}
+        <PaymentHistory
+          payments={serializedPayments}
+          photographerName={profile.name}
+          photographerEmail={profile.email}
+        />
       </div>
 
       {/* Footer note */}
