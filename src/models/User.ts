@@ -23,7 +23,7 @@ const userSchema = new Schema(
       enum: ["credentials", "google"],
       default: "credentials",
     },
-    isApproved: {
+    isBlocked: {
       type: Boolean,
       default: false,
     },

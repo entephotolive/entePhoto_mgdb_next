@@ -22,6 +22,10 @@ export async function updatePhotographerPhone(phoneNumber: string) {
     throw new Error("Phone number cannot be empty.");
   }
 
+  if (!/^\d{10}$/.test(phone)) {
+    throw new Error("Phone number must be exactly 10 digits.");
+  }
+
   const conn = await connectToDatabase();
   const collection = conn.connection.collection("users");
 
@@ -30,8 +34,8 @@ export async function updatePhotographerPhone(phoneNumber: string) {
     {
       $set: {
         phoneNumber: phone,
-        // Ensure isApproved exists as a field (backfill for legacy docs)
-        isApproved: false,
+        // Ensure isBlocked exists as a field
+        isBlocked: false,
       },
     },
     { returnDocument: "after" }
@@ -59,7 +63,7 @@ export async function updatePhotographerPhone(phoneNumber: string) {
 }
 
 /**
- * Returns the pending approval info for the currently logged-in photographer.
+ * Returns the info for the currently logged-in photographer.
  * Uses native driver to read fields that may be absent from a cached Mongoose model.
  */
 export async function getPhotographerPendingInfo() {
@@ -71,7 +75,7 @@ export async function getPhotographerPendingInfo() {
 
   const user = await collection.findOne(
     { email: session.email.toLowerCase() },
-    { projection: { isApproved: 1, phoneNumber: 1, name: 1, avatarUrl: 1 } }
+    { projection: { isBlocked: 1, phoneNumber: 1, name: 1, avatarUrl: 1 } }
   );
 
   if (!user) {
@@ -82,7 +86,7 @@ export async function getPhotographerPendingInfo() {
   }
 
   return {
-    isApproved: (user.isApproved as boolean | undefined) ?? false,
+    isBlocked: (user.isBlocked as boolean | undefined) ?? false,
     phoneNumber: (user.phoneNumber as string | undefined) ?? null,
     name: user.name as string,
     avatarUrl: (user.avatarUrl as string | undefined) ?? null,

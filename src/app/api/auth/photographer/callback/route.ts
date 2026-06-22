@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         email: googleUser.email,
         provider: "google",
         avatarUrl: googleUser.picture,
-        isApproved: false,
+        isBlocked: false,
         specializations: [],
         role: "photographer",
         createdAt: new Date(),
@@ -66,8 +66,8 @@ export async function GET(request: Request) {
     } else {
       // Existing user → backfill any fields absent in legacy documents
       const patch: Record<string, unknown> = {};
-      if (userDoc.isApproved === undefined || userDoc.isApproved === null) {
-        patch.isApproved = false;
+      if (userDoc.isBlocked === undefined || userDoc.isBlocked === null) {
+        patch.isBlocked = false;
       }
       if (!userDoc.avatarUrl && googleUser.picture) {
         patch.avatarUrl = googleUser.picture;
@@ -95,24 +95,33 @@ export async function GET(request: Request) {
     });
 
     const cookieOptions = getAuthCookieOptions();
-    const isApproved = (userDoc.isApproved as boolean | undefined) ?? false;
+    const isBlocked = (userDoc.isBlocked as boolean | undefined) ?? false;
+    const hasPhone = !!userDoc.phoneNumber;
 
-    // ── Step 5: Redirect based on approval status ──────────────────────────
-    if (!isApproved) {
-      const response = NextResponse.redirect(`${LOGIN_URL}?pending=true`);
+    // ── Step 5: Redirect based on status ───────────────────────────────────
+    if (isBlocked) {
+      const response = NextResponse.redirect(`${LOGIN_URL}?blocked=true`);
       response.cookies.set(cookieOptions.name, token, cookieOptions);
-      console.info(`[photographer/callback] Unapproved — pending: ${googleUser.email}`);
+      console.info(`[photographer/callback] Blocked: ${googleUser.email}`);
+      return response;
+    }
+
+    if (!hasPhone) {
+      const response = NextResponse.redirect(`${LOGIN_URL}?setup_phone=true`);
+      response.cookies.set(cookieOptions.name, token, cookieOptions);
+      console.info(`[photographer/callback] Phone setup required: ${googleUser.email}`);
       return response;
     }
 
     const response = NextResponse.redirect(DASHBOARD_URL);
     response.cookies.set(cookieOptions.name, token, cookieOptions);
-    console.info(`[photographer/callback] Approved — logged in: ${googleUser.email}`);
+    console.info(`[photographer/callback] Logged in: ${googleUser.email}`);
     return response;
   } catch (err) {
     console.error("[photographer/callback] Unexpected error:", err);
+    const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
     return NextResponse.redirect(
-      `${LOGIN_URL}?error=An+unexpected+error+occurred.`
+      `${LOGIN_URL}?error=${encodeURIComponent(errorMessage)}`
     );
   }
 }

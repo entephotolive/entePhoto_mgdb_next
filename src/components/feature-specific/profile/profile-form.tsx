@@ -97,6 +97,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
   const [studioLocation, setStudioLocation] = useState(
     initialData.studioLocation ?? "",
   );
+  const [phoneNumber, setPhoneNumber] = useState(initialData.phoneNumber ?? "");
   const [specialization, setSpecialization] = useState(
     initialData.specialization ?? "",
   );
@@ -170,6 +171,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
         specializations,
         bio,
         avatarUrl: finalAvatarUrl,
+        phoneNumber,
       });
 
       if (result.ok) {
@@ -190,6 +192,7 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
     setSpecialization(initialData.specialization ?? "");
     setSpecializations(initialData.specializations ?? []);
     setBio(initialData.bio ?? "");
+    setPhoneNumber(initialData.phoneNumber ?? "");
     setAvatarUrl(initialData.avatarUrl ?? "");
     setLocalAvatarPreview("");
     setPendingAvatarFile(null);
@@ -224,6 +227,20 @@ export function ProfileForm({ initialData, userId }: ProfileFormProps) {
             placeholder="Your full name"
             className={inputClass}
             required
+          />
+        </Field>
+
+        {/* Phone Number */}
+        <Field label="Phone Number">
+          <input
+            id="profile-phone"
+            type="tel"
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            placeholder="Your 10-digit contact number"
+            pattern="[0-9]{10}"
+            maxLength={10}
+            className={inputClass}
           />
         </Field>
 

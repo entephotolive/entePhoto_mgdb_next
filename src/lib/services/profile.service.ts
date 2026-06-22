@@ -19,6 +19,7 @@ export async function fetchProfileById(userId: string): Promise<ProfileData | nu
     specializations: user.specializations ?? [],
     bio: user.bio ?? "",
     avatarUrl: user.avatarUrl ?? "",
+    phoneNumber: user.phoneNumber ?? "",
   };
 }
 
@@ -30,6 +31,7 @@ export interface PatchProfileInput {
   specializations?: string[];
   bio?: string;
   avatarUrl?: string;
+  phoneNumber?: string;
 }
 
 export async function patchProfile(
@@ -56,5 +58,6 @@ export async function patchProfile(
     specializations: user.specializations ?? [],
     bio: user.bio ?? "",
     avatarUrl: user.avatarUrl ?? "",
+    phoneNumber: user.phoneNumber ?? "",
   };
 }

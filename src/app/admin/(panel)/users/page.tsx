@@ -11,7 +11,7 @@ export default async function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Photographers</h1>
           <p className="text-slate-400">
-            Manage and monitor all registered photographers. Approve or revoke access.
+            Manage and monitor all registered photographers. Block or unblock access.
           </p>
         </div>
         <div className="relative">

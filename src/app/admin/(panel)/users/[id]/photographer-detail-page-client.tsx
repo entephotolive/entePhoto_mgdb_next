@@ -19,7 +19,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { updateUserApproval } from "../actions";
+import { updateUserBlock } from "../actions";
 
 interface Event {
   _id: string;
@@ -44,7 +44,7 @@ interface PhotographerDetailPageClientProps {
     email: string;
     avatarUrl: string | null;
     phoneNumber: string | null;
-    isApproved: boolean;
+    isBlocked: boolean;
     createdAt: string | null;
   };
   profile: Profile;
@@ -60,12 +60,12 @@ export function PhotographerDetailPageClient({
 }: PhotographerDetailPageClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [isApproved, setIsApproved] = useState(user.isApproved);
+  const [isBlocked, setIsBlocked] = useState(user.isBlocked);
 
-  function handleApproval(approve: boolean) {
+  function handleBlock(block: boolean) {
     startTransition(async () => {
-      await updateUserApproval(user._id, approve);
-      setIsApproved(approve);
+      await updateUserBlock(user._id, block);
+      setIsBlocked(block);
       router.refresh();
     });
   }
@@ -114,31 +114,31 @@ export function PhotographerDetailPageClient({
             <Badge
               variant="secondary"
               className={
-                isApproved
+                !isBlocked
                   ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
-                  : "border-amber-400/20 bg-amber-400/10 text-amber-400"
+                  : "border-rose-400/20 bg-rose-400/10 text-rose-400"
               }
             >
-              {isApproved ? "Approved" : "Pending"}
+              {!isBlocked ? "Active" : "Blocked"}
             </Badge>
 
-            {!isApproved ? (
+            {isBlocked ? (
               <button
-                onClick={() => handleApproval(true)}
+                onClick={() => handleBlock(false)}
                 disabled={isPending}
                 className="flex items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                Approve
+                Unblock
               </button>
             ) : (
               <button
-                onClick={() => handleApproval(false)}
+                onClick={() => handleBlock(true)}
                 disabled={isPending}
                 className="flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-400 transition hover:bg-rose-500/20 disabled:opacity-50"
               >
                 <XCircle className="h-4 w-4" />
-                Revoke Access
+                Block Access
               </button>
             )}
           </div>

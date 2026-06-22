@@ -23,22 +23,21 @@ export default async function DashboardLayout({
     redirect("/photographer/login");
   }
 
-  // Use native driver to check isApproved — correctly handles legacy documents
-  // where the field may be absent (treated as falsy = not approved).
+  // Use native driver to check isBlocked and phoneNumber
   const conn = await connectToDatabase();
   const user = await conn.connection.collection("users").findOne(
     { email: session.email.toLowerCase() },
-    { projection: { isApproved: 1 } }
+    { projection: { isBlocked: 1 } }
   );
 
   if (!user) {
     redirect("/photographer/login");
   }
 
-  const isApproved = (user.isApproved as boolean | undefined) ?? false;
+  const isBlocked = (user.isBlocked as boolean | undefined) ?? false;
 
-  if (!isApproved) {
-    redirect("/photographer/login?pending=true");
+  if (isBlocked) {
+    redirect("/photographer/login?blocked=true");
   }
 
   return <DashboardShell user={session}>{children}</DashboardShell>;

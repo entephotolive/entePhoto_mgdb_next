@@ -4,19 +4,27 @@ import { LoginForm } from "@/components/feature-specific/auth/login-form";
 import { getCurrentPhotographerSession } from "@/lib/services/auth.service";
 import { connectToDatabase } from "@/lib/db/mongodb";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const isSetupPhone = resolvedSearchParams?.setup_phone === "true";
+
   const session = await getCurrentPhotographerSession();
   
   if (session) {
-    // Only redirect if they are approved.
-    // If not approved, they need to stay on this page to see the PendingModal.
+    // Only redirect if they are not blocked and not currently in setup_phone flow
     const conn = await connectToDatabase();
     const user = await conn.connection.collection("users").findOne(
       { email: session.email.toLowerCase() },
-      { projection: { isApproved: 1 } }
+      { projection: { isBlocked: 1 } }
     );
     
-    if (user?.isApproved) {
+    const isBlocked = user?.isBlocked as boolean | undefined;
+
+    if (!isBlocked && !isSetupPhone) {
       redirect("/photographer/dashboard");
     }
   }

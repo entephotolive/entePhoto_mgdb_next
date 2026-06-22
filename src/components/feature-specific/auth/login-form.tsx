@@ -12,8 +12,8 @@ import {
 } from "@/app/photographer/pending-actions";
 import { Phone, Clock, CheckCircle2, Edit2, X } from "lucide-react";
 
-// ─── Pending Modal ────────────────────────────────────────────────────────────
-function PendingModal({ onClose }: { onClose?: () => void }) {
+// ─── Phone Setup Modal ────────────────────────────────────────────────────────
+function PhoneSetupModal({ onClose }: { onClose?: () => void }) {
   const [phone, setPhone] = useState("");
   const [savedPhone, setSavedPhone] = useState<string | null>(null);
   const [confirmedPhone, setConfirmedPhone] = useState<string | null>(null);
@@ -76,28 +76,25 @@ function PendingModal({ onClose }: { onClose?: () => void }) {
           {/* Header */}
           <div className="mb-6 flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                <Clock className="h-6 w-6 text-amber-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
+                <Phone className="h-6 w-6 text-cyan-400" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">
-                  Approval Pending
+                  Welcome to Ente Photo
                 </h2>
                 <p className="text-sm text-slate-400">
-                  Your account is under review
+                  Please provide your phone number
                 </p>
               </div>
             </div>
           </div>
 
           {/* Info banner */}
-          <div className="mb-6 rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4">
+          <div className="mb-6 rounded-2xl border border-cyan-500/15 bg-cyan-500/5 p-4">
             <p className="text-sm leading-relaxed text-slate-300">
               👋 Thank you for registering!{" "}
-              <span className="font-semibold text-amber-400">
-                The admin will contact you as soon as possible
-              </span>{" "}
-              to activate your account. Please provide your phone number below
+              Please provide your phone number below
               so we can reach you.
             </p>
           </div>
@@ -133,7 +130,7 @@ function PendingModal({ onClose }: { onClose?: () => void }) {
                   <span>
                     Saved!{" "}
                     <span className="font-bold">{confirmedPhone}</span>{" "}
-                    has been recorded and the admin has been notified.
+                    has been recorded. Taking you to dashboard...
                   </span>
                 </div>
               )}
@@ -145,8 +142,10 @@ function PendingModal({ onClose }: { onClose?: () => void }) {
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Enter your phone number"
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="Enter your 10-digit phone number"
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                   required
                   className="h-12 w-full rounded-xl border border-white/10 bg-white/5 pl-11 pr-4 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20"
                 />
@@ -165,6 +164,17 @@ function PendingModal({ onClose }: { onClose?: () => void }) {
                   >
                     <X className="h-4 w-4" />
                     Cancel
+                  </button>
+                )}
+                {!savedPhone && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = "/photographer/dashboard";
+                    }}
+                    className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-white/10 px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/5"
+                  >
+                    Skip
                   </button>
                 )}
                 <Button
@@ -187,8 +197,39 @@ function PendingModal({ onClose }: { onClose?: () => void }) {
 
           {/* Footer note */}
           <p className="text-center text-xs text-slate-500">
-            You will receive a confirmation once your account is approved.
+            This will be your primary contact number.
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Blocked Modal ────────────────────────────────────────────────────────────
+function BlockedModal() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+
+      {/* Modal card */}
+      <div className="relative z-10 w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#081b24] shadow-2xl">
+        <div className="h-1 w-full bg-gradient-to-r from-rose-500 via-red-500 to-rose-700" />
+
+        <div className="p-8 text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/10 border border-rose-500/20">
+            <XCircle className="h-8 w-8 text-rose-500" />
+          </div>
+          <h2 className="mb-2 text-2xl font-bold text-white">Access Denied</h2>
+          <p className="mb-6 text-sm text-slate-400">
+            Your account has been blocked. Please contact the administrator for more information.
+          </p>
+          <Button
+            onClick={() => window.location.href = "/"}
+            className="w-full rounded-xl bg-white/10 text-white hover:bg-white/20 transition"
+          >
+            Go Back
+          </Button>
         </div>
       </div>
     </div>
@@ -201,13 +242,16 @@ function LoginFormInner() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
-  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showPhoneSetupModal, setShowPhoneSetupModal] = useState(false);
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
 
   useEffect(() => {
     const urlError = searchParams.get("error");
-    const pending = searchParams.get("pending");
+    const setupPhone = searchParams.get("setup_phone");
+    const blocked = searchParams.get("blocked");
     if (urlError) setError(urlError);
-    if (pending === "true") setShowPendingModal(true);
+    if (setupPhone === "true") setShowPhoneSetupModal(true);
+    if (blocked === "true") setShowBlockedModal(true);
   }, [searchParams]);
 
   async function handleGoogleSignIn() {
@@ -287,7 +331,8 @@ function LoginFormInner() {
         </div>
       </Card>
 
-      {showPendingModal && <PendingModal onClose={() => setShowPendingModal(false)} />}
+      {showPhoneSetupModal && <PhoneSetupModal onClose={() => setShowPhoneSetupModal(false)} />}
+      {showBlockedModal && <BlockedModal />}
     </>
   );
 }

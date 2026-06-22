@@ -50,7 +50,7 @@ export default async function PhotographerDetailPage({ params }: Props) {
     email: (userDoc.email as string) || "",
     avatarUrl: (userDoc.avatarUrl as string) || null,
     phoneNumber: (userDoc.phoneNumber as string) || null,
-    isApproved: (userDoc.isApproved as boolean) ?? false,
+    isBlocked: (userDoc.isBlocked as boolean) ?? false,
     createdAt: userDoc.createdAt instanceof Date
       ? userDoc.createdAt.toISOString()
       : null,

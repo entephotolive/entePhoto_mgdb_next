@@ -26,6 +26,7 @@ const profileSchema = z.object({
   specializations: z.array(z.string()).optional(),
   bio: z.string().max(600).optional(),
   avatarUrl: z.string().url().optional().or(z.literal("")),
+  phoneNumber: z.string().regex(/^\d{10}$/, "Phone number must be exactly 10 digits").optional().or(z.literal("")),
 });
 
 // ─── Action return type ─────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ export async function updateProfile(
     specializations?: string[];
     bio?: string;
     avatarUrl?: string;
+    phoneNumber?: string;
   }
 ): Promise<ActionResult<ProfileData>> {
   const parsed = profileSchema.safeParse(raw);

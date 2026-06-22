@@ -17,20 +17,20 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { InfiniteScroll } from "@/components/shared/infinite-scroll";
-import { fetchUsersPage, updateUserApproval, type ApprovalFilter } from "./actions";
+import { fetchUsersPage, updateUserBlock, type BlockFilter } from "./actions";
 import { PhotographerOverviewModal } from "./photographer-overview-modal";
 import { BarChart3 } from "lucide-react";
 
 // ─── Filter tabs config ───────────────────────────────────────────────────────
-const FILTERS: { label: string; value: ApprovalFilter; icon: React.ElementType; color: string }[] =
+const FILTERS: { label: string; value: BlockFilter; icon: React.ElementType; color: string }[] =
   [
     { label: "All", value: "all", icon: Users, color: "text-slate-400" },
-    { label: "Approved", value: "approved", icon: ShieldCheck, color: "text-emerald-400" },
-    { label: "Pending", value: "pending", icon: Clock, color: "text-amber-400" },
+    { label: "Active", value: "active", icon: ShieldCheck, color: "text-emerald-400" },
+    { label: "Blocked", value: "blocked", icon: XCircle, color: "text-rose-400" },
   ];
 
 export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
-  const [filter, setFilter] = useState<ApprovalFilter>("all");
+  const [filter, setFilter] = useState<BlockFilter>("all");
   const [users, setUsers] = useState(initialUsers);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(initialUsers.length >= 20);
@@ -41,7 +41,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
   const [overviewUser, setOverviewUser] = useState<any | null>(null);
 
   // ─── Switch filter ──────────────────────────────────────────────────────────
-  const handleFilterChange = useCallback((newFilter: ApprovalFilter) => {
+  const handleFilterChange = useCallback((newFilter: BlockFilter) => {
     setFilter(newFilter);
     setPage(1);
     setIsLoading(true);
@@ -70,17 +70,17 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
     }
   }, [page, isLoading, hasMore, filter]);
 
-  // ─── Approve / Reject ───────────────────────────────────────────────────────
-  const handleApproval = useCallback(
-    (userId: string, approve: boolean) => {
+  // ─── Block / Unblock ────────────────────────────────────────────────────────
+  const handleBlock = useCallback(
+    (userId: string, block: boolean) => {
       startTransition(async () => {
         try {
-          await updateUserApproval(userId, approve);
+          await updateUserBlock(userId, block);
           // Update the local state immediately for snappy UI
           if (filter === "all") {
             setUsers((prev) =>
               prev.map((u) =>
-                u._id === userId ? { ...u, isApproved: approve } : u
+                u._id === userId ? { ...u, isBlocked: block } : u
               )
             );
           } else {
@@ -88,7 +88,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
             setUsers((prev) => prev.filter((u) => u._id !== userId));
           }
         } catch (err) {
-          console.error("Failed to update approval status", err);
+          console.error("Failed to update block status", err);
         }
       });
     },
@@ -206,19 +206,19 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
 
                     {/* Status badge */}
                     <td className="px-6 py-4">
-                      {user.isApproved ? (
+                      {!user.isBlocked ? (
                         <Badge
                           variant="secondary"
                           className="bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
                         >
-                          Approved
+                          Active
                         </Badge>
                       ) : (
                         <Badge
                           variant="secondary"
-                          className="bg-amber-400/10 text-amber-400 border-amber-400/20"
+                          className="bg-rose-400/10 text-rose-400 border-rose-400/20"
                         >
-                          Pending
+                          Blocked
                         </Badge>
                       )}
                     </td>
@@ -233,7 +233,7 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                       </div>
                     </td>
 
-                    {/* Approve / Reject */}
+                    {/* Block / Unblock */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         <button
@@ -244,25 +244,25 @@ export function UsersClient({ initialUsers }: { initialUsers: any[] }) {
                           <BarChart3 className="h-4 w-4" />
                         </button>
 
-                        {!user.isApproved ? (
+                        {user.isBlocked ? (
                           <button
-                            onClick={() => handleApproval(user._id, true)}
+                            onClick={() => handleBlock(user._id, false)}
                             disabled={isPending}
-                            title="Approve"
+                            title="Unblock"
                             className="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20 transition hover:bg-emerald-500/20 disabled:opacity-50"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            Approve
+                            Unblock
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleApproval(user._id, false)}
+                            onClick={() => handleBlock(user._id, true)}
                             disabled={isPending}
-                            title="Revoke"
+                            title="Block"
                             className="flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-400 border border-rose-500/20 transition hover:bg-rose-500/20 disabled:opacity-50"
                           >
                             <XCircle className="h-3.5 w-3.5" />
-                            Revoke
+                            Block
                           </button>
                         )}
                       </div>
