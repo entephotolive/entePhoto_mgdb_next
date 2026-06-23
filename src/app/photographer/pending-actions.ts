@@ -2,6 +2,7 @@
 
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { getCurrentSession } from "@/lib/services/auth.service";
+import { sendAdminNotificationEmail } from "@/lib/services/email.service";
 
 /**
  * Updates the phone number for the currently logged-in photographer.
@@ -59,6 +60,9 @@ export async function updatePhotographerPhone(phoneNumber: string) {
     `[pending-actions] ✓ phoneNumber saved for ${session.email} → ${savedPhone}`
   );
 
+  // Send admin notification
+  sendAdminNotificationEmail(session.email, session.name || "Unknown", savedPhone).catch(console.error);
+
   return { success: true, phoneNumber: savedPhone };
 }
 
@@ -91,4 +95,15 @@ export async function getPhotographerPendingInfo() {
     name: user.name as string,
     avatarUrl: (user.avatarUrl as string | undefined) ?? null,
   };
+}
+
+/**
+ * Call this when the user skips providing a phone number
+ * so we can still notify the admin of the new registration.
+ */
+export async function skipPhoneSetupAndNotify() {
+  const session = await getCurrentSession();
+  if (session) {
+    sendAdminNotificationEmail(session.email, session.name || "Unknown", "Not provided (Skipped)").catch(console.error);
+  }
 }

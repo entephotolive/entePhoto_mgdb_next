@@ -9,6 +9,7 @@ import { BrandMark } from "@/components/shared/brand-mark";
 import {
   updatePhotographerPhone,
   getPhotographerPendingInfo,
+  skipPhoneSetupAndNotify,
 } from "@/app/photographer/pending-actions";
 import { Phone, Clock, CheckCircle2, Edit2, X, XCircle } from "lucide-react";
 
@@ -172,7 +173,15 @@ function PhoneSetupModal({ onClose }: { onClose?: () => void }) {
                   <button
                     type="button"
                     onClick={() => {
-                      window.location.href = "/photographer/dashboard";
+                      startTransition(async () => {
+                        try {
+                          await skipPhoneSetupAndNotify();
+                        } catch (e) {
+                          console.error("Failed to notify admin on skip", e);
+                        } finally {
+                          window.location.href = "/photographer/dashboard";
+                        }
+                      });
                     }}
                     className="flex h-11 items-center justify-center gap-1.5 rounded-xl border border-white/10 px-4 text-sm font-semibold text-slate-400 transition hover:bg-white/5"
                   >

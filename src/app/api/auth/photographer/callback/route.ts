@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { signSessionToken, getAuthCookieOptions } from "@/lib/utils/auth";
 import { exchangeCodeForToken, fetchGoogleUserProfile } from "@/lib/utils/google-oauth";
+import { sendWelcomeEmail, sendAdminNotificationEmail } from "@/lib/services/email.service";
 
 const host = process.env.NEXT_PUBLIC_APP_URL!;
 const REDIRECT_URI = `${host}/api/auth/photographer/callback`;
@@ -63,6 +64,9 @@ export async function GET(request: Request) {
       });
       userDoc = await usersCol.findOne({ _id: insertedId });
       console.info(`[photographer/callback] New photographer registered: ${googleUser.email}`);
+      
+      // Send welcome email asynchronously
+      sendWelcomeEmail(googleUser.email, googleUser.name).catch(console.error);
     } else {
       // Existing user → backfill any fields absent in legacy documents
       const patch: Record<string, unknown> = {};
