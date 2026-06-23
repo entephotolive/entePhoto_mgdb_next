@@ -10,7 +10,7 @@ import {
   updatePhotographerPhone,
   getPhotographerPendingInfo,
 } from "@/app/photographer/pending-actions";
-import { Phone, Clock, CheckCircle2, Edit2, X } from "lucide-react";
+import { Phone, Clock, CheckCircle2, Edit2, X, XCircle } from "lucide-react";
 
 // ─── Phone Setup Modal ────────────────────────────────────────────────────────
 function PhoneSetupModal({ onClose }: { onClose?: () => void }) {
@@ -55,7 +55,9 @@ function PhoneSetupModal({ onClose }: { onClose?: () => void }) {
         setConfirmedPhone(result.phoneNumber); // track confirmed value separately
         setIsEditing(false);
         setSuccess(true);
-        setTimeout(() => setSuccess(false), 4000);
+        setTimeout(() => {
+          window.location.href = "/photographer/dashboard";
+        }, 2000);
       } catch (err: any) {
         setError(err.message || "Failed to save phone number.");
       }
