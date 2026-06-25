@@ -3,8 +3,10 @@ import path from "path";
 import { AdminModel } from "../../models/Admin";
 import { connectToDatabase } from "../db/mongodb";
 
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
+  connectionTimeout: 5000, // Fails after 5 seconds instead of hanging
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -25,6 +27,7 @@ function escapeHtml(value: string) {
 
 export const sendWelcomeEmail = async (userEmail: string, userName: string) => {
   try {
+    console.log(`[EMAIL TEST] Attempting to send welcome email to ${userEmail}`);
     const currentYear = new Date().getFullYear();
 
     const mailOptions = {
