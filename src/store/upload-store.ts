@@ -12,6 +12,11 @@
  */
 
 import { create } from "zustand";
+import {
+  MAX_UPLOAD_SIZE_BYTES,
+  MAX_UPLOAD_SIZE_MB,
+  isAllowedFile,
+} from "@/lib/utils/upload-constants";
 
 // ── Types ─────────────────────────────────────────────────────────
 
@@ -83,9 +88,9 @@ interface UploadStore {
   _recompute: () => void;
 }
 
-// ── Validation constants ──────────────────────────────────────────
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+// ── Validation constants — sourced from @/lib/utils/upload-constants ─────────
+// Do NOT redefine these here. Always import from upload-constants.ts so the UI
+// labels, the store guard, and the server endpoint all reference one value.
 
 // ── Store ─────────────────────────────────────────────────────────
 export const useUploadStore = create<UploadStore>((set, get) => ({
@@ -107,24 +112,24 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
       const id = crypto.randomUUID();
       const preview = URL.createObjectURL(file);
 
-      if (!ALLOWED_TYPES.includes(file.type)) {
+      if (!isAllowedFile(file)) {
         return {
           id,
           file,
           preview,
           status: "failed",
           progress: 0,
-          error: "Unsupported type (JPG/PNG/WebP only)",
+          error: "Unsupported type (JPG/PNG/WebP/HEIC only)",
         };
       }
-      if (file.size > MAX_SIZE_BYTES) {
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
         return {
           id,
           file,
           preview,
           status: "failed",
           progress: 0,
-          error: "Exceeds 50 MB limit",
+          error: `Exceeds ${MAX_UPLOAD_SIZE_MB} MB limit`,
         };
       }
       return { id, file, preview, status: "queued", progress: 0 };

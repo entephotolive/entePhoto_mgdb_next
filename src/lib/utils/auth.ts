@@ -41,9 +41,11 @@ export async function verifySessionToken(token: string) {
   return payload;
 }
 
-export function getAuthCookieOptions() {
+import { photographerCookieName } from "@/lib/utils/constants";
+
+export function getAuthCookieOptions(cookieName: string = photographerCookieName) {
   return {
-    name: authCookieName,
+    name: cookieName,
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",

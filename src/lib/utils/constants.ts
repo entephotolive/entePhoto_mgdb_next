@@ -8,7 +8,9 @@ import {
 } from "lucide-react";
 import { UserRole } from "@/types";
 
-export const authCookieName = "photo_ceremony_session";
+export const photographerCookieName = "ep-photographer";
+export const adminCookieName = "ep-admin";
+export const authCookieName = photographerCookieName;
 
 export const dashboardNavItems = [
   {

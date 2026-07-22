@@ -10,7 +10,7 @@ export const scanFace = async (formData: FormData) => {
 
     const event = await getEventById(eid);
     
-    if (!event || typeof event === "string" || "error" in event) {
+    if (!event) {
       throw new Error("Event not found");
     }
 

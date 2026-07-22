@@ -12,24 +12,34 @@ import { useRef, useState, useEffect, useMemo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { EventListItem } from "@/types";
 import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
+import { EVENT_UPLOAD_WINDOW_MS, MAX_UPLOAD_SIZE_MB } from "@/lib/utils/upload-constants";
 
 interface UploadWorkspaceProps {
   events: EventListItem[];
   userId: string;
 }
 
+/**
+ * Returns true ONLY when uploads are permitted for the given event.
+ *
+ * Strict window: [eventTime, eventTime + EVENT_UPLOAD_WINDOW_MS]
+ *   • Before event starts → ❌ blocked
+ *   • During the 24-hour window → ✅ allowed
+ *   • After window closes → ❌ blocked
+ */
 function isEventActive(event: EventListItem | undefined): boolean {
   if (!event || !event.date) return false;
   const now = Date.now();
   const eventTime = new Date(event.date).getTime();
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-  return now >= eventTime && now <= eventTime + TWENTY_FOUR_HOURS;
+  return now >= eventTime && now <= eventTime + EVENT_UPLOAD_WINDOW_MS;
 }
 
 export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [showWarning, setShowWarning] = useState(events.length === 0);
+  // Start false — the modal only shows on deliberate user interaction
+  // (click / drop), not immediately on mount, to avoid a hydration flash.
+  const [showWarning, setShowWarning] = useState(false);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
@@ -78,6 +88,24 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     setIsInitialized(true);
   }, [isInitialized, sortedEvents, userId, setUploadContext]);
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const interruptedItems = items.filter((i) => i.status === "uploading");
+        if (interruptedItems.length > 0) {
+          interruptedItems.forEach((item) => {
+            retryUpload(item.id);
+          });
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [items, retryUpload]);
+
   const handleEventChange = (newId: string) => {
     setSelectedEventId(newId);
     localStorage.setItem("photo-ceremony-selected-event-id", newId);
@@ -122,7 +150,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         }}
         onDragOver={(event) => {
           event.preventDefault();
-          if (events.length > 0) setIsDragging(true);
+          if (events.length > 0 && isInitialized && selectedEventId) {
+            setIsDragging(true);
+          }
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={(event) => {
@@ -130,6 +160,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           setIsDragging(false);
           if (events.length === 0) {
             setShowWarning(true);
+            return;
+          }
+          if (!isInitialized || !selectedEventId) {
             return;
           }
           const selectedEvent = events.find((e) => e.id === selectedEventId);
@@ -153,7 +186,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           ref={inputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
           className="hidden"
           onChange={(event) => {
             if (event.target.files) {
@@ -190,11 +223,11 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 relative z-10">
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             <AlertCircle size={14} className="opacity-50" />
-            Max File Size: 15MB
+            Max File Size: {MAX_UPLOAD_SIZE_MB}MB
           </div>
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
             <ImageIcon size={14} className="opacity-50" />
-            Supported Formats: JPG, PNG
+            Supported Formats: JPG, PNG, WebP, HEIC
           </div>
         </div>
       </div>

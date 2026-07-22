@@ -71,7 +71,10 @@ export async function loginUser(input: LoginInput) {
   return mapSessionUser(user);
 }
 
-export async function createSession(user: SessionUser) {
+import { redirect } from "next/navigation";
+import { photographerCookieName, adminCookieName } from "@/lib/utils/constants";
+
+export async function createSession(user: SessionUser, cookieName: string = photographerCookieName) {
   const cookieStore = await cookies();
   const token = await signSessionToken({
     sub: user.id,
@@ -80,19 +83,24 @@ export async function createSession(user: SessionUser) {
   });
 
   cookieStore.set({
-    ...getAuthCookieOptions(),
+    ...getAuthCookieOptions(cookieName),
     value: token,
   });
 }
 
-export async function destroySession() {
+export async function destroySession(cookieName?: string) {
   const cookieStore = await cookies();
-  cookieStore.delete(getAuthCookieOptions().name);
+  if (cookieName) {
+    cookieStore.delete(getAuthCookieOptions(cookieName).name);
+  } else {
+    cookieStore.delete(getAuthCookieOptions(photographerCookieName).name);
+    cookieStore.delete(getAuthCookieOptions(adminCookieName).name);
+  }
 }
 
-export async function getCurrentSession() {
+export async function getCurrentSession(cookieName: string = photographerCookieName) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(getAuthCookieOptions().name)?.value;
+  const token = cookieStore.get(getAuthCookieOptions(cookieName).name)?.value;
 
   if (!token) {
     return null;
@@ -100,7 +108,6 @@ export async function getCurrentSession() {
 
   try {
     const payload = await verifySessionToken(token);
-  
 
     return {
       id: payload.sub,
@@ -116,7 +123,7 @@ export async function getCurrentSession() {
  * Gets the current session and verifies the admin exists in the database.
  */
 export async function getCurrentAdminSession() {
-  const session = await getCurrentSession();
+  const session = await getCurrentSession(adminCookieName);
   if (!session) return null;
 
   try {
@@ -139,7 +146,7 @@ export async function getCurrentAdminSession() {
  * Gets the current session and verifies the photographer (user) exists in the database.
  */
 export async function getCurrentPhotographerSession() {
-  const session = await getCurrentSession();
+  const session = await getCurrentSession(photographerCookieName);
   if (!session) return null;
 
   try {
@@ -158,11 +165,22 @@ export async function getCurrentPhotographerSession() {
 }
 
 export async function requireSession() {
-  const session = await getCurrentSession();
+  const session = await getCurrentSession(photographerCookieName);
 
   if (!session) {
-    throw new Error("Unauthorized");
+    redirect("/login");
   }
 
   return session;
 }
+
+export async function requirePhotographerSession() {
+  const session = await getCurrentPhotographerSession();
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  return session;
+}
+

@@ -1,6 +1,6 @@
 import { UploadWorkspace } from "@/components/feature-specific/uploads/upload-workspace";
 import { PageHeader } from "@/components/shared/page-header";
-import { requireSession } from "@/lib/services/auth.service";
+import { requirePhotographerSession } from "@/lib/services/auth.service";
 import { listEvents } from "@/lib/services/event.service";
 
 export const metadata = {
@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function UploadsPage() {
-  const session = await requireSession();
+  const session = await requirePhotographerSession();
   const events = await listEvents(session.id).catch(() => []);
 
   return (

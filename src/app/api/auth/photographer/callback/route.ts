@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { signSessionToken, getAuthCookieOptions } from "@/lib/utils/auth";
+import { photographerCookieName } from "@/lib/utils/constants";
 import { exchangeCodeForToken, fetchGoogleUserProfile } from "@/lib/utils/google-oauth";
 import { sendWelcomeEmail, sendAdminNotificationEmail } from "@/lib/services/email.service";
 
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
       email: userDoc.email as string,
     });
 
-    const cookieOptions = getAuthCookieOptions();
+    const cookieOptions = getAuthCookieOptions(photographerCookieName);
     const isBlocked = (userDoc.isBlocked as boolean | undefined) ?? false;
     const hasPhone = !!userDoc.phoneNumber;
 

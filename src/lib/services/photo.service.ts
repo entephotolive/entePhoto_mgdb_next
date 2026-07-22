@@ -4,6 +4,7 @@ import { EventModel } from "@/models/Event";
 import { PhotoModel } from "@/models/Photo";
 import { GalleryFolder } from "@/types";
 import { Types } from "mongoose";
+import { EVENT_UPLOAD_WINDOW_MS } from "@/lib/utils/upload-constants";
 
 const photoInputSchema = z.object({
   url: z.string().url(),
@@ -24,17 +25,17 @@ export async function createPhoto(input: unknown) {
 
   const now = Date.now();
   const eventTime = new Date(event.date).getTime();
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
+  // Enforce the same strict window as isEventActive() on the client.
   if (now < eventTime) {
     throw new Error(
-      "This event hasn't started yet. Uploads will be available once the event begins.",
+      "This event has not started yet. Uploads open at the event start time.",
     );
   }
 
-  if (now > eventTime + TWENTY_FOUR_HOURS) {
+  if (now > eventTime + EVENT_UPLOAD_WINDOW_MS) {
     throw new Error(
-      "This event has ended (24-hour window closed). New photos can no longer be added.",
+      `This event's upload window has closed. Photos can only be uploaded during the ${EVENT_UPLOAD_WINDOW_MS / 3_600_000}-hour window after the event starts.`,
     );
   }
 

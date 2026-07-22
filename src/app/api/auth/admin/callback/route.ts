@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { AdminModel } from "@/models/Admin";
 import { signSessionToken, getAuthCookieOptions } from "@/lib/utils/auth";
+import { adminCookieName } from "@/lib/utils/constants";
 import { exchangeCodeForToken, fetchGoogleUserProfile } from "@/lib/utils/google-oauth";
 
 const host = process.env.NEXT_PUBLIC_APP_URL!;
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       email: admin.email,
     });
 
-    const cookieOptions = getAuthCookieOptions();
+    const cookieOptions = getAuthCookieOptions(adminCookieName);
     const response = NextResponse.redirect(DASHBOARD_URL);
     response.cookies.set(cookieOptions.name, token, cookieOptions);
 

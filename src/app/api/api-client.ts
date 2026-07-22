@@ -5,6 +5,7 @@ const pythonApi = process.env.NEXT_PUBLIC_PYTHON_API_URL;
 export const api = axios.create({
   baseURL: pythonApi,
   withCredentials: true,
+  timeout: 120000, // 2 minutes timeout for large file uploads on mobile connections
 });
 
 // Optional: response interceptor

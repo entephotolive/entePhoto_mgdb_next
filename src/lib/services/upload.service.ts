@@ -14,6 +14,7 @@ import {
   UploadQueueItem,
 } from "@/store/upload-store";
 import { api } from "@/app/api/api-client";
+import { isAllowedFile } from "@/lib/utils/upload-constants";
 
 const DUPLICATE_CHECK_BATCH_SIZE = 100;
 const MOBILE_UPLOAD_CONCURRENCY = 2;
@@ -22,10 +23,11 @@ const DESKTOP_UPLOAD_CONCURRENCY = 6;
 /** Maximum safe canvas pixel area on iOS Safari (4 Megapixels) */
 const IOS_CANVAS_MAX_PIXELS = 4_000_000;
 
-/** Read EXIF orientation tag from a JPEG file (returns 1–8, defaults to 1) */
+/** Read EXIF orientation tag from a JPEG/HEIC file (returns 1–8, defaults to 1) */
 async function readExifOrientation(file: File): Promise<number> {
   try {
-    if (!file.type.includes("jpeg") && !file.type.includes("jpg")) return 1;
+    const isJpeg = file.type.includes("jpeg") || file.type.includes("jpg") || /\.jpe?g$/i.test(file.name);
+    if (!isJpeg) return 1;
     const buffer = await file.slice(0, 65536).arrayBuffer();
     const view = new DataView(buffer);
     if (view.getUint16(0) !== 0xffd8) return 1;
@@ -61,28 +63,16 @@ async function readExifOrientation(file: File): Promise<number> {
 
 /**
  * Resize & compress an image using the Canvas API before upload.
- *
- * iOS-safe fixes applied:
- *  1. Reads EXIF orientation and rotates the canvas so portrait iPhone shots
- *     are never sideways after upload.
- *  2. Clamps the canvas to ≤ 4 Megapixels so iOS Safari never crashes or
- *     produces a blank output (the old bug that caused 9 MB files).
- *  3. Always outputs image/jpeg (NOT WebP) because iOS Safari cannot encode
- *     WebP via canvas.toBlob — it silently falls back to PNG, which is huge.
- *  4. Falls back to returning the original file on any error so uploads
- *     are never permanently blocked.
- *
- * Max dimension: 2560 px · Quality: 0.90
+ * Preserves high resolution unless constrained by hardware canvas pixel caps.
+ * Fills white background for PNG transparency support.
  */
-async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Promise<File> {
-  if (!file.type.startsWith("image/")) return file;
+async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): Promise<File> {
+  if (!isAllowedFile(file)) return file;
 
   try {
-    // ── 1. Read EXIF orientation (JPEG only) ────────────────────────────
     const orientation = await readExifOrientation(file);
     const isRotated90 = orientation >= 5 && orientation <= 8;
 
-    // ── 2. Load the image ───────────────────────────────────────────────
     const url = URL.createObjectURL(file);
     const img = await new Promise<HTMLImageElement>((res, rej) => {
       const el = new window.Image();
@@ -94,19 +84,16 @@ async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Prom
     const srcW = img.naturalWidth;
     const srcH = img.naturalHeight;
 
-    // Logical dimensions after applying orientation rotation
     const logicW = isRotated90 ? srcH : srcW;
     const logicH = isRotated90 ? srcW : srcH;
 
-    // ── 3. Scale to fit within maxSizePx AND iOS canvas pixel cap ───────
-    const maxDimScale = Math.min(1, maxSizePx / Math.max(logicW, logicH));
+    const maxDimScale = Number.isFinite(maxSizePx) ? Math.min(1, maxSizePx / Math.max(logicW, logicH)) : 1;
     const pixelScale = Math.min(1, Math.sqrt(IOS_CANVAS_MAX_PIXELS / (logicW * logicH)));
     const scale = Math.min(maxDimScale, pixelScale);
 
     const canvasW = Math.round(logicW * scale);
     const canvasH = Math.round(logicH * scale);
 
-    // ── 4. Draw with EXIF rotation applied ──────────────────────────────
     const canvas = document.createElement("canvas");
     canvas.width = canvasW;
     canvas.height = canvasH;
@@ -114,10 +101,13 @@ async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Prom
     const ctx = canvas.getContext("2d");
     if (!ctx) return file;
 
+    // Fill canvas with white background (prevents black background on transparent PNGs)
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Apply EXIF orientation transform
     switch (orientation) {
       case 2: ctx.transform(-1, 0, 0,  1, canvasW, 0);       break;
       case 3: ctx.transform(-1, 0, 0, -1, canvasW, canvasH); break;
@@ -127,20 +117,14 @@ async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Prom
       case 7: ctx.transform( 0,-1,-1,  0, canvasW, canvasH); break;
       case 8: ctx.transform( 0,-1, 1,  0, 0, canvasW);       break;
     }
-    // Scale after the rotation transform
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0, srcW, srcH);
 
-    // ── 5. Encode as JPEG ────────────────────────────────────────────────
-    // WebP is NOT used here because iOS Safari's canvas.toBlob silently falls
-    // back to PNG when it can't encode WebP, which produces files that are
-    // LARGER than the original (the exact 3 MB → 9 MB bug reported).
     const outputMime = "image/jpeg";
     const blob = await new Promise<Blob | null>((res) =>
       canvas.toBlob(res, outputMime, quality)
     );
 
-    // Release canvas memory
     canvas.width = 0;
     canvas.height = 0;
 
@@ -149,10 +133,9 @@ async function compressImage(file: File, maxSizePx = 2560, quality = 0.90): Prom
     const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
     return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
   } catch {
-    return file; // Always fall back to original on any error
+    return file; // Fallback to original file on any loading/decoding error
   }
 }
-
 
 function getUploadConcurrency() {
   if (typeof window === "undefined") return DESKTOP_UPLOAD_CONCURRENCY;
@@ -200,63 +183,81 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
   useUploadStore.getState()._setCurrentFileName(item.file.name);
   useUploadStore.getState()._updateItem(item.id, { status: "uploading", progress: 0, error: undefined });
 
-  const itemController = new AbortController();
-  registerXhr(item.id, { abort: () => itemController.abort() } as any);
+  const maxAttempts = 3;
+  let attempt = 0;
+  let lastError: any = null;
 
-  try {
-    const fileToUpload = await compressImage(item.file);
+  while (attempt < maxAttempts) {
+    attempt++;
+    const itemController = new AbortController();
+    registerXhr(item.id, { abort: () => itemController.abort() } as any);
 
-    const formData = new FormData();
-    formData.append("event_id", String(context.eventId));
-    formData.append("images", fileToUpload);
-    if (context.folderId) {
-      formData.append("folder_id", context.folderId);
+    try {
+      const fileToUpload = await compressImage(item.file);
+
+      const formData = new FormData();
+      formData.append("event_id", String(context.eventId));
+      formData.append("images", fileToUpload);
+      if (context.uploadedBy) {
+        formData.append("uploadedBy", String(context.uploadedBy));
+      }
+      if (context.folderId) {
+        formData.append("folder_id", context.folderId);
+      }
+
+      const response = await api.post("api/upload-images/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        signal: itemController.signal,
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.lengthComputable && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            useUploadStore.getState()._updateItem(item.id, { progress });
+          }
+        },
+      });
+
+      const responseData = response.data;
+      if (responseData && responseData.images_not_uploaded > 0) {
+        const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+        const reasonObj =
+          responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedName) ||
+          responseData.reason_why_not_uploaded?.[0];
+        throw new Error(reasonObj?.reason || "Image not uploaded");
+      }
+
+      useUploadStore.getState()._updateItem(item.id, { status: "completed", progress: 100 });
+      return { ok: true as const };
+    } catch (error: any) {
+      lastError = error;
+      console.error(`Upload Attempt ${attempt}/${maxAttempts} Error for ${item.file.name}:`, error);
+      const isCancelled = error?.name === "CanceledError" || error?.message === "canceled";
+
+      if (isCancelled) {
+        useUploadStore.getState()._updateItem(item.id, {
+          status: "failed",
+          progress: 0,
+          error: "Cancelled",
+        });
+        return { ok: false as const, cancelled: true as const };
+      }
+
+      if (attempt < maxAttempts) {
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise((res) => setTimeout(res, backoffMs));
+      }
+    } finally {
+      unregisterXhr(item.id);
     }
-
-    const response = await api.post("api/upload-images/", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-      signal: itemController.signal,
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.lengthComputable && progressEvent.total) {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          useUploadStore.getState()._updateItem(item.id, { progress });
-        }
-      },
-    });
-
-    const responseData = response.data;
-    if (responseData && responseData.images_not_uploaded > 0) {
-      const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-      const reasonObj =
-        responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedName) ||
-        responseData.reason_why_not_uploaded?.[0];
-      throw new Error(reasonObj?.reason || "Image not uploaded");
-    }
-
-    useUploadStore.getState()._updateItem(item.id, { status: "completed", progress: 100 });
-    return { ok: true as const };
-  } catch (error: any) {
-    console.error(`Upload Error for ${item.file.name}:`, error);
-    const isCancelled = error.name === "CanceledError" || error.message === "canceled";
-
-    if (isCancelled && !useUploadStore.getState().items.find((i) => i.id === item.id)) {
-      return { ok: false as const, cancelled: true as const };
-    }
-
-    useUploadStore.getState()._updateItem(item.id, {
-      status: "failed",
-      progress: 0,
-      error: isCancelled
-        ? "Cancelled"
-        : (error.response?.data?.detail || error.message || "Upload failed"),
-    });
-
-    return { ok: false as const, cancelled: isCancelled };
-  } finally {
-    unregisterXhr(item.id);
   }
+
+  useUploadStore.getState()._updateItem(item.id, {
+    status: "failed",
+    progress: 0,
+    error: lastError?.response?.data?.detail || lastError?.message || "Upload failed after retries",
+  });
+  return { ok: false as const, cancelled: false as const };
 }
 
 async function runWithConcurrency<T>(

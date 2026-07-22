@@ -17,7 +17,7 @@ export async function generateMetadata({
 
   try {
     const eventInfo = await getEventById(eid);
-    if (eventInfo && typeof eventInfo !== "string" && !("error" in eventInfo)) {
+    if (eventInfo) {
       title = `${eventInfo.title} - Ente Photo`;
       description = `Join ${eventInfo.title} to view the live gallery and captured moments.`;
     }

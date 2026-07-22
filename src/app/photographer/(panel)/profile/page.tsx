@@ -30,6 +30,7 @@ export default async function ProfilePage() {
     specializations: [],
     bio: "",
     avatarUrl: "",
+    phoneNumber: "",
   };
 
   // Connect to DB and fetch profile, portfolio moments, and payment history in parallel

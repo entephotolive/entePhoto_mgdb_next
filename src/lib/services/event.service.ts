@@ -1,8 +1,12 @@
 import { z } from "zod";
+import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { EventModel } from "@/models/Event";
+import { PhotoModel } from "@/models/Photo";
+import { FolderModel } from "@/models/Folder";
 import { EventListItem } from "@/types";
 import { createFolder } from "@/lib/services/folder.service";
+
 
 const eventInputSchema = z.object({
   title: z.string().min(3),
@@ -86,22 +90,24 @@ export async function createEvent(input: unknown) {
   } satisfies EventListItem;
 }
 
-export async function getEventById(eventId: string) {
-  await connectToDatabase();
-
-  // Validate ObjectId first
+/**
+ * Fetch a single event by its ID.
+ * Returns null if the ID is not a valid ObjectId or the event does not exist.
+ * Throws on database errors.
+ */
+export async function getEventById(eventId: string): Promise<EventListItem | null> {
   if (!mongoose.Types.ObjectId.isValid(eventId)) {
-    return "Invalid event ID";
+    return null;
   }
+
+  await connectToDatabase();
 
   const event = await EventModel.findById(eventId)
     .populate("createdBy", "name")
     .lean();
 
- if (!event) {
-    return {
-      error: "Event not found",
-    };
+  if (!event) {
+    return null;
   }
 
   return {
@@ -151,12 +157,6 @@ export async function updateEvent(eventId: string, input: unknown) {
   } satisfies EventListItem;
 }
 
-import { PhotoModel } from "@/models/Photo";
-import { FolderModel } from "@/models/Folder";
-// import { deleteEventFolderFromCloudinary } from "@/lib/cloudinary-config";
-
-import mongoose from "mongoose";
-
 export async function deleteEvent(eventId: string) {
   await connectToDatabase();
 
@@ -194,23 +194,4 @@ export async function deleteEvent(eventId: string) {
   } finally {
     session.endSession();
   }
-}
-export async function cleanupExpiredEvents() {
-  await connectToDatabase();
-
-  // Calculate the threshold: 48 hours ago
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
-  const expirationTime = new Date(Date.now() - FORTY_EIGHT_HOURS);
-
-  // Find events where the event start date was more than 48 hours ago
-  const expiredEvents = await EventModel.find({
-    date: { $lt: expirationTime },
-  }).lean();
-
-  let deletedCount = 0;
-  for (const event of expiredEvents) {
-    await deleteEvent(event._id.toString());
-    deletedCount++;
-  }
-  return deletedCount;
 }
