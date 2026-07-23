@@ -20,8 +20,66 @@ const DUPLICATE_CHECK_BATCH_SIZE = 100;
 const MOBILE_UPLOAD_CONCURRENCY = 2;
 const DESKTOP_UPLOAD_CONCURRENCY = 6;
 
-/** Maximum safe canvas pixel area on iOS Safari (4 Megapixels) */
-const IOS_CANVAS_MAX_PIXELS = 4_000_000;
+/**
+ * Maximum safe canvas area (pixels).
+ * 16 MP is safe on all modern browsers including iOS Safari on all device tiers.
+ * iOS Safari 15 caps around 16–22 MP depending on available RAM; using 16 MP
+ * as a hard ceiling is conservative and reliable.
+ */
+const SAFE_CANVAS_MAX_PIXELS = 16_000_000;
+
+// ── Image dimension helpers ────────────────────────────────────────
+
+/**
+ * Parse the image width/height from the JPEG SOF (Start Of Frame) segment
+ * found in the first 256 KB of the file — zero pixel-decoding cost.
+ *
+ * Returns null for non-JPEG files or if the SOF segment cannot be found;
+ * the caller should fall back to a probe-bitmap strategy in that case.
+ */
+async function readJpegDimensions(
+  file: File,
+): Promise<{ width: number; height: number } | null> {
+  try {
+    const isJpeg =
+      file.type.includes("jpeg") ||
+      file.type.includes("jpg") ||
+      /\.jpe?g$/i.test(file.name);
+    if (!isJpeg) return null;
+
+    // 256 KB is sufficient to reach the SOF0 segment in virtually every JPEG.
+    const buffer = await file.slice(0, 262144).arrayBuffer();
+    const view = new DataView(buffer);
+    if (view.getUint16(0) !== 0xffd8) return null; // not a JPEG
+
+    let offset = 2;
+    while (offset + 4 <= view.byteLength) {
+      const marker = view.getUint16(offset);
+      offset += 2;
+
+      // SOF0 (0xFFC0), SOF1 (0xFFC1), SOF2 (0xFFC2 – progressive JPEG)
+      if (marker >= 0xffc0 && marker <= 0xffc3) {
+        // SOF payload layout: segLen(2) precision(1) height(2) width(2) …
+        if (offset + 7 <= view.byteLength) {
+          return {
+            height: view.getUint16(offset + 3),
+            width: view.getUint16(offset + 5),
+          };
+        }
+        return null;
+      }
+
+      // All other segments: skip by the embedded length field.
+      if (offset + 2 > view.byteLength) break;
+      const segLen = view.getUint16(offset);
+      if (segLen < 2) break; // guard against malformed data
+      offset += segLen;
+    }
+  } catch {
+    /* silently ignored */
+  }
+  return null;
+}
 
 /** Read EXIF orientation tag from a JPEG/HEIC file (returns 1–8, defaults to 1) */
 async function readExifOrientation(file: File): Promise<number> {
@@ -62,9 +120,26 @@ async function readExifOrientation(file: File): Promise<number> {
 }
 
 /**
- * Resize & compress an image using the Canvas API before upload.
- * Preserves high resolution unless constrained by hardware canvas pixel caps.
- * Fills white background for PNG transparency support.
+ * Resize & compress a user-uploaded image using createImageBitmap + Canvas.
+ *
+ * Key design decisions vs. the old HTMLImageElement approach:
+ *
+ *  1. createImageBitmap(file, { resizeWidth, resizeHeight }) decodes AND
+ *     downscales in a single browser-native step, without ever materialising
+ *     the full-resolution pixel buffer in JS/canvas memory.  This is the fix
+ *     for the iOS Safari canvas pixel-count limit: a 42 MP source image would
+ *     previously cause a silent partial-draw (blank/black region) when decoded
+ *     through HTMLImageElement because iOS truncates the decoded bitmap at its
+ *     memory ceiling without throwing any error.
+ *
+ *  2. EXIF orientation correction is applied to the already-downscaled bitmap
+ *     via canvas transforms — all matrix maths operates on small numbers
+ *     (≤ SAFE_CANVAS_MAX_PIXELS) rather than the original megapixel dimensions.
+ *
+ *  3. If createImageBitmap throws (very old browser without the API, or device
+ *     genuinely OOM), the catch block returns the original file unchanged so
+ *     the upload still proceeds — the server-side pipeline handles orientation
+ *     correctly for unprocessed files.
  */
 async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): Promise<File> {
   if (!isAllowedFile(file)) return file;
@@ -73,58 +148,112 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
     const orientation = await readExifOrientation(file);
     const isRotated90 = orientation >= 5 && orientation <= 8;
 
-    const url = URL.createObjectURL(file);
-    const img = await new Promise<HTMLImageElement>((res, rej) => {
-      const el = new window.Image();
-      el.onload = () => res(el);
-      el.onerror = () => rej(new Error("load failed"));
-      el.src = url;
-    }).finally(() => URL.revokeObjectURL(url));
+    // ── Step 1: Determine source pixel dimensions from the file header ────────
+    // For JPEG we parse the SOF segment (zero pixel-decode cost).
+    // For other formats (PNG, WebP, HEIC) a probe bitmap gives us the dims.
+    let srcW: number;
+    let srcH: number;
 
-    const srcW = img.naturalWidth;
-    const srcH = img.naturalHeight;
+    const jpegDims = await readJpegDimensions(file);
+    if (jpegDims) {
+      srcW = jpegDims.width;
+      srcH = jpegDims.height;
+    } else {
+      // Non-JPEG: decode at full size just to read dimensions, then close.
+      // These formats are rarely > 20 MP so the full decode is generally safe;
+      // the outer catch handles the rare case where even this fails.
+      const probeBitmap = await createImageBitmap(file);
+      srcW = probeBitmap.width;
+      srcH = probeBitmap.height;
+      probeBitmap.close();
+    }
 
+    // ── Step 2: Calculate scale factor ────────────────────────────────────────
+    // logicW/logicH represent the post-rotation (visually correct) dimensions.
     const logicW = isRotated90 ? srcH : srcW;
     const logicH = isRotated90 ? srcW : srcH;
 
-    const maxDimScale = Number.isFinite(maxSizePx) ? Math.min(1, maxSizePx / Math.max(logicW, logicH)) : 1;
-    const pixelScale = Math.min(1, Math.sqrt(IOS_CANVAS_MAX_PIXELS / (logicW * logicH)));
+    const maxDimScale = Number.isFinite(maxSizePx)
+      ? Math.min(1, maxSizePx / Math.max(logicW, logicH))
+      : 1;
+    const pixelScale = Math.min(
+      1,
+      Math.sqrt(SAFE_CANVAS_MAX_PIXELS / (logicW * logicH)),
+    );
     const scale = Math.min(maxDimScale, pixelScale);
 
+    // Canvas dimensions = post-rotation (logical) dimensions.
     const canvasW = Math.round(logicW * scale);
     const canvasH = Math.round(logicH * scale);
 
+    // Bitmap dimensions = raw file orientation (pre-rotation).
+    const bitmapW = Math.round(srcW * scale);
+    const bitmapH = Math.round(srcH * scale);
+
+    // ── Step 3: Decode + downscale in one native browser operation ────────────
+    // createImageBitmap with resize options decodes the source image at the
+    // target resolution internally — it never needs to allocate the full
+    // megapixel buffer that a canvas draw from an HTMLImageElement requires.
+    const bitmap = await createImageBitmap(file, {
+      resizeWidth: bitmapW,
+      resizeHeight: bitmapH,
+      resizeQuality: "high",
+    });
+
+    // ── Step 4: Draw onto canvas with EXIF orientation correction ─────────────
     const canvas = document.createElement("canvas");
     canvas.width = canvasW;
     canvas.height = canvasH;
 
     const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
+    if (!ctx) {
+      bitmap.close();
+      return file;
+    }
 
-    // Fill canvas with white background (prevents black background on transparent PNGs)
+    // White background prevents transparent-PNG pixels appearing black.
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvasW, canvasH);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
+    // Apply EXIF orientation correction.
+    //
+    // IMPORTANT: no separate ctx.scale() is used because the bitmap is already
+    // at the target dimensions (bitmapW × bitmapH).  All translation constants
+    // therefore reference the FINAL CANVAS values, not pre-scale values.
+    //
+    // For the two cases that were previously broken (6 and 8) — the old code
+    // applied ctx.scale() AFTER the rotation transform, causing the combined
+    // matrix to have a translation of canvasH where canvasW was needed (case 6)
+    // and canvasW where canvasH was needed (case 8), shifting the image off the
+    // canvas edge and producing a blank region equal to the difference.
+    //
+    // Verified transform math (for rotated cases, canvasW = srcH*s = bitmapH,
+    //                                                 canvasH = srcW*s = bitmapW):
+    //   case 6 (90° CW):   (bx,by) → (canvasW-by, bx)   → transform(0,1,-1,0,canvasW,0)
+    //   case 8 (270° CW):  (bx,by) → (by, canvasH-bx)   → transform(0,-1,1,0,0,canvasH)
     switch (orientation) {
-      case 2: ctx.transform(-1, 0, 0,  1, canvasW, 0);       break;
-      case 3: ctx.transform(-1, 0, 0, -1, canvasW, canvasH); break;
-      case 4: ctx.transform( 1, 0, 0, -1, 0, canvasH);       break;
-      case 5: ctx.transform( 0, 1, 1,  0, 0, 0);             break;
-      case 6: ctx.transform( 0, 1,-1,  0, canvasH, 0);       break;
-      case 7: ctx.transform( 0,-1,-1,  0, canvasW, canvasH); break;
-      case 8: ctx.transform( 0,-1, 1,  0, 0, canvasW);       break;
+      case 2: ctx.transform(-1,  0,  0,  1, canvasW,  0);       break;
+      case 3: ctx.transform(-1,  0,  0, -1, canvasW,  canvasH); break;
+      case 4: ctx.transform( 1,  0,  0, -1, 0,        canvasH); break;
+      case 5: ctx.transform( 0,  1,  1,  0, 0,        0);       break;
+      case 6: ctx.transform( 0,  1, -1,  0, canvasW,  0);       break; // ← was canvasH (FIXED)
+      case 7: ctx.transform( 0, -1, -1,  0, canvasW,  canvasH); break;
+      case 8: ctx.transform( 0, -1,  1,  0, 0,        canvasH); break; // ← was canvasW (FIXED)
+      // case 1: identity — no transform needed
     }
-    ctx.scale(scale, scale);
-    ctx.drawImage(img, 0, 0, srcW, srcH);
+
+    ctx.drawImage(bitmap, 0, 0, bitmapW, bitmapH);
+    bitmap.close();
 
     const outputMime = "image/jpeg";
     const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob(res, outputMime, quality)
+      canvas.toBlob(res, outputMime, quality),
     );
 
+    // Release the canvas backing store immediately.
     canvas.width = 0;
     canvas.height = 0;
 
@@ -133,7 +262,10 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
     const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
     return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
   } catch {
-    return file; // Fallback to original file on any loading/decoding error
+    // Any failure (OOM, unsupported API, decode error) → upload original file.
+    // The server-side pipeline handles orientation and resizing correctly for
+    // unprocessed source files, so the upload is never blocked.
+    return file;
   }
 }
 
