@@ -203,7 +203,30 @@ export async function listFoldersByEvent(
   applyAgg(perFolderAggPhotos);
   applyAgg(perFolderAggFaces);
 
+  // Ensure the "Cover Photo" folder always exists for this event
+  const hasCoverPhotoFolder = folderItems.some(
+    (f) => f.title.toLowerCase() === "cover photo",
+  );
+
+  if (!hasCoverPhotoFolder) {
+    try {
+      const coverFolder = await createFolder("Cover Photo", eventId, userId);
+      if (coverFolder) {
+        folderItems.unshift({
+          id: coverFolder._id.toString(),
+          title: coverFolder.name,
+          createdAt: (coverFolder as any).createdAt || new Date(),
+        });
+      }
+    } catch (err) {
+      console.error("[listFoldersByEvent] Failed to auto-create Cover Photo folder:", err);
+    }
+  }
+
   folderItems.sort((a, b) => {
+    // Cover Photo folder stays first, otherwise sort by creation date
+    if (a.title.toLowerCase() === "cover photo") return -1;
+    if (b.title.toLowerCase() === "cover photo") return 1;
     const delta = a.createdAt.getTime() - b.createdAt.getTime();
     if (delta !== 0) return delta;
     return a.title.localeCompare(b.title);
@@ -244,22 +267,45 @@ export async function createFolder(
       .replace(/[^\p{L}\p{N}]+/gu, "-")
       .replace(/^-+|-+$/g, "");
 
-    // Fallback in case the name consisted entirely of special characters
     if (!slug) {
       slug = `folder-${Date.now()}`;
+    }
+
+    const eventObjectId = toObjectId(eventId);
+    const userObjectId = toObjectId(userId);
+
+    const eventMatch = eventObjectId
+      ? [{ event_id: eventObjectId }, { eventId: eventObjectId }, { event_id: eventId }, { eventId: eventId }]
+      : [{ event_id: eventId }, { eventId: eventId }];
+
+    // Deduplication check: if a folder with the same name already exists for this event, return it
+    const existing = await FolderModel.findOne({
+      $and: [
+        { $or: eventMatch },
+        {
+          $or: [
+            { name: { $regex: new RegExp(`^${name.trim()}$`, "i") } },
+            { title: { $regex: new RegExp(`^${name.trim()}$`, "i") } },
+            { folder_name: { $regex: new RegExp(`^${name.trim()}$`, "i") } },
+          ],
+        },
+      ],
+    });
+
+    if (existing) {
+      return existing;
     }
 
     const folder = await FolderModel.create({
       name,
       slug,
-      eventId,
-      createdBy: userId,
+      eventId: eventObjectId || eventId,
+      createdBy: userObjectId || userId,
     });
 
-   
     return folder;
   } catch (error) {
-    console.error(error);
+    console.error("[createFolder] error:", error);
     throw error;
   }
 }

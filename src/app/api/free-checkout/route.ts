@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { EventModel } from "@/models/Event";
 import { PaymentModel } from "@/models/Payment";
 import { CouponModel } from "@/models/Coupon";
+import { createFolder } from "@/lib/services/folder.service";
 
 const BASE_PRICES: Record<string, number> = {
   self: 2499,
@@ -86,6 +87,9 @@ export async function POST(request: Request) {
       location: eventDetails.location,
       createdBy: eventDetails.createdBy,
     });
+
+    // Automatically create Cover Photo folder
+    await createFolder("Cover Photo", event._id.toString(), eventDetails.createdBy);
 
     // 5. Generate Invoice Number
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
