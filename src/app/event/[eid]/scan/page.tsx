@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import bg from "@/assets/1st.jpg";
 import { api } from "@/app/api/api-client";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error";
@@ -97,7 +96,6 @@ export default function FaceScanPage() {
       document.cookie = `scan_response=${attendeeId}; path=/; max-age=18000;`;
       setStatus("success");
 
-      // Small delay so the user sees the success state, then redirect
       setTimeout(() => {
         window.location.href = `/event/${eid}/live`;
       }, 1800);
@@ -115,207 +113,221 @@ export default function FaceScanPage() {
 
   const isScanning = status === "scanning";
 
-  /* ─── border / glow colours driven by status ─────────────────────────── */
-  const borderClass =
-    status === "success"
-      ? "border-emerald-400"
-      : status === "error"
-        ? "border-red-400"
-        : "border-cyan-400/30";
-
-  const glowClass =
-    status === "success"
-      ? "bg-emerald-400/10"
-      : status === "error"
-        ? "bg-red-400/10"
-        : "bg-cyan-400/10";
-
   return (
+    <div className="relative min-h-screen text-white bg-black overflow-hidden select-none">
+      {/* Laser scan beam CSS animation */}
+      <style jsx global>{`
+        @keyframes scanBeam {
+          0% {
+            top: 12vh;
+          }
+          50% {
+            top: 78vh;
+          }
+          100% {
+            top: 12vh;
+          }
+        }
+        .animate-scan-beam {
+          animation: scanBeam 3.5s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Full-screen background camera view — 100% fluent & crisp */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="fixed inset-0 h-full w-full object-cover scale-x-[-1] opacity-100"
+      />
+
+      {/* Responsive Corner Light-Leak Overlay (Exactly matching sample image with clear center) */}
     <div
-      className="relative min-h-screen text-white"
-      style={{
-        backgroundImage: `url(${bg.src})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+  className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-500"
+  style={{
+    background: `
+      radial-gradient(ellipse 3% 55% at -1% 46%, rgba(64, 138, 92, 100) 0%, transparent 70%),
+      radial-gradient(ellipse 28% 9% at 63% -1%, rgba(224, 168, 42, 100) 0%, transparent 70%),
+      radial-gradient(ellipse 34% 5% at 96% -1%, rgba(214, 92, 182, 0.48) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 1% 97%, rgba(255, 255, 255, 0.5) 0%, transparent 70%),
+      radial-gradient(ellipse 36% 55% at 2% 46%, rgba(64, 138, 92, 0.55) 0%, transparent 70%),
+      radial-gradient(ellipse 28% 22% at 63% 2%, rgba(224, 168, 42, 0.42) 0%, transparent 70%),
+      radial-gradient(ellipse 34% 30% at 96% 6%, rgba(214, 92, 182, 0.48) 0%, transparent 70%),
+      radial-gradient(circle 4% 30% at -1% 100%, rgba(78, 98, 208, 0.5) 0%, transparent 100%),
+      radial-gradient(circle at 48% 44%, transparent 0%, transparent 32%, rgba(0,0,0,0.55) 68%, rgba(0,0,0,0.92) 100%)
+    `,
+  }}
+/>
+      {/* Glassmorphism Laser Scanner Line (Hidden during scanning) */}
+      {!isScanning && (
+        <div className="pointer-events-none fixed left-0 right-0 z-30 flex flex-col items-center animate-scan-beam">
+          {/* Beam glow trail */}
+          <div
+            className={`h-10 w-full bg-gradient-to-b ${
+              status === "success"
+                ? "from-transparent via-emerald-500/5 to-emerald-400/25"
+                : status === "error"
+                  ? "from-transparent via-red-500/5 to-red-400/25"
+                  : "from-transparent via-cyan-500/5 to-cyan-400/25"
+            }`}
+          />
+
+          {/* Ultra-thin glassmorphism laser line */}
+          <div
+            className={`h-[1px] w-full backdrop-blur-md transition-colors duration-500 ${
+              status === "success"
+                ? "bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399,0_0_30px_#34d399]"
+                : status === "error"
+                  ? "bg-gradient-to-r from-transparent via-red-400 to-transparent shadow-[0_0_15px_#f87171,0_0_30px_#f87171]"
+                  : "bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee,0_0_30px_#22d3ee]"
+            }`}
+          />
+        </div>
+      )}
 
       {/* Navbar */}
       <div className="fixed top-4 left-1/2 z-50 flex w-[95%] max-w-6xl -translate-x-1/2 items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-4 py-2 shadow-lg backdrop-blur-xl sm:w-[85%] sm:px-6 sm:py-3 md:w-[70%] lg:w-[55%]">
         <Link href="/" className="flex items-center gap-2 cursor-pointer">
           <img
-            src="/entephoto.png"
+            src="/LOGO_B.png"
             className="h-10 w-auto rounded-full object-cover sm:h-10"
             alt="Ente photo logo"
           />
-          
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
           <div className="hidden h-6 w-px bg-white/20 sm:block" />
           <div className="flex items-center gap-2 text-xs text-red-400 sm:text-sm">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="hidden sm:inline">Live</span>
+            <span className="hidden sm:inline">Live Scanner</span>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 text-center">
-        {/* Title */}
-        <h1 className="text-3xl font-semibold sm:text-4xl">
-          Identity Discovery
-        </h1>
-        <p className="mb-10 text-sm text-gray-300">
-          Biometric authentication active
-        </p>
+      {/* Main content overlay */}
+      <div className="relative z-40 flex min-h-screen flex-col items-center justify-between py-24 px-4 text-center">
+        {/* Top Header */}
+        <div className="mt-8">
+          <h1 className="text-3xl font-semibold sm:text-4xl drop-shadow-md tracking-tight text-white">
+            Identity Discovery
+          </h1>
+          <p className="mt-2 text-sm text-gray-200 drop-shadow">
+            Biometric authentication active
+          </p>
+        </div>
 
-        {/* Camera frame */}
-        <div className="relative flex h-80 w-80 items-center justify-center sm:h-96 sm:w-96">
-          <div
-            className={`absolute h-full w-full rounded-[3rem] blur-3xl transition-colors duration-700 ${glowClass}`}
-          />
-
-          <div
-            className={`relative flex h-64 w-64 items-center justify-center overflow-hidden rounded-[2.5rem] border-2 bg-black/40 backdrop-blur sm:h-80 sm:w-80 transition-all duration-700 ${borderClass}`}
-          >
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="absolute h-full w-full object-cover"
-            />
-
-            {/* Corner brackets */}
-            <div className="pointer-events-none absolute h-full w-full">
-              <div className="absolute top-0 left-0 h-8 w-8 border-t-2 border-l-2 border-cyan-400" />
-              <div className="absolute top-0 right-0 h-8 w-8 border-t-2 border-r-2 border-cyan-400" />
-              <div className="absolute bottom-0 left-0 h-8 w-8 border-b-2 border-l-2 border-cyan-400" />
-              <div className="absolute right-0 bottom-0 h-8 w-8 border-r-2 border-b-2 border-cyan-400" />
+        {/* Center Status Indicators (Floating Glassmorphism Pills) */}
+        <div className="my-auto flex flex-col items-center justify-center gap-4">
+          {status === "scanning" && (
+            <div className="flex items-center gap-3 rounded-full border border-cyan-400/30 bg-black/60 px-6 py-3 text-cyan-300 backdrop-blur-xl shadow-[0_0_30px_rgba(34,211,238,0.25)] animate-pulse">
+              <svg
+                className="h-5 w-5 animate-spin text-cyan-400"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
+              <span className="text-sm font-semibold tracking-wider">
+                Analyzing Biometric Features...
+              </span>
             </div>
+          )}
 
-            {/* Idle dots */}
-            {status === "idle" && (
-              <div className="z-10 flex gap-3">
-                <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-              </div>
-            )}
+          {status === "success" && (
+            <div className="flex items-center gap-3 rounded-full border border-emerald-400/40 bg-emerald-950/70 px-6 py-3 text-emerald-300 backdrop-blur-xl shadow-[0_0_30px_rgba(52,211,153,0.3)]">
+              <svg
+                className="h-6 w-6 text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <span className="text-sm font-semibold tracking-wider uppercase">
+                Biometrics Verified • Redirecting...
+              </span>
+            </div>
+          )}
 
-            {/* Scanning overlay */}
-            {status === "scanning" && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/50 backdrop-blur-sm">
-                <svg
-                  className="h-10 w-10 animate-spin text-cyan-400"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8z"
-                  />
-                </svg>
-                <span className="text-xs text-cyan-300 tracking-widest">
-                  Analyzing…
-                </span>
-              </div>
-            )}
+          {status === "error" && (
+            <div className="flex max-w-md flex-col items-center gap-2 rounded-2xl border border-red-400/40 bg-red-950/80 p-4 text-red-200 backdrop-blur-xl shadow-[0_0_30px_rgba(248,113,113,0.3)]">
+              <svg
+                className="h-8 w-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              <span className="text-xs text-red-300 text-center font-medium">
+                {errorMsg}
+              </span>
+            </div>
+          )}
+        </div>
 
-            {/* Success overlay */}
-            {status === "success" && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-emerald-900/60 backdrop-blur-sm">
-                <svg
-                  className="h-12 w-12 text-emerald-400"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span className="text-xs font-semibold text-emerald-300 tracking-widest">
-                  face detected
-                </span>
-              </div>
-            )}
-
-            {/* Error overlay */}
-            {status === "error" && (
-              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-red-900/60 backdrop-blur-sm px-3">
-                <svg
-                  className="h-10 w-10 text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                <span className="text-[10px] leading-4 text-red-300 text-center">
-                  {errorMsg}
-                </span>
-              </div>
-            )}
-
-            <div className="absolute h-[70%] w-[70%] rounded-lg border border-cyan-400/20 border-dashed" />
-          </div>
-
-          {/* Hint pill */}
-          <div className="absolute bottom-[-28px] rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs text-cyan-300 backdrop-blur">
+        {/* Bottom Controls */}
+        <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+          {/* Hint Pill */}
+          <div className="rounded-full border border-white/20 bg-black/50 px-5 py-2 text-xs text-cyan-300 backdrop-blur-md shadow-lg">
             {status === "success"
               ? "Redirecting to your gallery…"
               : status === "error"
-                ? "Tap below to retry"
-                : "Align your face to find your moments"}
+                ? "Tap below to retry scan"
+                : "Look directly at the camera to discover your photos"}
           </div>
-        </div>
 
-        {/* CTA button */}
-        <button
-          onClick={
-            status === "error"
-              ? () => {
-                  setStatus("idle");
-                  setErrorMsg("");
-                }
-              : handleScan
-          }
-          disabled={isScanning || status === "success"}
-          className={`mt-14 rounded-full px-8 py-3 font-medium transition duration-300 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed
-            ${
+          {/* CTA Scan Button */}
+          <button
+            onClick={
               status === "error"
-                ? "bg-gradient-to-r from-red-500 to-orange-400"
-                : "bg-gradient-to-r from-pink-500 to-orange-400"
-            }`}
-        >
-          {isScanning
-            ? "Scanning…"
-            : status === "success"
-              ? "Matched ✓"
-              : status === "error"
-                ? "Try Again →"
-                : "Start Scan →"}
-        </button>
+                ? () => {
+                    setStatus("idle");
+                    setErrorMsg("");
+                  }
+                : handleScan
+            }
+            disabled={isScanning || status === "success"}
+            className={`w-full rounded-full py-3.5 font-semibold text-base transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed
+              ${
+                status === "error"
+                  ? "bg-gradient-to-r from-red-500 to-orange-400 text-white shadow-red-500/25"
+                  : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-cyan-500/30 hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]"
+              }`}
+          >
+            {isScanning
+              ? "Scanning…"
+              : status === "success"
+                ? "Matched ✓"
+                : status === "error"
+                  ? "Try Again →"
+                  : "Start Scan →"}
+          </button>
+        </div>
       </div>
     </div>
   );
