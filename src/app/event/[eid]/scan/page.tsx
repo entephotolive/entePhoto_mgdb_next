@@ -142,14 +142,13 @@ export default function FaceScanPage() {
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
       {/* Navbar */}
-      <div className="fixed top-4 left-1/2 z-50 flex w-[95%] max-w-6xl -translate-x-1/2 items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-4 py-2 shadow-lg backdrop-blur-xl sm:w-[85%] sm:px-6 sm:py-3 md:w-[70%] lg:w-[55%]">
-        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+      <div className="fixed top-4 left-1/2 z-50 flex h-14 sm:h-16 w-[95%] max-w-6xl -translate-x-1/2 items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-4 sm:px-6 shadow-lg backdrop-blur-xl sm:w-[85%] md:w-[70%] lg:w-[55%]">
+        <Link href="/" className="flex h-full items-center gap-2 cursor-pointer py-1 sm:py-1.5">
           <img
-            src="/entephoto.png"
-            className="h-10 w-auto rounded-full object-cover sm:h-10"
+            src="/logo.png"
+            className="h-full w-auto object-contain rounded-md drop-shadow-md"
             alt="Ente photo logo"
           />
-          
         </Link>
 
         <div className="flex items-center gap-3 sm:gap-5">
