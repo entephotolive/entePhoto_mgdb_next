@@ -149,20 +149,14 @@ export function GlobalUploadProgress() {
               >
                 <div className="pt-2">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-slate-400">
-                      {overallProgress}% Complete
+                    <span className="text-xs text-slate-300 font-medium">
+                      {completedCount} of {totalCount} uploaded
+                    </span>
+                    <span className="text-xs font-bold text-cyan-400">
+                      {overallProgress}%
                     </span>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-cyan-400 transition-all duration-300 relative"
-                      style={{ width: `${overallProgress}%` }}
-                    >
-                      {isUploading && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]" />
-                      )}
-                    </div>
-                  </div>
+                  <Progress value={overallProgress} className="h-2 bg-white/10" />
                 </div>
 
                 {/* Actions when done */}

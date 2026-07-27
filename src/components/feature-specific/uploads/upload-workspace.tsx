@@ -7,9 +7,11 @@ import {
   UploadCloud,
   X,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
-import { useRef, useState, useEffect, useMemo } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
+import { useUploadStore } from "@/store/upload-store";
 import { EventListItem } from "@/types";
 import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 import { EVENT_UPLOAD_WINDOW_MS, MAX_UPLOAD_SIZE_MB } from "@/lib/utils/upload-constants";
@@ -19,13 +21,140 @@ interface UploadWorkspaceProps {
   userId: string;
 }
 
+interface QueueItemCardProps {
+  id: string;
+  onRemove: (id: string) => void;
+  onRetry: (id: string) => void;
+}
+
+/**
+ * Fine-grained Memoized Queue Item Card.
+ * Subscribes ONLY to its own item in the Zustand store.
+ * When File #37 updates progress from 40% to 50%, only card #37 re-renders;
+ * cards #1-36 and #38-50 do NOT re-render.
+ */
+const UploadQueueItemCard = memo(function UploadQueueItemCard({
+  id,
+  onRemove,
+  onRetry,
+}: QueueItemCardProps) {
+  const item = useUploadStore(
+    useCallback((s) => s.items.find((i) => i.id === id), [id]),
+  );
+
+  if (!item) return null;
+
+  return (
+    <div className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]">
+      <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3">
+        <img
+          src={item.preview}
+          alt={item.file.name}
+          className="w-full h-full object-cover"
+        />
+
+        {item.status === "uploading" && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center flex-col p-4 backdrop-blur-sm">
+            <div className="relative w-20 h-20">
+              <svg className="w-full h-full" viewBox="0 0 100 100">
+                <circle
+                  className="text-white/10 stroke-current"
+                  strokeWidth="4"
+                  fill="transparent"
+                  r="40"
+                  cx="50"
+                  cy="50"
+                />
+                <circle
+                  className="text-cyan-400 stroke-current transition-all duration-300"
+                  strokeWidth="4"
+                  strokeDasharray={2 * Math.PI * 40}
+                  strokeDashoffset={
+                    2 * Math.PI * 40 * (1 - (item.progress || 0) / 100)
+                  }
+                  strokeLinecap="round"
+                  fill="transparent"
+                  r="40"
+                  cx="50"
+                  cy="50"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                {item.progress}%
+              </span>
+            </div>
+          </div>
+        )}
+
+        {item.status === "failed" && (
+          <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-4 backdrop-blur-sm z-10">
+            <div className="w-10 h-10 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-2">
+              <AlertCircle className="text-rose-500" size={20} />
+            </div>
+            <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center mb-2">
+              {item.error || "Upload failed"}
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetry(item.id);
+              }}
+              className="bg-rose-500/80 hover:bg-rose-500 text-white rounded-full p-2 transition-colors shadow-lg shadow-black/20"
+              title="Retry Upload"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        )}
+
+        {item.status !== "completed" && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(item.id);
+            }}
+            className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-rose-500/80 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all scale-0 group-hover:scale-100 border border-white/10 z-20"
+            title="Remove file"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+      <div className="px-3 pb-3">
+        <div className="flex justify-between items-start mb-1">
+          <p className="text-xs font-semibold text-slate-200 truncate pr-2">
+            {item.file.name}
+          </p>
+        </div>
+        <div className="flex justify-between items-center">
+          <p className="text-[10px] text-slate-500 font-medium">
+            {(item.file.size / (1024 * 1024)).toFixed(1)} MB
+          </p>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-tighter ${
+              item.status === "completed"
+                ? "text-cyan-400"
+                : item.status === "failed"
+                  ? "text-rose-400"
+                  : item.status === "duplicate"
+                    ? "text-amber-400"
+                    : item.status === "uploading"
+                      ? "text-sky-300 animate-pulse"
+                      : "text-slate-500"
+            }`}
+          >
+            {item.status}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 /**
  * Returns true ONLY when uploads are permitted for the given event.
- *
- * Strict window: [eventTime, eventTime + EVENT_UPLOAD_WINDOW_MS]
- *   • Before event starts → ❌ blocked
- *   • During the 24-hour window → ✅ allowed
- *   • After window closes → ❌ blocked
  */
 function isEventActive(event: EventListItem | undefined): boolean {
   if (!event || !event.date) return false;
@@ -37,23 +166,29 @@ function isEventActive(event: EventListItem | undefined): boolean {
 export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  // Start false — the modal only shows on deliberate user interaction
-  // (click / drop), not immediately on mount, to avoid a hydration flash.
   const [showWarning, setShowWarning] = useState(false);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
 
   const {
-    items,
     addFiles,
     removeFile,
     clearAll,
-    completedCount,
     isUploading,
     setUploadContext,
     retryUpload,
   } = useGlobalUpload();
+
+  // Select item IDs as a joined string so UploadWorkspace ONLY re-renders
+  // when files are added or removed, NOT on individual item progress updates.
+  const itemIdsStr = useUploadStore(
+    useCallback((s) => s.items.map((i) => i.id).join(","), []),
+  );
+  const itemIds = useMemo(
+    () => (itemIdsStr ? itemIdsStr.split(",") : []),
+    [itemIdsStr],
+  );
 
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
@@ -91,7 +226,8 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        const interruptedItems = items.filter((i) => i.status === "uploading");
+        const storeItems = useUploadStore.getState().items;
+        const interruptedItems = storeItems.filter((i) => i.status === "uploading");
         if (interruptedItems.length > 0) {
           interruptedItems.forEach((item) => {
             retryUpload(item.id);
@@ -104,7 +240,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [items, retryUpload]);
+  }, [retryUpload]);
 
   const handleEventChange = (newId: string) => {
     setSelectedEventId(newId);
@@ -209,16 +345,26 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         />
         <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
         <div className="w-16 h-16 bg-cyan-500/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform relative z-10">
-          <UploadCloud className="text-cyan-400" size={32} />
+          {isUploading ? (
+            <Loader2 className="text-cyan-400 animate-spin" size={32} />
+          ) : (
+            <UploadCloud className="text-cyan-400" size={32} />
+          )}
         </div>
-        <h3 className="text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10">
-          Drag & Drop photos here
+        <h3 className="text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10 flex items-center gap-2">
+          {isUploading ? "Processing & Uploading batch..." : "Drag & Drop photos here"}
         </h3>
         <p className="text-slate-500 text-sm mb-8 relative z-10">
-          or{" "}
-          <span className="text-cyan-400 hover:underline">
-            click to browse files
-          </span>
+          {isUploading ? (
+            <span className="text-cyan-400 animate-pulse">Upload in progress — feel free to add more photos</span>
+          ) : (
+            <>
+              or{" "}
+              <span className="text-cyan-400 hover:underline">
+                click to browse files
+              </span>
+            </>
+          )}
         </p>
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 relative z-10">
           <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
@@ -234,132 +380,44 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
 
       <section className="mt-8 sm:mt-12">
         <div className="flex items-center justify-between mb-6">
-          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-            Queue ({items.length} files)
-          </h4>
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1 uppercase tracking-widest"
-          >
-            <X size={12} /> Clear all
-          </button>
+          <div className="flex items-center gap-3">
+            <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              Queue ({itemIds.length} files)
+            </h4>
+            {isUploading && (
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
+                <Loader2 size={12} className="animate-spin" /> Processing batch
+              </span>
+            )}
+          </div>
+          {itemIds.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAll}
+              className="text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1 uppercase tracking-widest"
+            >
+              <X size={12} /> Clear all
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]"
-            >
-              <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3">
-                <img
-                  src={item.preview}
-                  alt={item.file.name}
-                  className="w-full h-full object-cover"
-                />
-
-                {item.status === "uploading" && (
-                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center flex-col p-4 backdrop-blur-sm">
-                    <div className="relative w-20 h-20">
-                      <svg className="w-full h-full" viewBox="0 0 100 100">
-                        <circle
-                          className="text-white/10 stroke-current"
-                          strokeWidth="4"
-                          fill="transparent"
-                          r="40"
-                          cx="50"
-                          cy="50"
-                        />
-                        <circle
-                          className="text-cyan-400 stroke-current transition-all duration-500"
-                          strokeWidth="4"
-                          strokeDasharray={2 * Math.PI * 40}
-                          strokeDashoffset={
-                            2 * Math.PI * 40 * (1 - (item.progress || 0) / 100)
-                          }
-                          strokeLinecap="round"
-                          fill="transparent"
-                          r="40"
-                          cx="50"
-                          cy="50"
-                        />
-                      </svg>
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                        {item.progress}%
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {item.status === "failed" && (
-                  <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-4 backdrop-blur-sm z-10">
-                    <div className="w-10 h-10 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-2">
-                      <AlertCircle className="text-rose-500" size={20} />
-                    </div>
-                    <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center mb-2">
-                      {item.error}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        retryUpload(item.id);
-                      }}
-                      className="bg-rose-500/80 hover:bg-rose-500 text-white rounded-full p-2 transition-colors shadow-lg shadow-black/20"
-                      title="Retry Upload"
-                    >
-                      <RefreshCw size={14} />
-                    </button>
-                  </div>
-                )}
-
-                {item.status !== "completed" && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(item.id);
-                    }}
-                    className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-rose-500/80 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all scale-0 group-hover:scale-100 border border-white/10 z-20"
-                    title="Remove file"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-              <div className="px-3 pb-3">
-                <div className="flex justify-between items-start mb-1">
-                  <p className="text-xs font-semibold text-slate-200 truncate pr-2">
-                    {item.file.name}
-                  </p>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    {(item.file.size / (1024 * 1024)).toFixed(1)} MB
-                  </p>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-tighter ${
-                      item.status === "completed"
-                        ? "text-cyan-400"
-                        : item.status === "failed"
-                          ? "text-rose-400"
-                          : "text-slate-500"
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {itemIds.map((id) => (
+            <UploadQueueItemCard
+              key={id}
+              id={id}
+              onRemove={removeFile}
+              onRetry={retryUpload}
+            />
           ))}
         </div>
       </section>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
         <div className="flex-1 w-full md:w-auto">
-          {items.length > 0 && (
+          {itemIds.length > 0 && (
             <p className="text-xs text-slate-500 italic">
-              {items.length} files queued. Click &quot;START UPLOAD&quot; on the
+              {itemIds.length} files queued. Click &quot;START UPLOAD&quot; on the
               widget to begin.
             </p>
           )}

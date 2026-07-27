@@ -25,6 +25,18 @@ const DESKTOP_UPLOAD_CONCURRENCY = 6;
 const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
 
 /**
+ * Yield control back to the main thread/browser event loop.
+ * Ensures DOM renders, CSS animations, and microtasks execute smoothly
+ * during large batch image processing (e.g. 50+ files).
+ */
+function yieldToMain(): Promise<void> {
+  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+    return new Promise((resolve) => window.requestIdleCallback(() => resolve(), { timeout: 50 }));
+  }
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
  * Resize & compress a user-uploaded image using native browser EXIF handling + Canvas.
  *
  * Key design decisions:
@@ -45,6 +57,9 @@ const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
  */
 async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): Promise<File> {
   if (!isAllowedFile(file)) return file;
+
+  // Yield to main thread before starting heavy CPU/GPU decode
+  await yieldToMain();
 
   try {
     // ── Phase 1: probe dimensions with a lightweight decode ───────────────────
@@ -294,6 +309,7 @@ async function runWithConcurrency<T>(
     while (currentIndex < items.length) {
       const item = items[currentIndex];
       currentIndex += 1;
+      await yieldToMain();
       await worker(item);
     }
   }
