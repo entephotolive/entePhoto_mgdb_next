@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { QrCode, X, CheckCircle2 } from "lucide-react";
 import jsQR from "jsqr";
-import bg from "@/assets/1st.jpg";
+
 
 /* --- helper ------------------------ */
 function extractEventId(raw: string): string {
@@ -249,7 +249,7 @@ export default function QrScannerPage() {
       <div
         className="relative flex h-screen w-full items-center justify-center overflow-hidden text-white"
         style={{
-          backgroundImage: `url(${bg.src})`,
+          backgroundImage: `url("/1st.jpg")`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
