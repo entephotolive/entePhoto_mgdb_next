@@ -18,6 +18,8 @@
  *   const avatar     = await compressImage(file, PRESET_AVATAR); // ≤ 700 KB
  */
 
+import { computeCanvasDimensions } from "./canvas-utils";
+
 export interface CompressOptions {
   /** Maximum width OR height in pixels (aspect ratio preserved). Default: 1920 */
   maxDimension?: number;
@@ -39,6 +41,7 @@ export const PRESET_AVATAR: CompressOptions = {
   mimeType: "image/webp",
 };
 
+
 const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
 
 /**
@@ -58,37 +61,45 @@ export async function compressImage(
   } = options;
 
   try {
-    let bitmap: ImageBitmap;
+    // ── Phase 1: probe dimensions ────────────────────────────────────────────────
+    // Decode once to read .width/.height, then release immediately.
+    let probeBitmap: ImageBitmap;
     try {
-      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      probeBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     } catch {
       // Fallback safety: if native createImageBitmap fails or is unsupported,
       // return original file unchanged so the server handles orientation/resizing.
       return file;
     }
 
-    const srcW = bitmap.width;
-    const srcH = bitmap.height;
+    const srcW = probeBitmap.width;
+    const srcH = probeBitmap.height;
     const maxDim = Math.max(srcW, srcH);
+    probeBitmap.close();
 
     // Skip compression if file is already small (<= 3MB) and under maxDimension
     if (file.size <= SKIP_COMPRESSION_SIZE_BYTES && maxDim <= maxDimension) {
-      bitmap.close();
       return file;
     }
 
-    let scale = 1.0;
-    if (maxDim > maxDimension) {
-      scale = maxDimension / maxDim;
+    // computeCanvasDimensions applies both the pixel-budget constraint AND
+    // the maxDimension cap with a single uniform scale factor.
+    const { resizeOptions } = computeCanvasDimensions(srcW, srcH, maxDimension);
+
+    // ── Phase 2: decode at target size (downscale inside the codec) ──────────
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+        ...(resizeOptions ?? {}),
+      });
+    } catch {
+      return file;
     }
 
-    const aspectRatio = srcW / srcH;
-    let targetW = srcW;
-    let targetH = srcH;
-    if (scale < 1.0) {
-      targetW = Math.round(srcW * scale);
-      targetH = Math.round(targetW / aspectRatio);
-    }
+    // bitmap dimensions already reflect the downscaled target
+    const targetW = bitmap.width;
+    const targetH = bitmap.height;
 
     const canvas = document.createElement("canvas");
     canvas.width = targetW;
@@ -113,26 +124,57 @@ export async function compressImage(
 
     const outputQuality = quality === "auto" ? 0.92 : (quality as number);
 
-    return new Promise<File>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error("canvas.toBlob() returned null"));
-            return;
-          }
-          const ext = mimeType === "image/webp" ? "webp" : "jpg";
-          const baseName = file.name.replace(/\.[^.]+$/, "");
-          resolve(
-            new File([blob], `${baseName}.${ext}`, {
-              type: mimeType,
-              lastModified: Date.now(),
-            }),
-          );
-        },
-        mimeType,
-        outputQuality,
-      );
-    });
+    try {
+      // ── Draw-failure detection ────────────────────────────────────────────────
+      // Sample 3 scattered 2×2 pixel regions to detect a silent draw failure
+      // (GPU flush race / memory pressure producing a fully-black or transparent canvas).
+      // Per this module’s reject-on-error contract we throw rather than swallowing.
+      const sampleRegions = [
+        [0, 0],
+        [Math.floor(targetW / 2), Math.floor(targetH / 2)],
+        [targetW - 2, targetH - 2],
+      ] as const;
+      const isDrawFailure = sampleRegions.every(([sx, sy]) => {
+        const { data } = ctx.getImageData(Math.max(0, sx), Math.max(0, sy), 2, 2);
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+          // Transparent pixel OR solid-black pixel are both failure signatures
+          if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
+        }
+        return true;
+      });
+      if (isDrawFailure) {
+        throw new Error(
+          "[compressImage] drawImage produced a black/transparent canvas (silent draw failure)",
+        );
+      }
+      // ─────────────────────────────────────────────────────────────────────────
+
+      return await new Promise<File>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("canvas.toBlob() returned null"));
+              return;
+            }
+            const ext = mimeType === "image/webp" ? "webp" : "jpg";
+            const baseName = file.name.replace(/\.[^.]+$/, "");
+            resolve(
+              new File([blob], `${baseName}.${ext}`, {
+                type: mimeType,
+                lastModified: Date.now(),
+              }),
+            );
+          },
+          mimeType,
+          outputQuality,
+        );
+      });
+    } finally {
+      // Release canvas GPU memory on every path (success, draw-failure, toBlob error)
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   } catch {
     return file;
   }

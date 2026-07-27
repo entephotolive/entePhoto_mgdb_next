@@ -169,3 +169,168 @@ describe("Zero Hand-Rolled Matrix Regression Guard", () => {
     }
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Megapixel-Safe Canvas Scaling — computeCanvasDimensions
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Pure JS reimplementation of computeCanvasDimensions — mirrors the logic in
+ * canvas-utils.ts exactly.  Using a local copy keeps the test file runnable
+ * without a browser environment (no DOM / ImageBitmap needed).
+ */
+function computeCanvasDimensionsLocal(
+  srcW: number,
+  srcH: number,
+  maxSizePx = Infinity,
+): { targetW: number; targetH: number; needsDownscale: boolean; outputRatio: number } {
+  const SAFE = 16_000_000;
+  const maxDim = Math.max(srcW, srcH);
+  const totalPixels = srcW * srcH;
+
+  let scale = 1.0;
+  if (Number.isFinite(maxSizePx) && maxDim > maxSizePx) {
+    scale = Math.min(scale, maxSizePx / maxDim);
+  }
+  if (totalPixels > SAFE) {
+    scale = Math.min(scale, Math.sqrt(SAFE / totalPixels));
+  }
+
+  if (scale >= 1.0) {
+    return { targetW: srcW, targetH: srcH, needsDownscale: false, outputRatio: srcW / srcH };
+  }
+
+  const ar = srcW / srcH;
+  let targetW = Math.round(srcW * scale);
+  let targetH = Math.round(targetW / ar);
+
+  while (targetW * targetH > SAFE && targetW > 1) {
+    targetW--;
+    targetH = Math.round(targetW / ar);
+  }
+
+  return { targetW, targetH, needsDownscale: true, outputRatio: targetW / targetH };
+}
+
+describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
+  const SAFE_PIXELS = 16_000_000;
+  const AR_TOLERANCE = 0.001; // 0.1 %
+
+  interface MpCase {
+    label: string;
+    w: number;
+    h: number;
+    expectDownscale: boolean;
+  }
+
+  const cases: MpCase[] = [
+    // ── Under budget — must NOT downscale ─────────────────────────────────────
+    { label: "2MP  4:3  (1920×1080)",       w: 1920,  h: 1080,  expectDownscale: false },
+    { label: "8MP  4:3  (3264×2448)",       w: 3264,  h: 2448,  expectDownscale: false },
+    { label: "16MP square (4000×4000)",     w: 4000,  h: 4000,  expectDownscale: false },
+    // ── Over budget — must downscale with AR preserved ────────────────────────
+    { label: "24MP DSLR 3:2  (6000×4000)", w: 6000,  h: 4000,  expectDownscale: true  },
+    { label: "48MP portrait (6048×8064)",  w: 6048,  h: 8064,  expectDownscale: true  },
+    { label: "48MP landscape (8064×6048)", w: 8064,  h: 6048,  expectDownscale: true  },
+    { label: "100MP square  (10000×10000)",w: 10000, h: 10000, expectDownscale: true  },
+    { label: "200MP landscape (20000×10000)", w: 20000, h: 10000, expectDownscale: true },
+    { label: "200MP ultra-wide (28284×7071)",w: 28284, h: 7071,  expectDownscale: true },
+    { label: "200MP portrait  (10000×20000)",w: 10000, h: 20000, expectDownscale: true },
+    { label: "200MP very-tall (4000×50000)", w: 4000,  h: 50000, expectDownscale: true },
+  ];
+
+  for (const c of cases) {
+    test(`[${c.label}] — canvas within budget, AR preserved, no degenerate output`, () => {
+      const inputRatio = c.w / c.h;
+      const res = computeCanvasDimensionsLocal(c.w, c.h);
+
+      // 1. Output dimensions must be positive integers
+      expect(res.targetW).toBeGreaterThan(0);
+      expect(res.targetH).toBeGreaterThan(0);
+
+      // 2. Canvas must fit within the safe pixel budget
+      expect(res.targetW * res.targetH).toBeLessThanOrEqual(SAFE_PIXELS);
+
+      // 3. Aspect ratio must be preserved within 0.1 %
+      const arDiff = Math.abs(res.outputRatio - inputRatio) / inputRatio;
+      expect(arDiff).toBeLessThan(AR_TOLERANCE);
+
+      // 4. Downscale flag must match expectation
+      expect(res.needsDownscale).toBe(c.expectDownscale);
+    });
+  }
+
+  // Boundary: exactly at the limit — no downscale needed
+  test("16MP square (4000×4000) sits exactly at budget boundary — no downscale", () => {
+    const res = computeCanvasDimensionsLocal(4000, 4000);
+    expect(res.needsDownscale).toBe(false);
+    expect(res.targetW).toBe(4000);
+    expect(res.targetH).toBe(4000);
+  });
+
+  // One pixel over the boundary — must trigger downscale
+  test("16MP+1px (4001×4000) just over budget — triggers downscale", () => {
+    const res = computeCanvasDimensionsLocal(4001, 4000);
+    expect(res.needsDownscale).toBe(true);
+    expect(res.targetW * res.targetH).toBeLessThanOrEqual(SAFE_PIXELS);
+  });
+
+  // maxSizePx cap combined with pixel budget
+  test("200MP + maxSizePx=1920: both constraints applied, stricter one wins", () => {
+    const res = computeCanvasDimensionsLocal(20000, 10000, 1920);
+    // maxSizePx=1920 on a 20000×10000 → scale = 1920/20000 = 0.096 → 1920×960
+    expect(res.targetW).toBeLessThanOrEqual(1920);
+    expect(res.targetH).toBeLessThanOrEqual(1920);
+    expect(res.targetW * res.targetH).toBeLessThanOrEqual(SAFE_PIXELS);
+    const arDiff = Math.abs(res.outputRatio - (20000 / 10000)) / (20000 / 10000);
+    expect(arDiff).toBeLessThan(AR_TOLERANCE);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Draw-Failure Pixel-Sampling Guard — isolated unit test
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Draw-Failure Pixel-Sampling Guard (isolated)", () => {
+  /**
+   * Mirrors the exact sampling logic from upload.service.ts / watermark.ts /
+   * compress-image.ts so we can assert it in isolation without a real canvas.
+   */
+  function isDrawFailure(pixels: Uint8ClampedArray): boolean {
+    // Treat the whole array as a single "region" of pixels
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3];
+      if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
+    }
+    return true;
+  }
+
+  test("all-transparent pixels → draw failure", () => {
+    const pixels = new Uint8ClampedArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    expect(isDrawFailure(pixels)).toBe(true);
+  });
+
+  test("all-solid-black pixels → draw failure", () => {
+    const pixels = new Uint8ClampedArray([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
+    expect(isDrawFailure(pixels)).toBe(true);
+  });
+
+  test("white pixel (255,255,255,255) → NOT a draw failure", () => {
+    // fillRect with #ffffff produces fully opaque white — must not be flagged
+    const pixels = new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255,
+                                          255, 255, 255, 255, 255, 255, 255, 255]);
+    expect(isDrawFailure(pixels)).toBe(false);
+  });
+
+  test("one non-black pixel among black pixels → NOT a draw failure (partial success)", () => {
+    // Even a single non-failure pixel breaks the 'every' chain → no fallback
+    const pixels = new Uint8ClampedArray([0, 0, 0, 255, 128, 64, 32, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
+    expect(isDrawFailure(pixels)).toBe(false);
+  });
+
+  test("arbitrary colour (200,100,50,255) → NOT a draw failure", () => {
+    const pixels = new Uint8ClampedArray([200, 100, 50, 255, 200, 100, 50, 255,
+                                          200, 100, 50, 255, 200, 100, 50, 255]);
+    expect(isDrawFailure(pixels)).toBe(false);
+  });
+});

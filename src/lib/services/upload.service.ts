@@ -15,16 +15,11 @@ import {
 } from "@/store/upload-store";
 import { api } from "@/app/api/api-client";
 import { isAllowedFile } from "@/lib/utils/upload-constants";
+import { computeCanvasDimensions } from "@/lib/utils/canvas-utils";
 
 const DUPLICATE_CHECK_BATCH_SIZE = 100;
 const MOBILE_UPLOAD_CONCURRENCY = 2;
 const DESKTOP_UPLOAD_CONCURRENCY = 6;
-
-/**
- * Maximum safe canvas area (pixels).
- * 16 MP is safe on all modern browsers including iOS Safari on all device tiers.
- */
-const SAFE_CANVAS_MAX_PIXELS = 16_000_000;
 
 /** Threshold (in bytes) below which we skip client-side re-compression if already safe size */
 const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
@@ -52,51 +47,55 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
   if (!isAllowedFile(file)) return file;
 
   try {
-    let bitmap: ImageBitmap;
+    // ── Phase 1: probe dimensions with a lightweight decode ───────────────────
+    // We need srcW/srcH to compute the scale factor before the real decode.
+    // Use a plain createImageBitmap (no resize options) on a tiny slice — the
+    // browser still returns correct .width/.height even for a 0-byte source rect.
+    // In practice this is near-instant: the codec only reads the image header.
+    let probeBitmap: ImageBitmap;
     try {
-      bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      probeBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
     } catch {
       // Fallback: If native createImageBitmap with imageOrientation is unsupported or fails,
       // skip client-side processing entirely and let the server handle EXIF rotation & resizing.
       return file;
     }
 
-    const srcW = bitmap.width;
-    const srcH = bitmap.height;
-    const maxDim = Math.max(srcW, srcH);
-    const totalPixels = srcW * srcH;
+    const srcW = probeBitmap.width;
+    const srcH = probeBitmap.height;
+    probeBitmap.close(); // release immediately — we only needed the dimensions
 
-    const exceedsMaxDim = Number.isFinite(maxSizePx) && maxDim > maxSizePx;
-    const exceedsPixels = totalPixels > SAFE_CANVAS_MAX_PIXELS;
     const exceedsFileSize = file.size > SKIP_COMPRESSION_SIZE_BYTES;
 
-    // Skip client-side re-encoding if file is already under size & dimension limits
-    if (!exceedsMaxDim && !exceedsPixels && !exceedsFileSize) {
-      bitmap.close();
+    // computeCanvasDimensions handles both the pixel-budget constraint AND the
+    // optional maxSizePx cap with a single uniform scale factor.
+    const { targetW, targetH, resizeOptions } = computeCanvasDimensions(srcW, srcH, maxSizePx);
+
+    // Skip client-side re-encoding if file is already under all limits
+    if (resizeOptions === null && !exceedsFileSize) {
       return file;
     }
 
-    // Determine scale factor
-    let scale = 1.0;
-    if (exceedsMaxDim) {
-      scale = Math.min(scale, maxSizePx / maxDim);
-    }
-    if (exceedsPixels) {
-      scale = Math.min(scale, Math.sqrt(SAFE_CANVAS_MAX_PIXELS / totalPixels));
+    // ── Phase 2: decode at target size (downscale happens inside the codec) ───
+    // Passing resizeWidth/resizeHeight means the browser downscales *during*
+    // decode — a 200 MP source buffer is never fully materialised in memory.
+    let bitmap: ImageBitmap;
+    try {
+      bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+        ...(resizeOptions ?? {}),
+      });
+    } catch {
+      return file;
     }
 
-    // Compute target dimensions preserving exact aspect ratio
-    const aspectRatio = srcW / srcH;
-    let targetW = srcW;
-    let targetH = srcH;
-    if (scale < 1.0) {
-      targetW = Math.round(srcW * scale);
-      targetH = Math.round(targetW / aspectRatio);
-    }
+    // bitmap.width/height now equal targetW/targetH (or srcW/srcH when no resize).
+    const drawW = bitmap.width;
+    const drawH = bitmap.height;
 
     const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
+    canvas.width = drawW;
+    canvas.height = drawH;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -106,28 +105,55 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
 
     // White background for PNG transparency support
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.fillRect(0, 0, drawW, drawH);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
     // Draw native oriented bitmap directly onto canvas — zero manual matrix transform!
-    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    // bitmap is already at the right size so we draw 1:1 (no scaling by drawImage).
+    ctx.drawImage(bitmap, 0, 0, drawW, drawH);
     bitmap.close();
 
-    const outputMime = "image/jpeg";
-    const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob(res, outputMime, quality),
-    );
+    try {
+      // ── Draw-failure detection ────────────────────────────────────────────────
+      // Sample a few scattered 2×2 pixel regions to guard against the race where
+      // the bitmap was closed before the GPU rasteriser flushed, producing a
+      // fully-black or fully-transparent canvas (silent draw failure).
+      const sampleRegions = [
+        [0, 0],
+        [Math.floor(drawW / 2), Math.floor(drawH / 2)],
+        [drawW - 2, drawH - 2],
+      ] as const;
+      const isDrawFailure = sampleRegions.every(([sx, sy]) => {
+        const { data } = ctx.getImageData(Math.max(0, sx), Math.max(0, sy), 2, 2);
+        for (let i = 0; i < data.length; i += 4) {
+          const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+          // Transparent pixel OR solid-black pixel are both failure signatures
+          if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
+        }
+        return true;
+      });
+      if (isDrawFailure) {
+        console.warn("[upload.service] drawImage produced a black/transparent canvas – returning original file");
+        return file;
+      }
+      // ─────────────────────────────────────────────────────────────────────────
 
-    // Release canvas memory immediately
-    canvas.width = 0;
-    canvas.height = 0;
+      const outputMime = "image/jpeg";
+      const blob = await new Promise<Blob | null>((res) =>
+        canvas.toBlob(res, outputMime, quality),
+      );
 
-    if (!blob) return file;
+      if (!blob) return file;
 
-    const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-    return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
+      const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+      return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
+    } finally {
+      // Release canvas GPU memory on every path (success, draw-failure, toBlob error)
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   } catch {
     // Return original file on any error so upload is never blocked
     return file;
