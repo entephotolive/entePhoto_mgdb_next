@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { ZoomIn } from "lucide-react";
-import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
+import {
+  PhotoLightbox,
+  type LightboxPhoto,
+} from "@/components/ui/photo-lightbox";
 
 interface Photo {
   id?: number | string;
@@ -29,7 +32,9 @@ export function PublicPhotoGrid({ photos }: PublicPhotoGridProps) {
   if (photos.length === 0) {
     return (
       <div className="py-20 text-center border border-dashed border-white/10 rounded-[40px] bg-white/[0.02]">
-        <p className="text-white/40 font-medium">This folder is currently empty.</p>
+        <p className="text-white/40 font-medium">
+          This folder is currently empty.
+        </p>
       </div>
     );
   }

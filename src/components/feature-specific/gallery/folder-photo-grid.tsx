@@ -1,13 +1,17 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Camera, X, ZoomIn, Loader2, Trash2 } from "lucide-react";
+import { AlertCircle, Camera, X, ZoomIn, Loader2, Trash2, Users } from "lucide-react";
 import type { PhotoItem } from "@/lib/services/photo.service";
-import { deletePhotoAction } from "@/app/photographer/(panel)/gallery/[slug]/action";
+import {
+  deletePhotoAction,
+  getFolderPhotosPage,
+} from "@/app/photographer/(panel)/gallery/[slug]/action";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
 import { applyWatermark } from "@/lib/utils/watermark";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +38,9 @@ function isEventActive(eventDate: string | undefined): boolean {
 }
 
 interface FolderPhotoGridProps {
-  photos: PhotoItem[];
+  initialPhotos?: PhotoItem[];
+  photos?: PhotoItem[];
+  initialCursor?: string | null;
   folderId: string;
   eventId: string;
   eventTitle: string;
@@ -45,7 +51,9 @@ interface FolderPhotoGridProps {
 }
 
 export function FolderPhotoGrid({
-  photos,
+  initialPhotos,
+  photos: photosProp,
+  initialCursor = null,
   folderId,
   eventId,
   eventTitle,
@@ -54,13 +62,80 @@ export function FolderPhotoGrid({
   folderName = "",
 }: FolderPhotoGridProps) {
   const router = useRouter();
+  const [photos, setPhotos] = useState<PhotoItem[]>(
+    initialPhotos ?? photosProp ?? [],
+  );
+  const [cursor, setCursor] = useState<string | null>(initialCursor);
+  const [isPending, startTransition] = useTransition();
+
   const [lightbox, setLightbox] = useState<PhotoItem | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<PhotoItem | null>(null);
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const { items, addFiles, removeFile, completedCount } = useGlobalUpload();
+
+  // Resync state when navigating between different folders/events
+  const folderKey = `${eventId}:${folderId}`;
+  const prevFolderKeyRef = useRef(folderKey);
+  useEffect(() => {
+    if (prevFolderKeyRef.current !== folderKey) {
+      prevFolderKeyRef.current = folderKey;
+      setPhotos(initialPhotos ?? photosProp ?? []);
+      setCursor(initialCursor);
+    }
+  }, [folderKey, initialPhotos, photosProp, initialCursor]);
+
+  // Merge any new photos from server refreshes (e.g. after upload) without blowing away pagination
+  useEffect(() => {
+    const freshPhotos = initialPhotos ?? photosProp;
+    if (freshPhotos && freshPhotos.length > 0) {
+      setPhotos((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const newPhotos = freshPhotos.filter((p) => !existingIds.has(p.id));
+        if (newPhotos.length > 0) {
+          const combined = [...newPhotos, ...prev];
+          combined.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          );
+          return combined;
+        }
+        return prev;
+      });
+    }
+  }, [initialPhotos, photosProp]);
+
+  // ─── IntersectionObserver for Infinite Scroll ────────────────────────────
+  useEffect(() => {
+    if (!cursor || isPending) return;
+    const observerTarget = sentinelRef.current;
+    if (!observerTarget) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && cursor && !isPending) {
+          startTransition(async () => {
+            const res = await getFolderPhotosPage(folderId, eventId, cursor);
+            if (res && res.photos) {
+              setPhotos((prev) => {
+                const existingIds = new Set(prev.map((p) => p.id));
+                const fresh = res.photos.filter((p) => !existingIds.has(p.id));
+                return [...prev, ...fresh];
+              });
+              setCursor(res.nextCursor);
+            }
+          });
+        }
+      },
+      { rootMargin: "250px" },
+    );
+
+    observer.observe(observerTarget);
+    return () => observer.disconnect();
+  }, [cursor, isPending, folderId, eventId]);
 
   // ─── Refresh gallery after a successful upload ────────────────────────────
   const lastCompletedRef = useRef(completedCount);
@@ -86,7 +161,10 @@ export function FolderPhotoGrid({
 
     if (isCover && filesToUpload.length > 0) {
       try {
-        const watermarkedFile = await applyWatermark(filesToUpload[0], "/name_logo.png");
+        const watermarkedFile = await applyWatermark(
+          filesToUpload[0],
+          "/name_logo.png",
+        );
         filesToUpload[0] = watermarkedFile;
       } catch (err) {
         console.error("Failed to apply watermark", err);
@@ -103,22 +181,24 @@ export function FolderPhotoGrid({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ─── Delete confirmation handler ──────────────────────────────────────────
+  // ─── Delete confirmation handler (Optimistic state update) ───────────────
   const handleDeleteConfirm = async () => {
     if (!photoToDelete) return;
     setIsDeleting(true);
-    const res = await deletePhotoAction(photoToDelete.id);
+    const deletedId = photoToDelete.id;
+    const res = await deletePhotoAction(deletedId);
     if (res.ok) {
+      setPhotos((prev) => prev.filter((p) => p.id !== deletedId));
       setPhotoToDelete(null);
       setLightbox(null);
-      router.refresh();
     }
     setIsDeleting(false);
   };
 
   const active = isEventActive(eventDate);
   const isCoverPhotoFolder = folderName.toLowerCase() === "cover photo";
-  const hideUploadBar = isCoverPhotoFolder && (photos.length > 0 || items.length > 0);
+  const hideUploadBar =
+    isCoverPhotoFolder && (photos.length > 0 || items.length > 0);
 
   return (
     <div>
@@ -141,7 +221,11 @@ export function FolderPhotoGrid({
                 ? "bg-cyan-400 text-black shadow-[0_0_24px_rgba(34,211,238,0.35)] hover:bg-cyan-300 hover:shadow-[0_0_32px_rgba(34,211,238,0.5)]"
                 : "cursor-not-allowed bg-slate-700 text-slate-400 opacity-60 shadow-none"
             }`}
-            title={active ? "Upload photos to this folder" : "Event is not active – uploads are disabled"}
+            title={
+              active
+                ? "Upload photos to this folder"
+                : "Event is not active – uploads are disabled"
+            }
           >
             <Camera size={16} />
             ADD TO FOLDER
@@ -185,8 +269,13 @@ export function FolderPhotoGrid({
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
                   {item.status === "uploading" ? (
                     <>
-                      <Loader2 size={32} className="mb-2 animate-spin text-cyan-400" />
-                      <span className="text-sm font-bold text-white">{item.progress}%</span>
+                      <Loader2
+                        size={32}
+                        className="mb-2 animate-spin text-cyan-400"
+                      />
+                      <span className="text-sm font-bold text-white">
+                        {item.progress}%
+                      </span>
                     </>
                   ) : item.status === "failed" ? (
                     <>
@@ -196,7 +285,9 @@ export function FolderPhotoGrid({
                       </span>
                     </>
                   ) : (
-                    <span className="text-xs font-bold uppercase text-slate-300">Queued</span>
+                    <span className="text-xs font-bold uppercase text-slate-300">
+                      Queued
+                    </span>
                   )}
                 </div>
                 {item.status !== "uploading" && (
@@ -236,12 +327,49 @@ export function FolderPhotoGrid({
               </div>
             </div>
           ))}
+
+          {/* Skeleton placeholders while fetching next page */}
+          {isPending && (
+            <>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={`skeleton-${i}`}
+                  className="mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416]"
+                >
+                  <Skeleton className="h-64 w-full rounded-[24px] bg-white/5" />
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
+      {/* ── Scroll Sentinel & End of Feed Indicator ── */}
+      {cursor ? (
+        <div
+          ref={sentinelRef}
+          className="my-8 flex h-12 w-full items-center justify-center"
+        >
+          {isPending && (
+            <span className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-cyan-400/80">
+              <Loader2 size={14} className="animate-spin" /> Loading captures...
+            </span>
+          )}
+        </div>
+      ) : (
+        photos.length > 0 && (
+          <div className="py-12 text-center text-xs font-bold uppercase tracking-widest text-slate-600">
+            You&apos;ve reached the end of the gallery
+          </div>
+        )
+      )}
+
       {/* ── Lightbox Modal ── */}
-      <Dialog open={!!lightbox} onOpenChange={(open) => !open && setLightbox(null)}>
-        <DialogContent className="flex flex-col items-center justify-between max-w-[95vw] w-full md:max-w-5xl max-h-[92vh] rounded-[32px] border border-white/10 bg-[#0d0d0f]/90 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] backdrop-blur-3xl outline-none">
+      <Dialog
+        open={!!lightbox}
+        onOpenChange={(open) => !open && setLightbox(null)}
+      >
+        <DialogContent showCloseButton={false} className="flex flex-col items-center justify-between max-w-[95vw] w-full md:max-w-5xl max-h-[92vh] rounded-[32px] border border-white/10 bg-[#0d0d0f]/90 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] backdrop-blur-3xl outline-none">
           {lightbox && (
             <div className="flex flex-col items-center justify-between w-full h-full gap-4">
               {/* Header / Title */}
@@ -250,9 +378,7 @@ export function FolderPhotoGrid({
                   <h3 className="text-lg md:text-xl font-bold text-white tracking-tight">
                     Captured Moment
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    {eventTitle}
-                  </p>
+                  <p className="text-xs text-slate-400">{eventTitle}</p>
                 </div>
                 <button
                   onClick={() => setLightbox(null)}
@@ -276,6 +402,16 @@ export function FolderPhotoGrid({
               <TooltipProvider delayDuration={150}>
                 <div className="flex items-center gap-4 rounded-full border border-white/15 bg-white/10 px-6 py-2.5 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all">
                   
+                  {/* Face Count Display */}
+                  <div className="flex items-center gap-2 pr-2 text-white/90">
+                    <Users size={18} className="text-cyan-400" />
+                    <span className="text-sm font-semibold">
+                      {lightbox.faceCount ?? 0} {(lightbox.faceCount === 1) ? 'Face' : 'Faces'}
+                    </span>
+                  </div>
+                  
+                  <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -287,7 +423,10 @@ export function FolderPhotoGrid({
                         <Trash2 size={20} />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl">
+                    <TooltipContent
+                      side="top"
+                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
+                    >
                       <p>Delete Photo</p>
                     </TooltipContent>
                   </Tooltip>
@@ -299,7 +438,10 @@ export function FolderPhotoGrid({
       </Dialog>
 
       {/* ── Delete Confirmation Modal ── */}
-      <Dialog open={!!photoToDelete} onOpenChange={(open) => !open && !isDeleting && setPhotoToDelete(null)}>
+      <Dialog
+        open={!!photoToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setPhotoToDelete(null)}
+      >
         <DialogContent className="bg-[#141416] border-white/10 text-white sm:max-w-[420px] rounded-3xl p-6 shadow-panel">
           <DialogHeader className="text-center sm:text-left">
             <div className="mx-auto sm:mx-0 w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-3">
@@ -309,7 +451,8 @@ export function FolderPhotoGrid({
               Delete Photo?
             </DialogTitle>
             <DialogDescription className="text-slate-400 text-sm leading-relaxed mt-1">
-              Are you sure you want to delete this photo from the gallery? This action cannot be undone.
+              Are you sure you want to delete this photo from the gallery? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
@@ -355,10 +498,12 @@ export function FolderPhotoGrid({
               <AlertCircle size={24} className="text-amber-400" />
             </div>
             <div>
-              <h3 className="mb-1 text-lg font-bold text-white">Event is Inactive</h3>
+              <h3 className="mb-1 text-lg font-bold text-white">
+                Event is Inactive
+              </h3>
               <p className="text-sm leading-relaxed text-slate-400">
-                Photos can only be uploaded during the event&apos;s active 24-hour window.
-                This event is currently outside that window.
+                Photos can only be uploaded during the event&apos;s active
+                24-hour window. This event is currently outside that window.
               </p>
             </div>
             <div className="mt-2">

@@ -15,6 +15,11 @@ import { useUploadStore } from "@/store/upload-store";
 import { EventListItem } from "@/types";
 import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 import { EVENT_UPLOAD_WINDOW_MS, MAX_UPLOAD_SIZE_MB } from "@/lib/utils/upload-constants";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FolderPhotoGrid } from "@/components/feature-specific/gallery/folder-photo-grid";
+import { getFolderPhotosPage } from "@/app/photographer/(panel)/gallery/[slug]/action";
+import type { PhotoItem } from "@/lib/services/photo.service";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
 
 interface UploadWorkspaceProps {
   events: EventListItem[];
@@ -44,16 +49,24 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
 
   if (!item) return null;
 
+  const isCompressing =
+    item.status === "queued" ||
+    (item.status === "uploading" && (item.progress || 0) === 0);
+
   return (
     <div className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]">
-      <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3">
-        <img
-          src={item.preview}
-          alt={item.file.name}
-          className="w-full h-full object-cover"
-        />
+      <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3 bg-black/20">
+        {isCompressing ? (
+          <Skeleton className="w-full h-full absolute inset-0 bg-white/5" />
+        ) : (
+          <img
+            src={item.preview}
+            alt={item.file.name}
+            className="w-full h-full object-cover"
+          />
+        )}
 
-        {item.status === "uploading" && (
+        {item.status === "uploading" && !isCompressing && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center flex-col p-4 backdrop-blur-sm">
             <div className="relative w-20 h-20">
               <svg className="w-full h-full" viewBox="0 0 100 100">
@@ -163,6 +176,80 @@ function isEventActive(event: EventListItem | undefined): boolean {
   return now >= eventTime && now <= eventTime + EVENT_UPLOAD_WINDOW_MS;
 }
 
+function RecentUploadsGrid({
+  eventId,
+  eventTitle,
+  eventDate,
+  userId,
+  completedCount,
+}: {
+  eventId: string;
+  eventTitle: string;
+  eventDate: string;
+  userId: string;
+  completedCount: number;
+}) {
+  const [initialData, setInitialData] = useState<{
+    photos: PhotoItem[];
+    cursor: string | null;
+  } | null>(null);
+
+  // We only show the skeleton on initial mount or event change.
+  // For background refreshes (like completedCount changes), we keep the current data
+  // on screen until the new data arrives, avoiding a full skeleton flash.
+  useEffect(() => {
+    if (!eventId) return;
+    let active = true;
+
+    // Only nullify if we don't have data yet (first load of this event)
+    setInitialData((prev) => (prev ? prev : null));
+
+    getFolderPhotosPage("all", eventId).then((res) => {
+      if (active) {
+        setInitialData({ photos: res.photos, cursor: res.nextCursor });
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, completedCount]);
+
+  if (!initialData) {
+    return (
+      <div className="mt-16 border-t border-white/5 pt-12">
+        <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
+        <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={`ws-skeleton-${i}`}
+              className="mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416]"
+            >
+              <Skeleton className="h-64 w-full rounded-[24px] bg-white/5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-16 border-t border-white/5 pt-12">
+      <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
+      <FolderPhotoGrid
+        initialPhotos={initialData.photos}
+        initialCursor={initialData.cursor}
+        folderId="all"
+        eventId={eventId}
+        eventTitle={eventTitle}
+        eventDate={eventDate}
+        userId={userId}
+        folderName="All Photos"
+      />
+    </div>
+  );
+}
+
 export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -178,6 +265,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     isUploading,
     setUploadContext,
     retryUpload,
+    completedCount,
   } = useGlobalUpload();
 
   // Select item IDs as a joined string so UploadWorkspace ONLY re-renders
@@ -189,6 +277,25 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     () => (itemIdsStr ? itemIdsStr.split(",") : []),
     [itemIdsStr],
   );
+
+  const [columns, setColumns] = useState(2);
+
+  useEffect(() => {
+    const updateCols = () => {
+      if (window.innerWidth >= 1024) setColumns(4);
+      else setColumns(2);
+    };
+    updateCols();
+    window.addEventListener("resize", updateCols);
+    return () => window.removeEventListener("resize", updateCols);
+  }, []);
+
+  const rowCount = Math.ceil(itemIds.length / columns);
+  const virtualizer = useWindowVirtualizer({
+    count: rowCount,
+    estimateSize: () => (columns === 4 ? 320 : 220),
+    overscan: 3,
+  });
 
   const sortedEvents = useMemo(() => {
     return [...events].sort((a, b) => {
@@ -262,12 +369,16 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">
             Select Event to Upload
           </label>
-          <EventSelectDropdown 
-            events={sortedEvents}
-            value={selectedEventId}
-            onChange={handleEventChange}
-            isLoading={!isInitialized && events.length > 0}
-          />
+          {!isInitialized && events.length > 0 ? (
+            <Skeleton className="h-11 w-64 rounded-2xl bg-white/5" />
+          ) : (
+            <EventSelectDropdown 
+              events={sortedEvents}
+              value={selectedEventId}
+              onChange={handleEventChange}
+              isLoading={!isInitialized && events.length > 0}
+            />
+          )}
         </div>
       </section>
 
@@ -401,16 +512,45 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {itemIds.map((id) => (
-            <UploadQueueItemCard
-              key={id}
-              id={id}
-              onRemove={removeFile}
-              onRetry={retryUpload}
-            />
-          ))}
-        </div>
+        {itemIds.length > 0 && (
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const startIndex = virtualRow.index * columns;
+              const rowItems = itemIds.slice(startIndex, startIndex + columns);
+
+              return (
+                <div
+                  key={virtualRow.index}
+                  data-index={virtualRow.index}
+                  ref={virtualizer.measureElement}
+                  className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {rowItems.map((id) => (
+                    <UploadQueueItemCard
+                      key={id}
+                      id={id}
+                      onRemove={removeFile}
+                      onRetry={retryUpload}
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
@@ -423,6 +563,17 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           )}
         </div>
       </div>
+
+      {/* ── Recent Uploads Grid ── */}
+      {selectedEventId && (
+        <RecentUploadsGrid
+          eventId={selectedEventId}
+          eventTitle={events.find((e) => e.id === selectedEventId)?.title || "Event"}
+          eventDate={events.find((e) => e.id === selectedEventId)?.date || ""}
+          userId={userId}
+          completedCount={completedCount}
+        />
+      )}
 
       {/* Warning Modal for No Events */}
       {showWarning && (

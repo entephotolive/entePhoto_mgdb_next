@@ -29,11 +29,13 @@ export default async function FolderDetailPage({
   // If none is given in query params we fallback gracefully
   const resolvedEventId = eventId ?? "";
 
-  const [meta, photos, event] = await Promise.all([
+  const [meta, photosRes, event] = await Promise.all([
     getFolderMeta(folderId, resolvedEventId).catch(() => null),
     resolvedEventId || folderId !== "all"
-      ? listPhotosByFolder(folderId, resolvedEventId).catch(() => [])
-      : Promise.resolve([]),
+      ? listPhotosByFolder(folderId, resolvedEventId, { limit: 40 }).catch(
+          () => ({ photos: [], nextCursor: null }),
+        )
+      : Promise.resolve({ photos: [], nextCursor: null }),
     resolvedEventId
       ? getEventById(resolvedEventId).catch(() => null)
       : Promise.resolve(null),
@@ -43,8 +45,11 @@ export default async function FolderDetailPage({
     notFound();
   }
 
+  const initialPhotos = photosRes?.photos ?? [];
+  const initialCursor = photosRes?.nextCursor ?? null;
+
   const folderName = meta?.name ?? "All Photos";
-  const photoCount = meta?.photoCount ?? photos.length;
+  const photoCount = meta?.photoCount ?? initialPhotos.length;
   const canonicalEventId = meta?.eventId ?? resolvedEventId;
   const eventTitle = event ? event.title : "event";
   const eventDate = event ? event.date : undefined;
@@ -83,7 +88,8 @@ export default async function FolderDetailPage({
 
       {/* ── Photo Grid (Client Island) ── */}
       <FolderPhotoGrid
-        photos={photos}
+        initialPhotos={initialPhotos}
+        initialCursor={initialCursor}
         folderId={folderId}
         eventId={canonicalEventId}
         eventTitle={eventTitle}

@@ -107,6 +107,7 @@ export type PhotoItem = {
   id: string;
   url: string;
   createdAt: string;
+  faceCount?: number;
 };
 
 export type FolderMeta = {
@@ -116,13 +117,41 @@ export type FolderMeta = {
   eventId: string;
 };
 
-type ListPhotoOptions = {
+export type ListPhotoOptions = {
   /**
    * Which collections to fetch from.
    * - "both" (default): union of `photos` + `image_with_face`
    */
   source?: "photos" | "image_with_face" | "both";
+  cursor?: string;
+  limit?: number;
 };
+
+export type PaginatedPhotosResult = {
+  photos: PhotoItem[];
+  nextCursor: string | null;
+};
+
+function decodeCursor(cursor?: string): { createdAt: Date; id: string } | null {
+  if (!cursor) return null;
+  try {
+    const json = Buffer.from(cursor, "base64url").toString("utf-8");
+    const parsed = JSON.parse(json);
+    if (parsed && parsed.createdAt) {
+      return { createdAt: new Date(parsed.createdAt), id: parsed.id ?? "" };
+    }
+  } catch {
+    const d = new Date(cursor);
+    if (!Number.isNaN(d.getTime())) return { createdAt: d, id: "" };
+  }
+  return null;
+}
+
+function encodeCursor(item: { createdAt: string; id: string }): string {
+  return Buffer.from(
+    JSON.stringify({ createdAt: item.createdAt, id: item.id }),
+  ).toString("base64url");
+}
 
 function toObjectId(value: string): Types.ObjectId | null {
   return Types.ObjectId.isValid(value) ? new Types.ObjectId(value) : null;
@@ -182,7 +211,12 @@ function resolveDocRawUrl(doc: any): string | null {
 }
 
 function resolveDocCreatedAt(doc: any): Date {
-  const candidates = [doc?.uploaded_at, doc?.uploadedAt, doc?.createdAt, doc?.created_at];
+  const candidates = [
+    doc?.uploaded_at,
+    doc?.uploadedAt,
+    doc?.createdAt,
+    doc?.created_at,
+  ];
   for (const value of candidates) {
     if (!value) continue;
     if (value instanceof Date) return value;
@@ -197,21 +231,29 @@ export async function listPhotosByFolder(
   folderId: string,
   eventId: string,
   options: ListPhotoOptions = {},
-): Promise<PhotoItem[]> {
+): Promise<PaginatedPhotosResult> {
   const conn = await connectToDatabase();
   const db = conn.connection.db;
-  if (!db) return [];
+  if (!db) return { photos: [], nextCursor: null };
 
   if (folderId === "all" && !eventId) {
-    return [];
+    return { photos: [], nextCursor: null };
   }
 
   const source = options.source ?? "both";
   const collections =
     source === "both" ? ["photos", "image_with_face"] : [source];
 
+  // Ensure createdAt indexes exist on collections
+  collections.forEach((name) => {
+    db.collection(name)
+      .createIndex({ uploaded_at: -1, createdAt: -1, _id: -1 })
+      .catch(() => {});
+  });
+
   const eventObjectId = eventId ? toObjectId(eventId) : null;
-  const folderObjectId = folderId && folderId !== "all" ? toObjectId(folderId) : null;
+  const folderObjectId =
+    folderId && folderId !== "all" ? toObjectId(folderId) : null;
 
   const eventMatch =
     eventId && eventObjectId
@@ -245,57 +287,106 @@ export async function listPhotosByFolder(
     if (eventMatch.length) and.push({ $or: eventMatch });
   }
 
+  const cursorData = decodeCursor(options.cursor);
+  if (cursorData) {
+    and.push({
+      $or: [
+        { uploaded_at: { $lt: cursorData.createdAt } },
+        { createdAt: { $lt: cursorData.createdAt } },
+      ],
+    });
+  }
+
   const query = and.length === 1 ? and[0] : { $and: and };
 
+  const limit = options.limit;
+  const fetchLimit = limit ? limit * 2 + 10 : 0;
+
   const docsByCollection = await Promise.all(
-    collections.map((name) =>
-      db
-        .collection(name)
-        .find(query, {
-          projection: {
-            _id: 1,
-            id: 1,
-            image_url: 1,
-            url: 1,
-            image_storage_name: 1,
-            uploaded_at: 1,
-            uploadedAt: 1,
-            createdAt: 1,
-            created_at: 1,
-          },
-        })
-        .sort({ uploaded_at: -1, createdAt: -1, _id: -1 })
-        .toArray(),
-    ),
+    collections.map((name) => {
+      let cursor = db.collection(name).find(query, {
+        projection: {
+          _id: 1,
+          id: 1,
+          image_url: 1,
+          url: 1,
+          image_storage_name: 1,
+          uploaded_at: 1,
+          uploadedAt: 1,
+          createdAt: 1,
+          created_at: 1,
+          face_count: 1,
+          faceCount: 1,
+        },
+      });
+      cursor = cursor.sort({ uploaded_at: -1, createdAt: -1, _id: -1 });
+      if (fetchLimit > 0) {
+        cursor = cursor.limit(fetchLimit);
+      }
+      return cursor.toArray();
+    }),
   );
 
-  const merged = docsByCollection.flat().map((doc: any) => {
-    const rawUrl = resolveDocRawUrl(doc);
-    const url = resolveImageUrl(rawUrl);
-    if (!url) return null;
+  let merged = docsByCollection
+    .flat()
+    .map((doc: any) => {
+      const rawUrl = resolveDocRawUrl(doc);
+      const url = resolveImageUrl(rawUrl);
+      if (!url) return null;
 
-    const createdAt = resolveDocCreatedAt(doc);
+      const createdAt = resolveDocCreatedAt(doc);
 
-    return {
-      id: (doc._id?.toString?.() ?? String(doc.id ?? url)) as string,
-      url,
-      createdAt: createdAt.toISOString(),
-      __createdAtMs: createdAt.getTime(),
-    };
-  }).filter(Boolean) as Array<PhotoItem & { __createdAtMs: number }>;
+      return {
+        id: (doc._id?.toString?.() ?? String(doc.id ?? url)) as string,
+        url,
+        createdAt: createdAt.toISOString(),
+        __createdAtMs: createdAt.getTime(),
+        faceCount: doc.face_count ?? doc.faceCount ?? 0,
+      };
+    })
+    .filter(Boolean) as Array<PhotoItem & { __createdAtMs: number }>;
 
-  merged.sort((a, b) => b.__createdAtMs - a.__createdAtMs);
+  merged.sort((a, b) => {
+    if (b.__createdAtMs !== a.__createdAtMs) {
+      return b.__createdAtMs - a.__createdAtMs;
+    }
+    return b.id.localeCompare(a.id);
+  });
+
+  if (cursorData) {
+    const cursorMs = cursorData.createdAt.getTime();
+    merged = merged.filter((item) => {
+      if (item.__createdAtMs < cursorMs) return true;
+      if (item.__createdAtMs === cursorMs && cursorData.id) {
+        return item.id < cursorData.id;
+      }
+      return false;
+    });
+  }
 
   // De-dupe by URL (face collection may contain the same underlying image).
   const seen = new Set<string>();
-  const result: PhotoItem[] = [];
+  const deduplicated: PhotoItem[] = [];
   for (const item of merged) {
     if (seen.has(item.url)) continue;
     seen.add(item.url);
-    result.push({ id: item.id, url: item.url, createdAt: item.createdAt });
+    deduplicated.push({ id: item.id, url: item.url, createdAt: item.createdAt });
   }
 
-  return result;
+  let photos = deduplicated;
+  let nextCursor: string | null = null;
+
+  if (limit && deduplicated.length > limit) {
+    photos = deduplicated.slice(0, limit);
+    const lastItem = photos[photos.length - 1];
+    nextCursor = encodeCursor(lastItem);
+  } else if (!limit && deduplicated.length > 40) {
+    photos = deduplicated.slice(0, 40);
+    const lastItem = photos[photos.length - 1];
+    nextCursor = encodeCursor(lastItem);
+  }
+
+  return { photos, nextCursor };
 }
 
 /** Fetch folder metadata by folder ID (or "all" pseudo-folder) */
@@ -392,4 +483,3 @@ export async function deletePhoto(photoId: string) {
     throw error;
   }
 }
-

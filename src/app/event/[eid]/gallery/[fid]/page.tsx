@@ -2,7 +2,10 @@ import Navbar from "@/components/Navbar";
 import Layout from "@/components/Layout";
 import Link from "next/link";
 import { ChevronLeft, Images } from "lucide-react";
-import { listPhotosByFolder, getFolderMeta } from "@/lib/services/photo.service";
+import {
+  listPhotosByFolder,
+  getFolderMeta,
+} from "@/lib/services/photo.service";
 import { PublicPhotoGrid } from "@/components/feature-specific/gallery/public-photo-grid";
 import { MyPhotosGrid } from "@/components/feature-specific/gallery/my-photos-grid";
 import { notFound } from "next/navigation";
@@ -11,7 +14,9 @@ interface PublicFolderDetailPageProps {
   params: Promise<{ eid: string; fid: string }>;
 }
 
-export default async function PublicFolderDetailPage({ params }: PublicFolderDetailPageProps) {
+export default async function PublicFolderDetailPage({
+  params,
+}: PublicFolderDetailPageProps) {
   const { eid, fid } = await params;
 
   // "my-photos" is a virtual client-side folder — no DB lookup needed
@@ -51,10 +56,12 @@ export default async function PublicFolderDetailPage({ params }: PublicFolderDet
     );
   }
 
-  const [meta, photos] = await Promise.all([
+  const [meta, photosRes] = await Promise.all([
     getFolderMeta(fid, eid).catch(() => null),
-    listPhotosByFolder(fid, eid).catch(() => []),
+    listPhotosByFolder(fid, eid).catch(() => ({ photos: [], nextCursor: null })),
   ]);
+
+  const photos = photosRes?.photos ?? [];
 
   if (!meta) {
     notFound();

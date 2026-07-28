@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
+    "@tanstack/react-virtual": "^3.14.8",
     "@types/nodemailer": "^8.0.1",
     "axios": "1.13.6",
     "bcryptjs": "^2.4.3",

@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/services/auth.service";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import { PhotoModel } from "@/models/Photo";
 import { revalidatePath } from "next/cache";
+import { listPhotosByFolder } from "@/lib/services/photo.service";
 
 export async function updatePhotoStatus(
   photoId: string,
@@ -66,4 +67,19 @@ export async function deletePhotoAction(photoId: string) {
     return { ok: false, error: "Failed to delete photo" };
   }
 }
+
+export async function getFolderPhotosPage(
+  folderId: string,
+  eventId: string,
+  cursor?: string | null,
+) {
+  try {
+    await requireSession();
+    return await listPhotosByFolder(folderId, eventId, cursor ? { cursor, limit: 40 } : { limit: 40 });
+  } catch (error) {
+    console.error("[getFolderPhotosPage]", error);
+    return { photos: [], nextCursor: null };
+  }
+}
+
 
