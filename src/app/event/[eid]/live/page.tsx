@@ -39,10 +39,18 @@ function getAttendeeId(): string | null {
 }
 
 function normalizePhoto(photo: any): MatchedPhoto {
+  const id = photo.id ?? photo.image_id;
+  const rawUrl: string = photo.url ?? photo.image_url ?? "";
+
+  // Extract extension from the URL path (strips query strings)
+  const pathname = rawUrl.split("?")[0];
+  const extMatch = pathname.match(/\.([a-zA-Z0-9]+)$/);
+  const ext = extMatch ? extMatch[1].toLowerCase() : "jpg";
+
   return {
-    image_id: photo.id ?? photo.image_id,
-    image_url: photo.url ?? photo.image_url,
-    image_name: photo.image_name ?? `Photo ${photo.id ?? photo.image_id}`,
+    image_id: id,
+    image_url: rawUrl,
+    image_name: `entephoto_${id}.${ext}`,
   };
 }
 
