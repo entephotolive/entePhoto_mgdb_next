@@ -1,5 +1,5 @@
 // @ts-ignore
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, mock, spyOn } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { api } from "@/app/api/api-client";
@@ -288,69 +288,66 @@ describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
 });
 
 import { isAllowedFile } from "@/lib/utils/upload-constants";
-import { fillCanvasWhite, isCanvasDrawFailure as isCanvasDrawFailureShared } from "@/lib/utils/canvas-utils";
+import { fillCanvasWhite, isCanvasDrawFailure } from "@/lib/utils/canvas-utils";
+import * as exifModule from "@/lib/utils/exif-orientation";
+import { applyWatermark } from "@/lib/utils/watermark";
+import { compressImage } from "@/lib/utils/compress-image";
 
 describe("Draw-Failure Pixel-Sampling Guard (isolated)", () => {
   test("shared canvas-utils exports fillCanvasWhite and isCanvasDrawFailure functions", () => {
     expect(typeof fillCanvasWhite).toBe("function");
-    expect(typeof isCanvasDrawFailureShared).toBe("function");
+    expect(typeof isCanvasDrawFailure).toBe("function");
   });
 
   /**
-   * Mirrors the exact sampling logic from upload.service.ts / watermark.ts /
-   * compress-image.ts so we can assert it in isolation without a real canvas.
+   * Refactored to test the real, imported `isCanvasDrawFailure` function from canvas-utils.ts
+   * using a mock 2D context rather than maintaining a duplicate sampling loop in this file.
    */
-  function isDrawFailure(pixels: Uint8ClampedArray): boolean {
-    // Treat the whole array as a single "region" of pixels
-    for (let i = 0; i < pixels.length; i += 4) {
-      const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3];
-      if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
-    }
-    return true;
+  function testDrawFailureGuard(pixels: Uint8ClampedArray): boolean {
+    const fakeCtx = {
+      getImageData: () => ({ data: pixels }),
+    } as unknown as CanvasRenderingContext2D;
+    return isCanvasDrawFailure(fakeCtx, 10, 10);
   }
 
   test("all-transparent pixels → draw failure", () => {
     const pixels = new Uint8ClampedArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-    expect(isDrawFailure(pixels)).toBe(true);
+    expect(testDrawFailureGuard(pixels)).toBe(true);
   });
 
   test("all-solid-black pixels → draw failure", () => {
     const pixels = new Uint8ClampedArray([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
-    expect(isDrawFailure(pixels)).toBe(true);
+    expect(testDrawFailureGuard(pixels)).toBe(true);
   });
 
   test("white pixel (255,255,255,255) → NOT a draw failure", () => {
-    // fillRect with #ffffff produces fully opaque white — must not be flagged
     const pixels = new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255,
                                           255, 255, 255, 255, 255, 255, 255, 255]);
-    expect(isDrawFailure(pixels)).toBe(false);
+    expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 
   test("one non-black pixel among black pixels → NOT a draw failure (partial success)", () => {
-    // Even a single non-failure pixel breaks the 'every' chain → no fallback
     const pixels = new Uint8ClampedArray([0, 0, 0, 255, 128, 64, 32, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
-    expect(isDrawFailure(pixels)).toBe(false);
+    expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 
   test("arbitrary colour (200,100,50,255) → NOT a draw failure", () => {
     const pixels = new Uint8ClampedArray([200, 100, 50, 255, 200, 100, 50, 255,
                                           200, 100, 50, 255, 200, 100, 50, 255]);
-    expect(isDrawFailure(pixels)).toBe(false);
+    expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 });
 
-describe("Module Worker EXIF Orientation & Fallback Integration", () => {
+describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", () => {
   test("[M13/M05] Module worker imports shared EXIF orientation utilities and handles fallback orientation matrix", async () => {
     const { getOrientationTransform, readJpegExifOrientation } = await import("@/lib/utils/exif-orientation");
 
-    // 1. Verify readJpegExifOrientation is present and executable
     const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "test.jpg", { type: "image/jpeg" });
     const orientation = await readJpegExifOrientation(dummyFile);
     expect(orientation).toBe(1);
 
-    // 2. Verify getOrientationTransform produces expected canvas dimensions and transform matrix for iPhone EXIF case 6 & 8
     const portraitCase6 = getOrientationTransform(6, 4000, 3000);
-    expect(portraitCase6.canvasW).toBe(3000); // Width/Height swapped for 90 deg rotation
+    expect(portraitCase6.canvasW).toBe(3000);
     expect(portraitCase6.canvasH).toBe(4000);
     expect(typeof portraitCase6.applyTransform).toBe("function");
 
@@ -360,28 +357,152 @@ describe("Module Worker EXIF Orientation & Fallback Integration", () => {
     expect(typeof landscapeCase8.applyTransform).toBe("function");
   });
 
-  test("[M05] watermark.ts imports shared EXIF orientation fallback utilities and applies transform", async () => {
-    const watermarkModule = await import("@/lib/utils/watermark");
-    const { getOrientationTransform } = await import("@/lib/utils/exif-orientation");
+  // Helper setup for Canvas & ImageBitmap mocks
+  function setupCanvasHarness(options: { nativeOrientation: boolean; exifOrientation: number }) {
+    const saveSpy = mock();
+    const restoreSpy = mock();
+    const transformSpy = mock();
+    const drawImageSpy = mock();
+    const fillRectSpy = mock();
 
-    expect(typeof watermarkModule.applyWatermark).toBe("function");
+    const mockCtx = {
+      fillStyle: "",
+      fillRect: fillRectSpy,
+      imageSmoothingEnabled: true,
+      imageSmoothingQuality: "high",
+      save: saveSpy,
+      restore: restoreSpy,
+      transform: transformSpy,
+      drawImage: drawImageSpy,
+      getImageData: () => ({
+        data: new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+      }),
+      globalAlpha: 1.0,
+    };
 
-    // Verify EXIF rotation transform logic for watermark canvas setup
-    const transform6 = getOrientationTransform(6, 6000, 4000);
-    expect(transform6.canvasW).toBe(4000);
-    expect(transform6.canvasH).toBe(6000);
+    const mockCanvas = {
+      width: 0,
+      height: 0,
+      getContext: (type: string) => (type === "2d" ? mockCtx : null),
+      toBlob: (cb: (b: Blob | null) => void, mime: string) =>
+        cb(new Blob([new Uint8Array([1, 2, 3])], { type: mime })),
+    };
+
+    // Spies on exif-orientation module
+    const supportsSpy = spyOn(exifModule, "supportsImageOrientation").mockResolvedValue(options.nativeOrientation);
+    const readExifSpy = spyOn(exifModule, "readJpegExifOrientation").mockResolvedValue(options.exifOrientation);
+
+    // Mock globalThis.document & createImageBitmap
+    const origDocument = globalThis.document;
+    (globalThis as any).document = {
+      createElement: (tag: string) => {
+        if (tag === "canvas") return mockCanvas;
+        return {};
+      },
+    };
+
+    const origCreateImageBitmap = globalThis.createImageBitmap;
+    globalThis.createImageBitmap = mock().mockResolvedValue({
+      width: 4000,
+      height: 3000,
+      close: mock(),
+    });
+
+    // Mock HTMLImageElement for watermark loading
+    const origImage = globalThis.Image;
+    globalThis.Image = class MockImage {
+      onload: () => void = () => {};
+      src = "";
+      crossOrigin = "";
+      naturalWidth = 300;
+      naturalHeight = 100;
+      constructor() {
+        setTimeout(() => this.onload(), 0);
+      }
+    } as any;
+
+    return {
+      saveSpy,
+      restoreSpy,
+      transformSpy,
+      drawImageSpy,
+      supportsSpy,
+      readExifSpy,
+      cleanup: () => {
+        supportsSpy.mockRestore();
+        readExifSpy.mockRestore();
+        globalThis.document = origDocument;
+        globalThis.createImageBitmap = origCreateImageBitmap;
+        globalThis.Image = origImage;
+      },
+    };
+  }
+
+  test("[M05] watermark.ts fallback path: invokes ctx.save(), transform(), drawImage(), ctx.restore() when native orientation unsupported", async () => {
+    const harness = setupCanvasHarness({ nativeOrientation: false, exifOrientation: 6 });
+    try {
+      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "portrait.jpg", { type: "image/jpeg" });
+      const result = await applyWatermark(dummyFile, "http://example.com/watermark.png");
+
+      expect(result).toBeInstanceOf(File);
+      // Fallback path MUST execute save -> transform -> drawImage -> restore in that order
+      expect(harness.saveSpy).toHaveBeenCalled();
+      expect(harness.transformSpy).toHaveBeenCalledWith(0, 1, -1, 0, 3000, 0); // EXIF case 6 CW transform
+      expect(harness.drawImageSpy).toHaveBeenCalled();
+      expect(harness.restoreSpy).toHaveBeenCalled();
+    } finally {
+      harness.cleanup();
+    }
   });
 
-  test("[M05] compress-image.ts imports shared EXIF orientation fallback utilities and applies transform", async () => {
-    const compressModule = await import("@/lib/utils/compress-image");
-    const { getOrientationTransform } = await import("@/lib/utils/exif-orientation");
+  test("[M05] watermark.ts native path: bypasses ctx.save()/transform when native orientation supported", async () => {
+    const harness = setupCanvasHarness({ nativeOrientation: true, exifOrientation: 6 });
+    try {
+      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "portrait.jpg", { type: "image/jpeg" });
+      const result = await applyWatermark(dummyFile, "http://example.com/watermark.png");
 
-    expect(typeof compressModule.compressImage).toBe("function");
+      expect(result).toBeInstanceOf(File);
+      // Native path MUST NOT invoke save/transform fallback
+      expect(harness.saveSpy).not.toHaveBeenCalled();
+      expect(harness.transformSpy).not.toHaveBeenCalled();
+      expect(harness.drawImageSpy).toHaveBeenCalled();
+    } finally {
+      harness.cleanup();
+    }
+  });
 
-    // Verify EXIF rotation transform logic for compressImage canvas setup
-    const transform8 = getOrientationTransform(8, 5304, 7952);
-    expect(transform8.canvasW).toBe(7952);
-    expect(transform8.canvasH).toBe(5304);
+  test("[M05] compress-image.ts fallback path: invokes ctx.save(), transform(), drawImage(), ctx.restore() when native orientation unsupported", async () => {
+    const harness = setupCanvasHarness({ nativeOrientation: false, exifOrientation: 8 });
+    try {
+      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "landscape.jpg", { type: "image/jpeg" });
+      const result = await compressImage(dummyFile);
+
+      expect(result).toBeInstanceOf(File);
+      // Fallback path MUST execute save -> transform -> drawImage -> restore in that order
+      expect(harness.saveSpy).toHaveBeenCalled();
+      expect(harness.transformSpy).toHaveBeenCalledWith(0, -1, 1, 0, 0, 4000); // EXIF case 8 CCW transform
+      expect(harness.drawImageSpy).toHaveBeenCalled();
+      expect(harness.restoreSpy).toHaveBeenCalled();
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("[M05] compress-image.ts native path: bypasses ctx.save()/transform when native orientation supported", async () => {
+    const harness = setupCanvasHarness({ nativeOrientation: true, exifOrientation: 8 });
+    try {
+      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "landscape.jpg", { type: "image/jpeg" });
+      const result = await compressImage(dummyFile);
+
+      expect(result).toBeInstanceOf(File);
+      // Native path MUST NOT invoke save/transform fallback
+      expect(harness.saveSpy).not.toHaveBeenCalled();
+      expect(harness.transformSpy).not.toHaveBeenCalled();
+      expect(harness.drawImageSpy).toHaveBeenCalled();
+    } finally {
+      harness.cleanup();
+    }
   });
 });
+
 
