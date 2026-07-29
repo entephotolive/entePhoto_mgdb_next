@@ -114,3 +114,47 @@ export function computeCanvasDimensions(
     },
   };
 }
+
+export type AnyCanvasContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+/**
+ * Fills the canvas with a solid white background (#ffffff).
+ * Must be called before drawImage to support transparent PNG conversion
+ * and guard against transparent canvas rendering artifacts.
+ */
+export function fillCanvasWhite(
+  ctx: AnyCanvasContext,
+  width: number,
+  height: number,
+): void {
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+}
+
+/**
+ * Samples 3 scattered 2×2 pixel regions (top-left, center, bottom-right) to detect
+ * silent drawImage failures caused by GPU flush races or memory pressure.
+ * Returns true if all sampled pixels are fully transparent (0,0,0,0) or solid black (0,0,0,255).
+ */
+export function isCanvasDrawFailure(
+  ctx: AnyCanvasContext,
+  width: number,
+  height: number,
+): boolean {
+  const sampleRegions = [
+    [0, 0],
+    [Math.floor(width / 2), Math.floor(height / 2)],
+    [Math.max(0, width - 2), Math.max(0, height - 2)],
+  ] as const;
+
+  return sampleRegions.every(([sx, sy]) => {
+    const { data } = ctx.getImageData(Math.max(0, sx), Math.max(0, sy), 2, 2);
+    for (let i = 0; i < data.length; i += 4) {
+      const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+      // Transparent pixel OR solid-black pixel are both failure signatures
+      if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
+    }
+    return true;
+  });
+}
+

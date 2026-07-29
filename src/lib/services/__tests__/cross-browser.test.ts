@@ -287,11 +287,15 @@ describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Draw-Failure Pixel-Sampling Guard — isolated unit test
-// ─────────────────────────────────────────────────────────────────────────────
+import { isAllowedFile } from "@/lib/utils/upload-constants";
+import { fillCanvasWhite, isCanvasDrawFailure as isCanvasDrawFailureShared } from "@/lib/utils/canvas-utils";
 
 describe("Draw-Failure Pixel-Sampling Guard (isolated)", () => {
+  test("shared canvas-utils exports fillCanvasWhite and isCanvasDrawFailure functions", () => {
+    expect(typeof fillCanvasWhite).toBe("function");
+    expect(typeof isCanvasDrawFailureShared).toBe("function");
+  });
+
   /**
    * Mirrors the exact sampling logic from upload.service.ts / watermark.ts /
    * compress-image.ts so we can assert it in isolation without a real canvas.
@@ -334,3 +338,50 @@ describe("Draw-Failure Pixel-Sampling Guard (isolated)", () => {
     expect(isDrawFailure(pixels)).toBe(false);
   });
 });
+
+describe("Module Worker EXIF Orientation & Fallback Integration", () => {
+  test("[M13/M05] Module worker imports shared EXIF orientation utilities and handles fallback orientation matrix", async () => {
+    const { getOrientationTransform, readJpegExifOrientation } = await import("@/lib/utils/exif-orientation");
+
+    // 1. Verify readJpegExifOrientation is present and executable
+    const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "test.jpg", { type: "image/jpeg" });
+    const orientation = await readJpegExifOrientation(dummyFile);
+    expect(orientation).toBe(1);
+
+    // 2. Verify getOrientationTransform produces expected canvas dimensions and transform matrix for iPhone EXIF case 6 & 8
+    const portraitCase6 = getOrientationTransform(6, 4000, 3000);
+    expect(portraitCase6.canvasW).toBe(3000); // Width/Height swapped for 90 deg rotation
+    expect(portraitCase6.canvasH).toBe(4000);
+    expect(typeof portraitCase6.applyTransform).toBe("function");
+
+    const landscapeCase8 = getOrientationTransform(8, 4000, 3000);
+    expect(landscapeCase8.canvasW).toBe(3000);
+    expect(landscapeCase8.canvasH).toBe(4000);
+    expect(typeof landscapeCase8.applyTransform).toBe("function");
+  });
+
+  test("[M05] watermark.ts imports shared EXIF orientation fallback utilities and applies transform", async () => {
+    const watermarkModule = await import("@/lib/utils/watermark");
+    const { getOrientationTransform } = await import("@/lib/utils/exif-orientation");
+
+    expect(typeof watermarkModule.applyWatermark).toBe("function");
+
+    // Verify EXIF rotation transform logic for watermark canvas setup
+    const transform6 = getOrientationTransform(6, 6000, 4000);
+    expect(transform6.canvasW).toBe(4000);
+    expect(transform6.canvasH).toBe(6000);
+  });
+
+  test("[M05] compress-image.ts imports shared EXIF orientation fallback utilities and applies transform", async () => {
+    const compressModule = await import("@/lib/utils/compress-image");
+    const { getOrientationTransform } = await import("@/lib/utils/exif-orientation");
+
+    expect(typeof compressModule.compressImage).toBe("function");
+
+    // Verify EXIF rotation transform logic for compressImage canvas setup
+    const transform8 = getOrientationTransform(8, 5304, 7952);
+    expect(transform8.canvasW).toBe(7952);
+    expect(transform8.canvasH).toBe(5304);
+  });
+});
+

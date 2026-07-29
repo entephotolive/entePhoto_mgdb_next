@@ -8,7 +8,16 @@
  *  3. Preserves aspect ratio exactly when scaling down for canvas limits.
  *  4. Fallback safety: If createImageBitmap fails, returns original file.
  */
-import { computeCanvasDimensions } from "./canvas-utils";
+import {
+  computeCanvasDimensions,
+  fillCanvasWhite,
+  isCanvasDrawFailure,
+} from "./canvas-utils";
+import {
+  supportsImageOrientation,
+  readJpegExifOrientation,
+  getOrientationTransform,
+} from "./exif-orientation";
 
 /**
  * Applies a watermark to an image File and returns a new File.
@@ -22,12 +31,19 @@ export async function applyWatermark(
   watermarkSrc: string,
 ): Promise<File> {
   try {
+    const nativeOrientation = await supportsImageOrientation();
+
     // ── Phase 1: probe dimensions ────────────────────────────────────────────────
-    // Decode once (no resize) to get post-EXIF-orientation dimensions only;
-    // the bitmap is released immediately after reading .width/.height.
     let probeBitmap: ImageBitmap;
+    let exifOrientation = 1;
+
     try {
-      probeBitmap = await createImageBitmap(originalFile, { imageOrientation: "from-image" });
+      if (nativeOrientation) {
+        probeBitmap = await createImageBitmap(originalFile, { imageOrientation: "from-image" });
+      } else {
+        probeBitmap = await createImageBitmap(originalFile);
+        exifOrientation = await readJpegExifOrientation(originalFile);
+      }
     } catch {
       return originalFile;
     }
@@ -39,8 +55,6 @@ export async function applyWatermark(
     // Compute uniform scale so the canvas never exceeds SAFE_CANVAS_MAX_PIXELS,
     // regardless of megapixel count or aspect ratio.
     const { targetW, targetH, resizeOptions } = computeCanvasDimensions(srcW, srcH);
-    const canvasW = targetW;
-    const canvasH = targetH;
 
     // Load the watermark image
     const watermark = await new Promise<HTMLImageElement>((res, rej) => {
@@ -54,12 +68,34 @@ export async function applyWatermark(
     // ── Phase 2: decode at target size (downscale inside the codec) ───────────
     let imgBitmap: ImageBitmap;
     try {
-      imgBitmap = await createImageBitmap(originalFile, {
-        imageOrientation: "from-image",
-        ...(resizeOptions ?? {}),
-      });
+      if (nativeOrientation) {
+        imgBitmap = await createImageBitmap(originalFile, {
+          imageOrientation: "from-image",
+          ...(resizeOptions ?? {}),
+        });
+      } else {
+        imgBitmap = await createImageBitmap(originalFile, { ...(resizeOptions ?? {}) });
+      }
     } catch {
       return originalFile;
+    }
+
+    const drawW = imgBitmap.width;
+    const drawH = imgBitmap.height;
+
+    // ── Canvas setup — orientation-aware ──────────────────────────────────────
+    let canvasW: number;
+    let canvasH: number;
+    let applyOrientationTransform: ((ctx: CanvasRenderingContext2D) => void) | null = null;
+
+    if (!nativeOrientation && exifOrientation !== 1) {
+      const orientTransform = getOrientationTransform(exifOrientation, drawW, drawH);
+      canvasW = orientTransform.canvasW;
+      canvasH = orientTransform.canvasH;
+      applyOrientationTransform = orientTransform.applyTransform;
+    } else {
+      canvasW = drawW;
+      canvasH = drawH;
     }
 
     const canvas = document.createElement("canvas");
@@ -73,33 +109,23 @@ export async function applyWatermark(
     }
 
     // White background for PNG transparency support (must come before drawImage)
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvasW, canvasH);
+    fillCanvasWhite(ctx, canvasW, canvasH);
 
-    // Draw main image directly (already oriented natively!)
-    ctx.drawImage(imgBitmap, 0, 0, canvasW, canvasH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    if (applyOrientationTransform) {
+      ctx.save();
+      applyOrientationTransform(ctx);
+      ctx.drawImage(imgBitmap, 0, 0, drawW, drawH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(imgBitmap, 0, 0, canvasW, canvasH);
+    }
     imgBitmap.close();
 
     try {
-      // ── Draw-failure detection ────────────────────────────────────────────────
-      // Sample 3 scattered 2×2 regions. A draw failure (GPU flush race, memory
-      // pressure) leaves the entire canvas black or transparent — even though
-      // fillRect ran, a failed drawImage overwrites it with zeros.
-      const sampleRegions = [
-        [0, 0],
-        [Math.floor(canvasW / 2), Math.floor(canvasH / 2)],
-        [canvasW - 2, canvasH - 2],
-      ] as const;
-      const isDrawFailure = sampleRegions.every(([sx, sy]) => {
-        const { data } = ctx.getImageData(Math.max(0, sx), Math.max(0, sy), 2, 2);
-        for (let i = 0; i < data.length; i += 4) {
-          const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
-          // Transparent pixel OR solid-black pixel are both failure signatures
-          if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
-        }
-        return true;
-      });
-      if (isDrawFailure) {
+      if (isCanvasDrawFailure(ctx, canvasW, canvasH)) {
         console.warn("[applyWatermark] drawImage produced a black/transparent canvas – returning original file");
         return originalFile;
       }

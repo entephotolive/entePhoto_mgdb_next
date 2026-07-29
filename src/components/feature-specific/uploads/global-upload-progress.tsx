@@ -98,7 +98,12 @@ export function GlobalUploadProgress() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        // M17: use paddingBottom with env(safe-area-inset-bottom) so the widget
+        // isn't clipped by the iPhone home-bar or obscured by Safari's dynamic
+        // address bar. The base bottom-12 / sm:bottom-12 is kept as the fallback
+        // for browsers that don't support env().
         className="fixed bottom-12 right-0 sm:bottom-12 sm:right-8 z-50 w-full max-w-[360px] sm:max-w-sm px-4 sm:px-0 pointer-events-auto"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="bg-[#121214] border border-white/10 rounded-2xl sm:rounded-[1.5rem] p-4 sm:p-5 shadow-2xl flex flex-col gap-3 pointer-events-auto">
           {/* Header */}

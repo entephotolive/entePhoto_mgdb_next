@@ -37,10 +37,12 @@ export type QueueItemStatus =
 export interface UploadQueueItem {
   id: string;
   file: File;
-  preview: string;
+  preview: string;       // blob URL; empty string means "show skeleton until compression is done"
   status: QueueItemStatus;
   progress: number;
   error?: string;
+  /** Timestamp (ms) when the item entered 'uploading' status. Used for stall detection (M11). */
+  stalledSince?: number;
 }
 
 export interface UploadContext {
@@ -80,7 +82,7 @@ interface UploadStore {
   /** Internal — called by upload.service */
   _updateItem: (
     id: string,
-    patch: Partial<Omit<UploadQueueItem, "id" | "file" | "preview">>,
+    patch: Partial<Omit<UploadQueueItem, "id" | "file">>,
   ) => void;
   _setUploading: (v: boolean) => void;
   _setCurrentFileName: (name: string) => void;
@@ -110,7 +112,16 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     const files = Array.from(fileList);
     const newItems: UploadQueueItem[] = files.map((file) => {
       const id = crypto.randomUUID();
-      const preview = URL.createObjectURL(file);
+
+      // M06: HEIC/HEIF files cannot be decoded by <img> on non-Safari-17+ browsers.
+      // Use an empty string as the preview placeholder; upload.service will set a
+      // real blob URL once the compressed JPEG output is available.
+      const isHeic =
+        file.type === "image/heic" ||
+        file.type === "image/heif" ||
+        file.name.toLowerCase().endsWith(".heic") ||
+        file.name.toLowerCase().endsWith(".heif");
+      const preview = isHeic ? "" : URL.createObjectURL(file);
 
       if (!isAllowedFile(file)) {
         return {
@@ -154,7 +165,8 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     if (item) {
       xhrMap.get(id)?.abort();
       xhrMap.delete(id);
-      URL.revokeObjectURL(item.preview);
+      // Only revoke if preview is a real blob URL (HEIC items start with "")
+      if (item.preview) URL.revokeObjectURL(item.preview);
     }
     set((s) => {
       const items = s.items.filter((i) => i.id !== id);
@@ -167,7 +179,8 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     get().items.forEach((i) => {
       xhrMap.get(i.id)?.abort();
       xhrMap.delete(i.id);
-      URL.revokeObjectURL(i.preview);
+      // Only revoke if preview is a real blob URL
+      if (i.preview) URL.revokeObjectURL(i.preview);
     });
     set({
       items: [],
@@ -185,7 +198,7 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     const toRemove = get().items.filter(
       (i) => i.status === "completed" || i.status === "duplicate",
     );
-    toRemove.forEach((i) => URL.revokeObjectURL(i.preview));
+    toRemove.forEach((i) => { if (i.preview) URL.revokeObjectURL(i.preview); });
     set((s) => {
       const items = s.items.filter(
         (i) => i.status !== "completed" && i.status !== "duplicate",
@@ -202,9 +215,23 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
   // ── Internal updaters (used by upload.service) ─────────────────
   _updateItem(id, patch) {
     set((s) => {
-      const items = s.items.map((item) =>
-        item.id === id ? { ...item, ...patch } : item,
-      );
+      const items = s.items.map((item) => {
+        if (item.id !== id) return item;
+
+        // M14: Revoke the preview blob URL when an item finishes (completed or duplicate)
+        // so the browser can release the memory immediately rather than waiting for
+        // the store to be cleared. This keeps peak memory lower on iOS Safari for
+        // large batches where all blob URLs would otherwise stay alive simultaneously.
+        const isFinishing =
+          (patch.status === "completed" || patch.status === "duplicate") &&
+          item.status !== "completed" &&
+          item.status !== "duplicate";
+        if (isFinishing && item.preview) {
+          URL.revokeObjectURL(item.preview);
+        }
+
+        return { ...item, ...patch };
+      });
       return { items, ...computeDerived(items) };
     });
   },

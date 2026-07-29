@@ -18,7 +18,16 @@
  *   const avatar     = await compressImage(file, PRESET_AVATAR); // ≤ 700 KB
  */
 
-import { computeCanvasDimensions } from "./canvas-utils";
+import {
+  computeCanvasDimensions,
+  fillCanvasWhite,
+  isCanvasDrawFailure,
+} from "./canvas-utils";
+import {
+  supportsImageOrientation,
+  readJpegExifOrientation,
+  getOrientationTransform,
+} from "./exif-orientation";
 
 export interface CompressOptions {
   /** Maximum width OR height in pixels (aspect ratio preserved). Default: 1920 */
@@ -61,14 +70,20 @@ export async function compressImage(
   } = options;
 
   try {
+    const nativeOrientation = await supportsImageOrientation();
+
     // ── Phase 1: probe dimensions ────────────────────────────────────────────────
-    // Decode once to read .width/.height, then release immediately.
     let probeBitmap: ImageBitmap;
+    let exifOrientation = 1;
+
     try {
-      probeBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      if (nativeOrientation) {
+        probeBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+      } else {
+        probeBitmap = await createImageBitmap(file);
+        exifOrientation = await readJpegExifOrientation(file);
+      }
     } catch {
-      // Fallback safety: if native createImageBitmap fails or is unsupported,
-      // return original file unchanged so the server handles orientation/resizing.
       return file;
     }
 
@@ -77,8 +92,8 @@ export async function compressImage(
     const maxDim = Math.max(srcW, srcH);
     probeBitmap.close();
 
-    // Skip compression if file is already small (<= 3MB) and under maxDimension
-    if (file.size <= SKIP_COMPRESSION_SIZE_BYTES && maxDim <= maxDimension) {
+    // Skip compression if file is already small (<= 3MB), under maxDimension, and no EXIF rotation needed
+    if (file.size <= SKIP_COMPRESSION_SIZE_BYTES && maxDim <= maxDimension && exifOrientation === 1) {
       return file;
     }
 
@@ -89,21 +104,39 @@ export async function compressImage(
     // ── Phase 2: decode at target size (downscale inside the codec) ──────────
     let bitmap: ImageBitmap;
     try {
-      bitmap = await createImageBitmap(file, {
-        imageOrientation: "from-image",
-        ...(resizeOptions ?? {}),
-      });
+      if (nativeOrientation) {
+        bitmap = await createImageBitmap(file, {
+          imageOrientation: "from-image",
+          ...(resizeOptions ?? {}),
+        });
+      } else {
+        bitmap = await createImageBitmap(file, { ...(resizeOptions ?? {}) });
+      }
     } catch {
       return file;
     }
 
-    // bitmap dimensions already reflect the downscaled target
-    const targetW = bitmap.width;
-    const targetH = bitmap.height;
+    const drawW = bitmap.width;
+    const drawH = bitmap.height;
+
+    // ── Canvas setup — orientation-aware ──────────────────────────────────────
+    let canvasW: number;
+    let canvasH: number;
+    let applyOrientationTransform: ((ctx: CanvasRenderingContext2D) => void) | null = null;
+
+    if (!nativeOrientation && exifOrientation !== 1) {
+      const orientTransform = getOrientationTransform(exifOrientation, drawW, drawH);
+      canvasW = orientTransform.canvasW;
+      canvasH = orientTransform.canvasH;
+      applyOrientationTransform = orientTransform.applyTransform;
+    } else {
+      canvasW = drawW;
+      canvasH = drawH;
+    }
 
     const canvas = document.createElement("canvas");
-    canvas.width = targetW;
-    canvas.height = targetH;
+    canvas.width = canvasW;
+    canvas.height = canvasH;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -112,38 +145,25 @@ export async function compressImage(
     }
 
     // Fill white background for transparent image conversion
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, targetW, targetH);
+    fillCanvasWhite(ctx, canvasW, canvasH);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    // Direct draw of native oriented bitmap — zero manual matrix transform!
-    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    if (applyOrientationTransform) {
+      ctx.save();
+      applyOrientationTransform(ctx);
+      ctx.drawImage(bitmap, 0, 0, drawW, drawH);
+      ctx.restore();
+    } else {
+      ctx.drawImage(bitmap, 0, 0, canvasW, canvasH);
+    }
     bitmap.close();
 
     const outputQuality = quality === "auto" ? 0.92 : (quality as number);
 
     try {
-      // ── Draw-failure detection ────────────────────────────────────────────────
-      // Sample 3 scattered 2×2 pixel regions to detect a silent draw failure
-      // (GPU flush race / memory pressure producing a fully-black or transparent canvas).
-      // Per this module’s reject-on-error contract we throw rather than swallowing.
-      const sampleRegions = [
-        [0, 0],
-        [Math.floor(targetW / 2), Math.floor(targetH / 2)],
-        [targetW - 2, targetH - 2],
-      ] as const;
-      const isDrawFailure = sampleRegions.every(([sx, sy]) => {
-        const { data } = ctx.getImageData(Math.max(0, sx), Math.max(0, sy), 2, 2);
-        for (let i = 0; i < data.length; i += 4) {
-          const [r, g, b, a] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
-          // Transparent pixel OR solid-black pixel are both failure signatures
-          if (!((r === 0 && g === 0 && b === 0 && (a === 0 || a === 255)))) return false;
-        }
-        return true;
-      });
-      if (isDrawFailure) {
+      if (isCanvasDrawFailure(ctx, canvasW, canvasH)) {
         throw new Error(
           "[compressImage] drawImage produced a black/transparent canvas (silent draw failure)",
         );

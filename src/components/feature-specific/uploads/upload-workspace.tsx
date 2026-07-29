@@ -8,6 +8,9 @@ import {
   X,
   RefreshCw,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
 } from "lucide-react";
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
@@ -16,10 +19,14 @@ import { EventListItem } from "@/types";
 import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 import { EVENT_UPLOAD_WINDOW_MS, MAX_UPLOAD_SIZE_MB } from "@/lib/utils/upload-constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FolderPhotoGrid } from "@/components/feature-specific/gallery/folder-photo-grid";
 import { getFolderPhotosPage } from "@/app/photographer/(panel)/gallery/[slug]/action";
 import type { PhotoItem } from "@/lib/services/photo.service";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import {
+  detectInAppBrowser,
+  openInSystemBrowser,
+  type InAppBrowserResult,
+} from "@/lib/utils/in-app-browser";
 
 interface UploadWorkspaceProps {
   events: EventListItem[];
@@ -53,10 +60,13 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     item.status === "queued" ||
     (item.status === "uploading" && (item.progress || 0) === 0);
 
+  // M06: also show skeleton when preview is empty (HEIC file awaiting compression to JPEG)
+  const showSkeleton = isCompressing || item.preview === "";
+
   return (
     <div className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]">
       <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3 bg-black/20">
-        {isCompressing ? (
+        {showSkeleton ? (
           <Skeleton className="w-full h-full absolute inset-0 bg-white/5" />
         ) : (
           <img
@@ -100,11 +110,15 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
         )}
 
         {item.status === "failed" && (
-          <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-4 backdrop-blur-sm z-10">
-            <div className="w-10 h-10 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-2">
-              <AlertCircle className="text-rose-500" size={20} />
+          <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-3 backdrop-blur-sm z-10">
+            <div className="w-8 h-8 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-1.5 shrink-0">
+              <AlertCircle className="text-rose-500" size={16} />
             </div>
-            <p className="text-[10px] font-bold text-rose-100/80 uppercase tracking-tighter text-center mb-2">
+            {/* M18: min 11px, line-clamp-3, title for full message on long-press / hover */}
+            <p
+              className="text-[11px] font-semibold text-rose-100/90 text-center mb-2 line-clamp-3 leading-tight"
+              title={item.error || "Upload failed"}
+            >
               {item.error || "Upload failed"}
             </p>
             <button
@@ -113,10 +127,11 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
                 e.stopPropagation();
                 onRetry(item.id);
               }}
-              className="bg-rose-500/80 hover:bg-rose-500 text-white rounded-full p-2 transition-colors shadow-lg shadow-black/20"
+              className="bg-rose-500/80 hover:bg-rose-500 active:bg-rose-600 text-white rounded-full p-2 transition-colors shadow-lg shadow-black/20"
               title="Retry Upload"
+              aria-label="Retry upload"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={13} />
             </button>
           </div>
         )}
@@ -128,10 +143,16 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
               e.stopPropagation();
               onRemove(item.id);
             }}
-            className="absolute top-3 right-3 w-8 h-8 bg-black/40 hover:bg-rose-500/80 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-all scale-0 group-hover:scale-100 border border-white/10 z-20"
+            // M02: always visible at 60% opacity on touch devices (no hover state).
+            // On pointer-fine (desktop), hidden by default and revealed on hover.
+            // min 44×44px touch target per iOS HIG.
+            className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 bg-black/50 hover:bg-rose-500/80 active:bg-rose-600 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 z-20 transition-all
+              opacity-60 hover:opacity-100 active:opacity-100
+              sm:scale-0 sm:opacity-0 sm:group-hover:scale-100 sm:group-hover:opacity-100"
             title="Remove file"
+            aria-label="Remove file"
           >
-            <X size={14} />
+            <X size={13} />
           </button>
         )}
       </div>
@@ -189,24 +210,16 @@ function RecentUploadsGrid({
   userId: string;
   completedCount: number;
 }) {
-  const [initialData, setInitialData] = useState<{
-    photos: PhotoItem[];
-    cursor: string | null;
-  } | null>(null);
+  const [photos, setPhotos] = useState<PhotoItem[] | null>(null);
 
-  // We only show the skeleton on initial mount or event change.
-  // For background refreshes (like completedCount changes), we keep the current data
-  // on screen until the new data arrives, avoiding a full skeleton flash.
   useEffect(() => {
     if (!eventId) return;
     let active = true;
 
-    // Only nullify if we don't have data yet (first load of this event)
-    setInitialData((prev) => (prev ? prev : null));
-
-    getFolderPhotosPage("all", eventId).then((res) => {
+    getFolderPhotosPage("all", eventId, null).then((res) => {
       if (active) {
-        setInitialData({ photos: res.photos, cursor: res.nextCursor });
+        // Only keep the latest 10
+        setPhotos(res.photos.slice(0, 10));
       }
     });
 
@@ -215,17 +228,17 @@ function RecentUploadsGrid({
     };
   }, [eventId, completedCount]);
 
-  if (!initialData) {
+  if (photos === null) {
     return (
       <div className="mt-16 border-t border-white/5 pt-12">
         <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
-        <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={`ws-skeleton-${i}`}
-              className="mb-4 break-inside-avoid overflow-hidden rounded-[24px] border border-white/5 bg-[#141416]"
+              className="aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416]"
             >
-              <Skeleton className="h-64 w-full rounded-[24px] bg-white/5" />
+              <Skeleton className="h-full w-full rounded-[20px] bg-white/5" />
             </div>
           ))}
         </div>
@@ -233,19 +246,32 @@ function RecentUploadsGrid({
     );
   }
 
+  if (photos.length === 0) return null;
+
   return (
     <div className="mt-16 border-t border-white/5 pt-12">
-      <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
-      <FolderPhotoGrid
-        initialPhotos={initialData.photos}
-        initialCursor={initialData.cursor}
-        folderId="all"
-        eventId={eventId}
-        eventTitle={eventTitle}
-        eventDate={eventDate}
-        userId={userId}
-        folderName="All Photos"
-      />
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-white">Recent Uploads</h3>
+        <span className="text-xs text-slate-500 font-semibold uppercase tracking-widest">
+          Latest {photos.length} photo{photos.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {photos.map((photo) => (
+          <div
+            key={photo.id}
+            className="aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416] transition-transform hover:scale-[1.03]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photo.url}
+              alt="Recent upload"
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -257,6 +283,23 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showAllQueue, setShowAllQueue] = useState(false);
+  const QUEUE_VISIBLE_COUNT = 10;
+
+  // ── In-app browser detection ──────────────────────────────────────────────
+  // Detected synchronously once on mount. UA sniffing is the only reliable
+  // approach here — in-app browsers present as Safari/Chrome but inject
+  // proprietary UA tokens.
+  const [inAppBrowser, setInAppBrowser] = useState<InAppBrowserResult>(
+    { isInAppBrowser: false, appName: null }
+  );
+  const [openBrowserResult, setOpenBrowserResult] = useState<
+    "opened" | "copied" | "failed" | null
+  >(null);
+
+  useEffect(() => {
+    setInAppBrowser(detectInAppBrowser());
+  }, []);
 
   const {
     addFiles,
@@ -331,16 +374,38 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   }, [isInitialized, sortedEvents, userId, setUploadContext]);
 
   useEffect(() => {
+    const STALL_THRESHOLD_MS = 45_000; // 45 s with no progress = consider stalled (M11)
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        const storeItems = useUploadStore.getState().items;
-        const interruptedItems = storeItems.filter((i) => i.status === "uploading");
-        if (interruptedItems.length > 0) {
-          interruptedItems.forEach((item) => {
-            retryUpload(item.id);
+      if (document.visibilityState !== "visible") return;
+
+      const storeItems = useUploadStore.getState().items;
+      const interruptedItems = storeItems.filter((i) => i.status === "uploading");
+      if (interruptedItems.length === 0) return;
+
+      const now = Date.now();
+      interruptedItems.forEach((item) => {
+        const isStalled =
+          item.stalledSince !== undefined && now - item.stalledSince > STALL_THRESHOLD_MS;
+
+        if (isStalled) {
+          // Item has been stuck in 'uploading' for > 45 s with no progress event.
+          // Transition it to 'failed' immediately — the network request was killed
+          // by iOS Safari's tab suspension and will never complete.
+          useUploadStore.getState()._updateItem(item.id, {
+            status: "failed",
+            progress: 0,
+            error: "Upload interrupted — tap retry to continue.",
+            stalledSince: undefined,
           });
+        } else {
+          // Item entered 'uploading' recently — try to resume it.
+          // M11 FIX: force isUploading to false first so processUploadQueue
+          // doesn't hit the early-return guard and silently skip the retry.
+          useUploadStore.getState()._setUploading(false);
+          retryUpload(item.id);
         }
-      }
+      });
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -364,6 +429,51 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
+
+      {/* ── In-App Browser Warning Banner ── */}
+      {inAppBrowser.isInAppBrowser && (
+        <div className="relative flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-4 text-sm">
+          <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-400" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-300 leading-snug">
+              {inAppBrowser.appName
+                ? `You're using ${inAppBrowser.appName}'s browser`
+                : "You're using an in-app browser"}
+            </p>
+            <p className="mt-1 text-xs text-amber-200/70 leading-relaxed">
+              This browser only allows selecting{" "}
+              <span className="font-bold">one photo at a time</span>. Open in
+              Safari or Chrome to select multiple photos at once.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const result = await openInSystemBrowser();
+                  setOpenBrowserResult(result);
+                  if (result === "copied") {
+                    setTimeout(() => setOpenBrowserResult(null), 3000);
+                  }
+                }}
+                className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-3 py-1.5 text-xs font-bold text-black transition-all hover:bg-amber-300 active:scale-95"
+              >
+                <ExternalLink size={12} />
+                Open in browser
+              </button>
+              {openBrowserResult === "copied" && (
+                <span className="text-xs font-semibold text-amber-300 animate-in fade-in">
+                  Link copied to clipboard ✓
+                </span>
+              )}
+              {openBrowserResult === "failed" && (
+                <span className="text-xs text-amber-200/70">
+                  Couldn't open — copy this URL manually.
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <section className="mb-6 sm:mb-10 flex flex-col md:flex-row md:items-end justify-end gap-4 sm:gap-6">
         <div className="flex flex-col w-full md:w-auto md:items-end">
           <label className="block text-[10px] font-bold uppercase tracking-widest text-cyan-500/80 mb-2">
@@ -429,11 +539,21 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             : "border-white/10 hover:border-cyan-500/30 bg-gradient-to-b from-white/[0.02] to-transparent"
         }`}
       >
+        {/* M04: DO NOT add a `capture` attribute here (e.g., capture="environment").
+             Omitting capture ensures mobile Safari & Android Chrome show the full native picker
+             allowing users to choose existing photos from their Photo Library, take a new photo,
+             or select files from iCloud/Google Drive. Adding capture forces camera-only capture. */}
+        {/* M15: accept uses image/* as the primary wildcard (works on all browsers).
+             The explicit MIME types image/jpeg etc. are redundant but harmless on desktop.
+             .heic/.heif extension hints are specifically for iOS Safari's file picker, which
+             uses extensions rather than MIME types for HEIC. The image/heic + image/heif
+             MIME entries have no effect on Android Chrome (which ignores non-standard MIMEs
+             and respects only image/* and the extension hints). */}
         <input
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif"
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={(event) => {
             if (event.target.files) {
@@ -462,10 +582,24 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             <UploadCloud className="text-cyan-400" size={32} />
           )}
         </div>
-        <h3 className="text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10 flex items-center gap-2">
+        {/* M03: Mobile CTA — distinct from desktop drag-and-drop copy.
+             Hidden on sm+ (desktop shows "Drag & Drop" / "click to browse").
+             Mobile has no drag-and-drop from Photos, so needs its own clear affordance. */}
+        <div className="sm:hidden flex flex-col items-center gap-1 relative z-10 mb-2">
+          <div className="flex items-center gap-2 text-cyan-400 font-bold text-base">
+            <ImageIcon size={18} className="shrink-0" />
+            Tap to select photos
+          </div>
+          <p className="text-xs text-slate-500 text-center">
+            Choose from your photo library
+          </p>
+        </div>
+
+        {/* Desktop CTA — hidden on mobile */}
+        <h3 className="hidden sm:flex text-base sm:text-xl font-semibold text-slate-200 mb-1 relative z-10 items-center gap-2">
           {isUploading ? "Processing & Uploading batch..." : "Drag & Drop photos here"}
         </h3>
-        <p className="text-slate-500 text-sm mb-8 relative z-10">
+        <p className="hidden sm:block text-slate-500 text-sm mb-8 relative z-10">
           {isUploading ? (
             <span className="text-cyan-400 animate-pulse">Upload in progress — feel free to add more photos</span>
           ) : (
@@ -490,8 +624,8 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
       </div>
 
       <section className="mt-8 sm:mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-3">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
               Queue ({itemIds.length} files)
             </h4>
@@ -500,6 +634,23 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                 <Loader2 size={12} className="animate-spin" /> Processing batch
               </span>
             )}
+            {/* M20 & M19: Data usage estimate & micro-copy */}
+            {itemIds.length > 0 && (() => {
+              const items = useUploadStore.getState().items;
+              const totalRawBytes = items.reduce((sum, item) => sum + (item.file?.size || 0), 0);
+              const totalRawMb = (totalRawBytes / (1024 * 1024)).toFixed(1);
+              // Estimated compressed size (~70% reduction or max ~1.5MB per photo)
+              const estCompressedMb = (totalRawBytes * 0.3 / (1024 * 1024)).toFixed(1);
+
+              return (
+                <span
+                  className="text-[10px] font-medium text-slate-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10"
+                  title="Photos are compressed client-side before uploading to save mobile bandwidth"
+                >
+                  Est. upload: ~{estCompressedMb} MB <span className="text-slate-500">(from {totalRawMb} MB raw)</span>
+                </span>
+              );
+            })()}
           </div>
           {itemIds.length > 0 && (
             <button
@@ -512,45 +663,78 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           )}
         </div>
 
-        {itemIds.length > 0 && (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const startIndex = virtualRow.index * columns;
-              const rowItems = itemIds.slice(startIndex, startIndex + columns);
+        {itemIds.length > 0 && (() => {
+          const visibleIds = showAllQueue ? itemIds : itemIds.slice(0, QUEUE_VISIBLE_COUNT);
+          const hiddenCount = itemIds.length - QUEUE_VISIBLE_COUNT;
+          const visibleRows = Math.ceil(visibleIds.length / columns);
+          const visibleVirtualItems = virtualizer.getVirtualItems().filter(
+            (vr) => vr.index < visibleRows,
+          );
+          const visibleHeight = visibleVirtualItems.length > 0
+            ? visibleVirtualItems[visibleVirtualItems.length - 1].end
+            : 0;
 
-              return (
-                <div
-                  key={virtualRow.index}
-                  data-index={virtualRow.index}
-                  ref={virtualizer.measureElement}
-                  className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
+          return (
+            <>
+              <div
+                style={{
+                  height: showAllQueue ? `${virtualizer.getTotalSize()}px` : `${visibleHeight}px`,
+                  width: "100%",
+                  position: "relative",
+                }}
+              >
+              {(showAllQueue ? virtualizer.getVirtualItems() : visibleVirtualItems).map((virtualRow) => {
+                  const startIndex = virtualRow.index * columns;
+                  const rowItems = (showAllQueue ? itemIds : visibleIds).slice(startIndex, startIndex + columns);
+
+                  return (
+                    <div
+                      key={virtualRow.index}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      {rowItems.map((id) => (
+                        <UploadQueueItemCard
+                          key={id}
+                          id={id}
+                          onRemove={removeFile}
+                          onRetry={retryUpload}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Show more / collapse toggle */}
+              {hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllQueue((v) => !v)}
+                  className="mt-4 w-full flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all"
                 >
-                  {rowItems.map((id) => (
-                    <UploadQueueItemCard
-                      key={id}
-                      id={id}
-                      onRemove={removeFile}
-                      onRetry={retryUpload}
-                    />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  {showAllQueue ? (
+                    <>
+                      <ChevronUp size={16} /> Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={16} /> Show {hiddenCount} more hidden file{hiddenCount !== 1 ? "s" : ""}
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          );
+        })()}
       </section>
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
