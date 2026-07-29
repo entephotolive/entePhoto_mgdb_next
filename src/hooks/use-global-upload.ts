@@ -29,6 +29,7 @@ export function useGlobalUpload() {
     if (id) {
       store._updateItem(id, { status: "queued", error: undefined, progress: 0 });
     }
+    store._setUploading(false);
     store._setStatus("idle");
     await processUploadQueue(store.uploadContext);
   };

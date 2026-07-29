@@ -32,7 +32,8 @@ export type QueueItemStatus =
   | "uploading"
   | "completed"
   | "failed"
-  | "duplicate";
+  | "duplicate"
+  | "paused";
 
 export interface UploadQueueItem {
   id: string;

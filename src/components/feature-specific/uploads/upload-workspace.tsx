@@ -109,6 +109,20 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
           </div>
         )}
 
+        {item.status === "paused" && (
+          <div className="absolute inset-0 bg-amber-500/20 flex items-center justify-center flex-col p-3 backdrop-blur-sm z-10">
+            <div className="w-8 h-8 rounded-full border-2 border-amber-500/50 flex items-center justify-center mb-1.5 shrink-0">
+              <RefreshCw className="text-amber-400 animate-spin" size={16} />
+            </div>
+            <p
+              className="text-[11px] font-semibold text-amber-100/90 text-center mb-2 line-clamp-3 leading-tight"
+              title={item.error || "Paused while backgrounded"}
+            >
+              {item.error || "Paused — resuming..."}
+            </p>
+          </div>
+        )}
+
         {item.status === "failed" && (
           <div className="absolute inset-0 bg-rose-500/20 flex items-center justify-center flex-col p-3 backdrop-blur-sm z-10">
             <div className="w-8 h-8 rounded-full border-2 border-rose-500/50 flex items-center justify-center mb-1.5 shrink-0">
@@ -374,38 +388,33 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   }, [isInitialized, sortedEvents, userId, setUploadContext]);
 
   useEffect(() => {
-    const STALL_THRESHOLD_MS = 45_000; // 45 s with no progress = consider stalled (M11)
-
     const handleVisibilityChange = () => {
-      if (document.visibilityState !== "visible") return;
-
       const storeItems = useUploadStore.getState().items;
-      const interruptedItems = storeItems.filter((i) => i.status === "uploading");
-      if (interruptedItems.length === 0) return;
 
-      const now = Date.now();
-      interruptedItems.forEach((item) => {
-        const isStalled =
-          item.stalledSince !== undefined && now - item.stalledSince > STALL_THRESHOLD_MS;
-
-        if (isStalled) {
-          // Item has been stuck in 'uploading' for > 45 s with no progress event.
-          // Transition it to 'failed' immediately — the network request was killed
-          // by iOS Safari's tab suspension and will never complete.
+      if (document.visibilityState === "hidden") {
+        // App/tab backgrounded or screen locked — mark in-flight items as 'paused'
+        // so the UI displays a paused badge instead of letting them error out from a killed socket.
+        const uploadingItems = storeItems.filter((i) => i.status === "uploading");
+        uploadingItems.forEach((item) => {
           useUploadStore.getState()._updateItem(item.id, {
-            status: "failed",
-            progress: 0,
-            error: "Upload interrupted — tap retry to continue.",
-            stalledSince: undefined,
+            status: "paused",
+            error: "Paused while backgrounded — resuming...",
           });
-        } else {
-          // Item entered 'uploading' recently — try to resume it.
-          // M11 FIX: force isUploading to false first so processUploadQueue
-          // doesn't hit the early-return guard and silently skip the retry.
-          useUploadStore.getState()._setUploading(false);
+        });
+        return;
+      }
+
+      if (document.visibilityState === "visible") {
+        // App/tab foregrounded or screen unlocked — auto-resume any paused or interrupted items.
+        const itemsToResume = storeItems.filter(
+          (i) => i.status === "paused" || i.status === "uploading",
+        );
+        if (itemsToResume.length === 0) return;
+
+        itemsToResume.forEach((item) => {
           retryUpload(item.id);
-        }
-      });
+        });
+      }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);

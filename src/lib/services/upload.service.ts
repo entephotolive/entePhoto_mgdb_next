@@ -42,10 +42,11 @@ const DESKTOP_MAX_UPLOAD_ATTEMPTS = 3;
 /** Threshold (in bytes) below which we skip client-side re-compression if already safe size */
 const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
 
-// M12: treat an item as self-stalled if it has been uploading > this threshold
-// with no progress event. Used as a backstop when the AbortController signal
-// fails to fire (iOS Safari tab suspension kills XHR silently).
 const STALL_BACKSTOP_MS = 60_000; // 60 s — longer than M11's 45 s UI threshold
+
+/** Ceiling (120 s) after which a queue stuck in isUploading with no progress is force-reset */
+const QUEUE_STALENESS_CEILING_MS = 120_000;
+let lastUploadActivityAt = Date.now();
 
 /**
  * Yield control back to the main thread/browser event loop.
@@ -359,6 +360,13 @@ function isMobileDevice(): boolean {
 }
 
 function getUploadConcurrency() {
+  if (typeof navigator !== "undefined") {
+    const conn = (navigator as any).connection;
+    const effectiveType: string = conn?.effectiveType ?? "";
+    if (effectiveType === "slow-2g" || effectiveType === "2g" || effectiveType === "3g") {
+      return 1;
+    }
+  }
   return isMobileDevice() ? MOBILE_UPLOAD_CONCURRENCY : DESKTOP_UPLOAD_CONCURRENCY;
 }
 
@@ -455,14 +463,20 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
       });
       return { ok: false as const, cancelled: false as const };
     }
+
     const itemController = new AbortController();
     registerXhr(item.id, { abort: () => itemController.abort() } as any);
 
     try {
-      // M13 + M06: use the worker-first compression path.
-      // compressImageWithWorker also returns previewBlobUrl for HEIC files
-      // that previously had no preview (empty string in the store).
-      const { compressedFile, previewBlobUrl } = await compressImageWithWorker(item.file);
+      // Mobile optimization: cap max dimension to 1920px and quality to 0.85 to shrink
+      // ~20MB camera exports down to ~300KB-600KB payloads before sending over mobile networks.
+      const targetMaxPx = mobile ? 1920 : Infinity;
+      const targetQuality = mobile ? 0.85 : 0.92;
+      const { compressedFile, previewBlobUrl } = await compressImageWithWorker(
+        item.file,
+        targetMaxPx,
+        targetQuality,
+      );
 
       // M06: update the preview in the store now that we have a decoded JPEG blob
       if (previewBlobUrl) {
@@ -472,6 +486,7 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
       const formData = new FormData();
       formData.append("event_id", String(context.eventId));
       formData.append("images", compressedFile);
+      formData.append("idempotency_key", item.id);
       if (context.uploadedBy) {
         formData.append("uploadedBy", String(context.uploadedBy));
       }
@@ -482,11 +497,13 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
       const response = await api.post("api/upload-images/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          "X-Idempotency-Key": item.id,
         },
         signal: itemController.signal,
         // M08: per-request adaptive timeout based on detected network quality
         timeout: getUploadTimeout(),
         onUploadProgress: (progressEvent) => {
+          lastUploadActivityAt = Date.now();
           if (progressEvent.lengthComputable && progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             // Update progress and clear stalledSince (we're actively receiving data)
@@ -595,13 +612,22 @@ async function runWithConcurrency<T>(
 
 export async function processUploadQueue(context: UploadContext) {
   const store = useUploadStore.getState();
+
+  // Self-healing safety net: If isUploading is true but no progress/activity has occurred
+  // for > QUEUE_STALENESS_CEILING_MS (120 s), force-reset isUploading to recover from stuck locks.
+  if (store.isUploading && Date.now() - lastUploadActivityAt > QUEUE_STALENESS_CEILING_MS) {
+    console.warn("[upload.service] isUploading lock exceeded 120s staleness ceiling without progress — force-resetting lock");
+    store._setUploading(false);
+  }
+
   if (store.isUploading || store.items.length === 0) return;
 
   const toUpload = store.items.filter(
-    (i) => i.status === "queued" || i.status === "failed",
+    (i) => i.status === "queued" || i.status === "failed" || i.status === "paused",
   );
   if (toUpload.length === 0) return;
 
+  lastUploadActivityAt = Date.now();
   store._setUploading(true);
   store._setStatus("uploading");
   store.setWidgetVisible(true);
@@ -614,11 +640,24 @@ export async function processUploadQueue(context: UploadContext) {
       toUpload.forEach((item) => {
         const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
         if (duplicateSet.has(expectedName)) {
-          useUploadStore.getState()._updateItem(item.id, {
-            status: "duplicate",
-            error: "File already exists",
-            progress: 0,
-          });
+          if (item.status === "failed") {
+            // Retry recovery: If a retried item failed due to a network drop after
+            // the server recorded the upload, checkDuplicates confirms the image
+            // exists. Resolve it as 'completed' (100%) rather than a duplicate error.
+            useUploadStore.getState()._updateItem(item.id, {
+              status: "completed",
+              progress: 100,
+              error: undefined,
+              stalledSince: undefined,
+            });
+          } else {
+            // Pre-existing upload from a prior session/event
+            useUploadStore.getState()._updateItem(item.id, {
+              status: "duplicate",
+              error: "File already exists",
+              progress: 0,
+            });
+          }
         }
       });
     }
