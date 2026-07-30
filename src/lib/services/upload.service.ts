@@ -40,7 +40,7 @@ const MOBILE_MAX_UPLOAD_ATTEMPTS = 5;
 const DESKTOP_MAX_UPLOAD_ATTEMPTS = 3;
 
 /** Threshold (in bytes) below which we skip client-side re-compression if already safe size */
-const SKIP_COMPRESSION_SIZE_BYTES = 3 * 1024 * 1024; // 3 MB
+const SKIP_COMPRESSION_SIZE_BYTES = 2 * 1024 * 1024; // 3 MB
 
 const STALL_BACKSTOP_MS = 60_000; // 60 s — longer than M11's 45 s UI threshold
 
@@ -667,7 +667,7 @@ export async function processUploadQueue(context: UploadContext) {
 
   const finalToUpload = toUpload.filter((item) => {
     const stateItem = useUploadStore.getState().items.find((i) => i.id === item.id);
-    return stateItem && stateItem.status !== "duplicate";
+    return stateItem && stateItem.status !== "duplicate" && stateItem.status !== "completed";
   });
 
   if (finalToUpload.length === 0) {

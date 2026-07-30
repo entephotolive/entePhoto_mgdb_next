@@ -80,6 +80,10 @@ interface UploadStore {
   setWidgetVisible: (v: boolean) => void;
   setWidgetMinimised: (v: boolean) => void;
 
+  /** Lazy preview management for visible pagination */
+  ensurePreview: (id: string) => void;
+  revokePreview: (id: string) => void;
+
   /** Internal — called by upload.service */
   _updateItem: (
     id: string,
@@ -111,18 +115,18 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
   // ── Add files to queue ─────────────────────────────────────────
   addFiles(fileList, context) {
     const files = Array.from(fileList);
-    const newItems: UploadQueueItem[] = files.map((file) => {
+    const newItems: UploadQueueItem[] = files.map((file, index) => {
       const id = crypto.randomUUID();
 
-      // M06: HEIC/HEIF files cannot be decoded by <img> on non-Safari-17+ browsers.
-      // Use an empty string as the preview placeholder; upload.service will set a
-      // real blob URL once the compressed JPEG output is available.
+      // M06 / Lazy Loading: HEIC/HEIF files cannot be decoded by <img> natively
+      // and items beyond initial page (index >= 24) start with empty preview.
+      // Previews for hidden items are created on-demand when paged into view.
       const isHeic =
         file.type === "image/heic" ||
         file.type === "image/heif" ||
         file.name.toLowerCase().endsWith(".heic") ||
         file.name.toLowerCase().endsWith(".heif");
-      const preview = isHeic ? "" : URL.createObjectURL(file);
+      const preview = !isHeic && index < 24 ? URL.createObjectURL(file) : "";
 
       if (!isAllowedFile(file)) {
         return {
@@ -213,6 +217,34 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
   setWidgetVisible: (v) => set({ isWidgetVisible: v }),
   setWidgetMinimised: (v) => set({ isWidgetMinimised: v }),
 
+  // ── Lazy Preview actions ───────────────────────────────────────
+  ensurePreview(id) {
+    const item = get().items.find((i) => i.id === id);
+    if (item && !item.preview && item.status !== "completed" && item.status !== "duplicate") {
+      const isHeic =
+        item.file.type === "image/heic" ||
+        item.file.type === "image/heif" ||
+        item.file.name.toLowerCase().endsWith(".heic") ||
+        item.file.name.toLowerCase().endsWith(".heif");
+      if (!isHeic && isAllowedFile(item.file)) {
+        const previewUrl = URL.createObjectURL(item.file);
+        set((s) => ({
+          items: s.items.map((i) => (i.id === id ? { ...i, preview: previewUrl } : i)),
+        }));
+      }
+    }
+  },
+
+  revokePreview(id) {
+    const item = get().items.find((i) => i.id === id);
+    if (item && item.preview) {
+      URL.revokeObjectURL(item.preview);
+      set((s) => ({
+        items: s.items.map((i) => (i.id === id ? { ...i, preview: "" } : i)),
+      }));
+    }
+  },
+
   // ── Internal updaters (used by upload.service) ─────────────────
   _updateItem(id, patch) {
     set((s) => {
@@ -220,15 +252,14 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
         if (item.id !== id) return item;
 
         // M14: Revoke the preview blob URL when an item finishes (completed or duplicate)
-        // so the browser can release the memory immediately rather than waiting for
-        // the store to be cleared. This keeps peak memory lower on iOS Safari for
-        // large batches where all blob URLs would otherwise stay alive simultaneously.
+        // so the browser can release memory immediately.
         const isFinishing =
           (patch.status === "completed" || patch.status === "duplicate") &&
           item.status !== "completed" &&
           item.status !== "duplicate";
         if (isFinishing && item.preview) {
           URL.revokeObjectURL(item.preview);
+          patch.preview = "";
         }
 
         return { ...item, ...patch };

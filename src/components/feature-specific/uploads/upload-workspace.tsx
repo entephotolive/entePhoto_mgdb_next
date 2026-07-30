@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Check,
 } from "lucide-react";
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
@@ -60,20 +61,40 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     item.status === "queued" ||
     (item.status === "uploading" && (item.progress || 0) === 0);
 
-  // M06: also show skeleton when preview is empty (HEIC file awaiting compression to JPEG)
-  const showSkeleton = isCompressing || item.preview === "";
+  const showSkeleton = isCompressing;
+  const isCompletedOrDuplicate =
+    item.status === "completed" || item.status === "duplicate";
 
   return (
     <div className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]">
       <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3 bg-black/20">
         {showSkeleton ? (
           <Skeleton className="w-full h-full absolute inset-0 bg-white/5" />
-        ) : (
+        ) : item.preview ? (
           <img
             src={item.preview}
             alt={item.file.name}
             className="w-full h-full object-cover"
           />
+        ) : (
+          <div className="w-full h-full absolute inset-0 bg-white/5 flex flex-col items-center justify-center p-3 text-center">
+            <ImageIcon className="text-slate-500 mb-1" size={24} />
+            <span className="text-[10px] text-slate-400 font-medium truncate max-w-full px-1">
+              {item.file.name}
+            </span>
+          </div>
+        )}
+
+        {/* Success Flash Overlay for completed / duplicate items (~600ms) */}
+        {isCompletedOrDuplicate && (
+          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center flex-col p-3 backdrop-blur-sm z-10 animate-in fade-in duration-200">
+            <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-500/30 flex items-center justify-center mb-1 shrink-0">
+              <Check className="text-emerald-400" size={20} />
+            </div>
+            <p className="text-[11px] font-bold text-emerald-300 text-center uppercase tracking-wider">
+              {item.status === "completed" ? "Uploaded ✓" : "Duplicate"}
+            </p>
+          </div>
         )}
 
         {item.status === "uploading" && !isCompressing && (
@@ -150,16 +171,13 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
           </div>
         )}
 
-        {item.status !== "completed" && (
+        {!isCompletedOrDuplicate && (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onRemove(item.id);
             }}
-            // M02: always visible at 60% opacity on touch devices (no hover state).
-            // On pointer-fine (desktop), hidden by default and revealed on hover.
-            // min 44×44px touch target per iOS HIG.
             className="absolute top-2 right-2 w-7 h-7 sm:w-8 sm:h-8 bg-black/50 hover:bg-rose-500/80 active:bg-rose-600 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/10 z-20 transition-all
               opacity-60 hover:opacity-100 active:opacity-100
               sm:scale-0 sm:opacity-0 sm:group-hover:scale-100 sm:group-hover:opacity-100"
@@ -297,8 +315,11 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const [showInactiveWarning, setShowInactiveWarning] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
-  const [showAllQueue, setShowAllQueue] = useState(false);
-  const QUEUE_VISIBLE_COUNT = 10;
+  
+  const QUEUE_PAGE_SIZE = 24;
+  const [visibleLimit, setVisibleLimit] = useState(QUEUE_PAGE_SIZE);
+  const completedTimestampsRef = useRef<Map<string, number>>(new Map());
+  const [flashTick, setFlashTick] = useState(0);
 
   // ── In-app browser detection ──────────────────────────────────────────────
   // Detected synchronously once on mount. UA sniffing is the only reliable
@@ -325,15 +346,63 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     completedCount,
   } = useGlobalUpload();
 
-  // Select item IDs as a joined string so UploadWorkspace ONLY re-renders
-  // when files are added or removed, NOT on individual item progress updates.
-  const itemIdsStr = useUploadStore(
-    useCallback((s) => s.items.map((i) => i.id).join(","), []),
-  );
-  const itemIds = useMemo(
-    () => (itemIdsStr ? itemIdsStr.split(",") : []),
-    [itemIdsStr],
-  );
+  const items = useUploadStore((s) => s.items);
+  const ensurePreview = useUploadStore((s) => s.ensurePreview);
+  const revokePreview = useUploadStore((s) => s.revokePreview);
+
+  // Track completion timestamps for ~600ms success flash
+  useEffect(() => {
+    let timerScheduled = false;
+    const now = Date.now();
+    items.forEach((item) => {
+      if (item.status === "completed" || item.status === "duplicate") {
+        if (!completedTimestampsRef.current.has(item.id)) {
+          completedTimestampsRef.current.set(item.id, now);
+          timerScheduled = true;
+          setTimeout(() => {
+            setFlashTick((t) => t + 1);
+          }, 650);
+        }
+      }
+    });
+    if (timerScheduled) {
+      setFlashTick((t) => t + 1);
+    }
+  }, [items]);
+
+  // Renderable items: active queue items (queued, uploading, paused, failed) OR completed/duplicate <600ms ago
+  const renderableItems = useMemo(() => {
+    const now = Date.now();
+    return items.filter((item) => {
+      if (item.status !== "completed" && item.status !== "duplicate") {
+        return true;
+      }
+      const completedAt = completedTimestampsRef.current.get(item.id);
+      return completedAt ? now - completedAt < 600 : false;
+    });
+  }, [items, flashTick]);
+
+  // Bounded page window of visible items (backfills automatically as completed items leave renderableItems)
+  const visibleRenderableItems = useMemo(() => {
+    return renderableItems.slice(0, visibleLimit);
+  }, [renderableItems, visibleLimit]);
+
+  const hiddenCount = Math.max(0, renderableItems.length - visibleLimit);
+
+  // Lazy preview management: attach preview blob URLs to visible page, revoke for hidden
+  useEffect(() => {
+    const visibleSet = new Set(visibleRenderableItems.map((i) => i.id));
+    visibleRenderableItems.forEach((item) => {
+      if (!item.preview && item.status !== "completed" && item.status !== "duplicate") {
+        ensurePreview(item.id);
+      }
+    });
+    items.forEach((item) => {
+      if (!visibleSet.has(item.id) && item.preview) {
+        revokePreview(item.id);
+      }
+    });
+  }, [visibleRenderableItems, items, ensurePreview, revokePreview]);
 
   const [columns, setColumns] = useState(2);
 
@@ -347,7 +416,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
     return () => window.removeEventListener("resize", updateCols);
   }, []);
 
-  const rowCount = Math.ceil(itemIds.length / columns);
+  const rowCount = Math.ceil(visibleRenderableItems.length / columns);
   const virtualizer = useWindowVirtualizer({
     count: rowCount,
     estimateSize: () => (columns === 4 ? 320 : 220),
@@ -636,7 +705,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="flex flex-wrap items-center gap-3">
             <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">
-              Queue ({itemIds.length} files)
+              Queue ({renderableItems.length} active / {items.length} total)
             </h4>
             {isUploading && (
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
@@ -644,12 +713,11 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               </span>
             )}
             {/* M20 & M19: Data usage estimate & micro-copy */}
-            {itemIds.length > 0 && (() => {
-              const items = useUploadStore.getState().items;
+            {items.length > 0 && (() => {
               const totalRawBytes = items.reduce((sum, item) => sum + (item.file?.size || 0), 0);
               const totalRawMb = (totalRawBytes / (1024 * 1024)).toFixed(1);
               // Estimated compressed size (~70% reduction or max ~1.5MB per photo)
-              const estCompressedMb = (totalRawBytes * 0.3 / (1024 * 1024)).toFixed(1);
+              const estCompressedMb = ((totalRawBytes * 0.3) / (1024 * 1024)).toFixed(1);
 
               return (
                 <span
@@ -661,7 +729,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
               );
             })()}
           </div>
-          {itemIds.length > 0 && (
+          {items.length > 0 && (
             <button
               type="button"
               onClick={clearAll}
@@ -672,10 +740,8 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
           )}
         </div>
 
-        {itemIds.length > 0 && (() => {
-          const visibleIds = showAllQueue ? itemIds : itemIds.slice(0, QUEUE_VISIBLE_COUNT);
-          const hiddenCount = itemIds.length - QUEUE_VISIBLE_COUNT;
-          const visibleRows = Math.ceil(visibleIds.length / columns);
+        {visibleRenderableItems.length > 0 && (() => {
+          const visibleRows = Math.ceil(visibleRenderableItems.length / columns);
           const visibleVirtualItems = virtualizer.getVirtualItems().filter(
             (vr) => vr.index < visibleRows,
           );
@@ -687,14 +753,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
             <>
               <div
                 style={{
-                  height: showAllQueue ? `${virtualizer.getTotalSize()}px` : `${visibleHeight}px`,
+                  height: `${visibleHeight}px`,
                   width: "100%",
                   position: "relative",
                 }}
               >
-              {(showAllQueue ? virtualizer.getVirtualItems() : visibleVirtualItems).map((virtualRow) => {
+                {visibleVirtualItems.map((virtualRow) => {
                   const startIndex = virtualRow.index * columns;
-                  const rowItems = (showAllQueue ? itemIds : visibleIds).slice(startIndex, startIndex + columns);
+                  const rowItems = visibleRenderableItems.slice(startIndex, startIndex + columns);
 
                   return (
                     <div
@@ -710,10 +776,10 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                         transform: `translateY(${virtualRow.start}px)`,
                       }}
                     >
-                      {rowItems.map((id) => (
+                      {rowItems.map((item) => (
                         <UploadQueueItemCard
-                          key={id}
-                          id={id}
+                          key={item.id}
+                          id={item.id}
                           onRemove={removeFile}
                           onRetry={retryUpload}
                         />
@@ -723,22 +789,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
                 })}
               </div>
 
-              {/* Show more / collapse toggle */}
+              {/* Show more / pagination button */}
               {hiddenCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowAllQueue((v) => !v)}
+                  onClick={() => setVisibleLimit((prev) => prev + QUEUE_PAGE_SIZE)}
                   className="mt-4 w-full flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white transition-all"
                 >
-                  {showAllQueue ? (
-                    <>
-                      <ChevronUp size={16} /> Show less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown size={16} /> Show {hiddenCount} more hidden file{hiddenCount !== 1 ? "s" : ""}
-                    </>
-                  )}
+                  <ChevronDown size={16} /> Show {Math.min(QUEUE_PAGE_SIZE, hiddenCount)} more ({hiddenCount} remaining)
                 </button>
               )}
             </>
@@ -748,9 +806,9 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
 
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-8 mt-6">
         <div className="flex-1 w-full md:w-auto">
-          {itemIds.length > 0 && (
+          {renderableItems.length > 0 && (
             <p className="text-xs text-slate-500 italic">
-              {itemIds.length} files queued. Click &quot;START UPLOAD&quot; on the
+              {renderableItems.length} files in active queue. Click &quot;START UPLOAD&quot; on the
               widget to begin.
             </p>
           )}
