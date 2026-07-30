@@ -59,6 +59,7 @@ const xhrMap = new Map<string, XMLHttpRequest>();
 interface UploadStore {
   // ── Queue state ──────────────────────────────────────────────
   items: UploadQueueItem[];
+  flashedItemIds: string[];
   uploadContext: UploadContext | null;
   uploadStatus: UploadStatus;
   isUploading: boolean;
@@ -83,6 +84,7 @@ interface UploadStore {
   /** Lazy preview management for visible pagination */
   ensurePreview: (id: string) => void;
   revokePreview: (id: string) => void;
+  markItemFlashed: (id: string) => void;
 
   /** Internal — called by upload.service */
   _updateItem: (
@@ -102,6 +104,7 @@ interface UploadStore {
 // ── Store ─────────────────────────────────────────────────────────
 export const useUploadStore = create<UploadStore>((set, get) => ({
   items: [],
+  flashedItemIds: [],
   uploadContext: null,
   uploadStatus: "idle",
   isUploading: false,
@@ -175,7 +178,8 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     }
     set((s) => {
       const items = s.items.filter((i) => i.id !== id);
-      return { items, ...computeDerived(items) };
+      const flashedItemIds = s.flashedItemIds.filter((fid) => fid !== id);
+      return { items, flashedItemIds, ...computeDerived(items) };
     });
   },
 
@@ -189,6 +193,7 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
     });
     set({
       items: [],
+      flashedItemIds: [],
       uploadContext: null,
       uploadStatus: "idle",
       isUploading: false,
@@ -208,7 +213,9 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
       const items = s.items.filter(
         (i) => i.status !== "completed" && i.status !== "duplicate",
       );
-      return { items, ...computeDerived(items) };
+      const toRemoveIds = new Set(toRemove.map((i) => i.id));
+      const flashedItemIds = s.flashedItemIds.filter((id) => !toRemoveIds.has(id));
+      return { items, flashedItemIds, ...computeDerived(items) };
     });
   },
 
@@ -243,6 +250,13 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
         items: s.items.map((i) => (i.id === id ? { ...i, preview: "" } : i)),
       }));
     }
+  },
+
+  markItemFlashed(id) {
+    set((s) => {
+      if (s.flashedItemIds.includes(id)) return s;
+      return { flashedItemIds: [...s.flashedItemIds, id] };
+    });
   },
 
   // ── Internal updaters (used by upload.service) ─────────────────

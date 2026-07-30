@@ -149,4 +149,27 @@ describe("Upload Queue Pagination & Lazy-Load Previews", () => {
     expect(state.totalCount).toBe(90);
     expect(state.completedCount).toBe(15);
   });
+
+  test("markItemFlashed adds item to flashedItemIds and allows filtering from visible queue", () => {
+    const files: File[] = Array.from({ length: 5 }, (_, i) => {
+      return new File([new Uint8Array([1, 2, 3])], `photo_${i + 1}.jpg`, { type: "image/jpeg" });
+    });
+
+    useUploadStore.getState().addFiles(files);
+    let state = useUploadStore.getState();
+    const firstId = state.items[0].id;
+
+    expect(state.flashedItemIds).not.toContain(firstId);
+
+    // Mark first item flashed (after 600ms timer)
+    useUploadStore.getState().markItemFlashed(firstId);
+
+    state = useUploadStore.getState();
+    expect(state.flashedItemIds).toContain(firstId);
+
+    // Active renderable items filter excludes flashed items
+    const activeRenderable = state.items.filter((item) => !state.flashedItemIds.includes(item.id));
+    expect(activeRenderable.length).toBe(4);
+    expect(activeRenderable.find((i) => i.id === firstId)).toBeUndefined();
+  });
 });

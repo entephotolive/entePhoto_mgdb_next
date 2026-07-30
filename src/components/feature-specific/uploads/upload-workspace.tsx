@@ -55,6 +55,18 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     useCallback((s) => s.items.find((i) => i.id === id), [id]),
   );
 
+  useEffect(() => {
+    if (!item) return;
+    if (item.status === "completed" || item.status === "duplicate") {
+      console.log(`[UploadQueue] timer started for item ${item.id} (${item.file.name})`);
+      const timer = setTimeout(() => {
+        console.log(`[UploadQueue] timer fired, removing item ${item.id} (${item.file.name})`);
+        useUploadStore.getState().markItemFlashed(item.id);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [item?.id, item?.status]);
+
   if (!item) return null;
 
   const isCompressing =
@@ -347,40 +359,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   } = useGlobalUpload();
 
   const items = useUploadStore((s) => s.items);
+  const flashedItemIds = useUploadStore((s) => s.flashedItemIds);
   const ensurePreview = useUploadStore((s) => s.ensurePreview);
   const revokePreview = useUploadStore((s) => s.revokePreview);
 
-  // Track completion timestamps for ~600ms success flash
-  useEffect(() => {
-    let timerScheduled = false;
-    const now = Date.now();
-    items.forEach((item) => {
-      if (item.status === "completed" || item.status === "duplicate") {
-        if (!completedTimestampsRef.current.has(item.id)) {
-          completedTimestampsRef.current.set(item.id, now);
-          timerScheduled = true;
-          setTimeout(() => {
-            setFlashTick((t) => t + 1);
-          }, 650);
-        }
-      }
-    });
-    if (timerScheduled) {
-      setFlashTick((t) => t + 1);
-    }
-  }, [items]);
-
-  // Renderable items: active queue items (queued, uploading, paused, failed) OR completed/duplicate <600ms ago
+  // Renderable items: active queue items (queued, uploading, paused, failed) OR completed/duplicate items before the 600ms timer fires
   const renderableItems = useMemo(() => {
-    const now = Date.now();
-    return items.filter((item) => {
-      if (item.status !== "completed" && item.status !== "duplicate") {
-        return true;
-      }
-      const completedAt = completedTimestampsRef.current.get(item.id);
-      return completedAt ? now - completedAt < 600 : false;
-    });
-  }, [items, flashTick]);
+    return items.filter((item) => !flashedItemIds.includes(item.id));
+  }, [items, flashedItemIds]);
 
   // Bounded page window of visible items (backfills automatically as completed items leave renderableItems)
   const visibleRenderableItems = useMemo(() => {
