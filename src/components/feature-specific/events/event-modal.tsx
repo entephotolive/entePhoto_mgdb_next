@@ -138,7 +138,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
     setCoupon((prev) => ({ ...prev, status: "loading", message: null }));
 
     try {
-      const res = await fetch("/api/verify-coupon", {
+      const res = await fetch("/next-api/verify-coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -189,7 +189,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
     startTransition(async () => {
       try {
         // Step 1: Create order — server resolves coupon discount securely
-        const orderRes = await fetch("/api/create-order", {
+        const orderRes = await fetch("/next-api/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -206,7 +206,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
         // ── FREE CHECKOUT BRANCH ─────────────────────────────────────────────
         // When a coupon makes the total ₹0, skip Razorpay entirely
         if (orderData.free === true) {
-          const freeRes = await fetch("/api/free-checkout", {
+          const freeRes = await fetch("/next-api/free-checkout", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -248,7 +248,7 @@ export function EventModal({ open, onClose, createdBy }: EventModalProps) {
           handler: async function (response: any) {
             try {
               // Step 3: Verify Payment & Create Event + Payment Record in DB
-              const verifyRes = await fetch("/api/verify-payment", {
+              const verifyRes = await fetch("/next-api/verify-payment", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

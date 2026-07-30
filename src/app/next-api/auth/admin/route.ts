@@ -8,5 +8,5 @@ import { buildGoogleAuthRedirect } from "@/lib/utils/google-oauth";
  */
 export function GET() {
   const host = process.env.NEXT_PUBLIC_APP_URL!;
-  return buildGoogleAuthRedirect(`${host}/api/auth/admin/callback`);
+  return buildGoogleAuthRedirect(`${host}/next-api/auth/admin/callback`);
 }

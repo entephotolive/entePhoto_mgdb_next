@@ -25,7 +25,7 @@ export function AdminLoginForm() {
     setIsPending(true);
 
     try {
-      window.location.href = "/api/auth/admin";
+      window.location.href = "/next-api/auth/admin";
     } catch {
       setError("Failed to initialize Google Sign-In.");
       setIsPending(false);

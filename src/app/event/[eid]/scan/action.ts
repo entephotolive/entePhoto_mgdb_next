@@ -1,6 +1,6 @@
 "use server";
 
-import { api } from "@/app/api/api-client";
+import { api } from "@/app/next-api/api-client";
 import { getEventById } from "@/lib/services/event.service";
 
 export const scanFace = async (formData: FormData) => {
@@ -9,7 +9,7 @@ export const scanFace = async (formData: FormData) => {
     if (!eid) throw new Error("Event ID not provided");
 
     const event = await getEventById(eid);
-    
+
     if (!event) {
       throw new Error("Event not found");
     }
@@ -26,6 +26,8 @@ export const scanFace = async (formData: FormData) => {
     return res.data;
   } catch (error: any) {
     console.error("Scan Face Error:", error.response?.data || error.message);
-    throw new Error(error.response?.data?.detail || error.message || "Failed to scan face");
+    throw new Error(
+      error.response?.data?.detail || error.message || "Failed to scan face",
+    );
   }
 };

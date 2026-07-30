@@ -2,7 +2,7 @@
 import { describe, expect, test, mock, spyOn } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { api } from "@/app/api/api-client";
+import { api } from "@/app/next-api/api-client";
 import { isAllowedFile } from "@/lib/utils/upload-constants";
 
 describe("Cross-Browser & Cross-Device Upload Reliability", () => {
@@ -11,9 +11,21 @@ describe("Cross-Browser & Cross-Device Upload Reliability", () => {
   });
 
   test("accepts files from mobile photo pickers with various MIME types and extensions", () => {
-    const iosCameraFile = new File([new Uint8Array([1, 2, 3])], "IMG_4921.JPG", { type: "image/jpeg" });
-    const iosShareSheetFile = new File([new Uint8Array([1, 2, 3])], "IMG_4922.HEIC", { type: "" });
-    const androidGalleryFile = new File([new Uint8Array([1, 2, 3])], "20260722_120401.jpg", { type: "image/jpeg" });
+    const iosCameraFile = new File(
+      [new Uint8Array([1, 2, 3])],
+      "IMG_4921.JPG",
+      { type: "image/jpeg" },
+    );
+    const iosShareSheetFile = new File(
+      [new Uint8Array([1, 2, 3])],
+      "IMG_4922.HEIC",
+      { type: "" },
+    );
+    const androidGalleryFile = new File(
+      [new Uint8Array([1, 2, 3])],
+      "20260722_120401.jpg",
+      { type: "image/jpeg" },
+    );
 
     expect(isAllowedFile(iosCameraFile)).toBe(true);
     expect(isAllowedFile(iosShareSheetFile)).toBe(true);
@@ -32,7 +44,12 @@ describe("Aspect Ratio Preservation (Exact scaling within 0.1% tolerance)", () =
     srcW: number,
     srcH: number,
     maxSizePx = Infinity,
-  ): { targetW: number; targetH: number; inputRatio: number; outputRatio: number } {
+  ): {
+    targetW: number;
+    targetH: number;
+    inputRatio: number;
+    outputRatio: number;
+  } {
     const maxDim = Math.max(srcW, srcH);
     const totalPixels = srcW * srcH;
 
@@ -71,7 +88,8 @@ describe("Aspect Ratio Preservation (Exact scaling within 0.1% tolerance)", () =
   for (const item of testRatios) {
     test(`preserves aspect ratio within 0.1% for ${item.name}`, () => {
       const res = calcScaledDimensions(item.w, item.h);
-      const relativeDiff = Math.abs(res.outputRatio - res.inputRatio) / res.inputRatio;
+      const relativeDiff =
+        Math.abs(res.outputRatio - res.inputRatio) / res.inputRatio;
       expect(relativeDiff).toBeLessThan(0.001); // < 0.1%
     });
   }
@@ -183,7 +201,12 @@ function computeCanvasDimensionsLocal(
   srcW: number,
   srcH: number,
   maxSizePx = Infinity,
-): { targetW: number; targetH: number; needsDownscale: boolean; outputRatio: number } {
+): {
+  targetW: number;
+  targetH: number;
+  needsDownscale: boolean;
+  outputRatio: number;
+} {
   const SAFE = 16_000_000;
   const maxDim = Math.max(srcW, srcH);
   const totalPixels = srcW * srcH;
@@ -197,7 +220,12 @@ function computeCanvasDimensionsLocal(
   }
 
   if (scale >= 1.0) {
-    return { targetW: srcW, targetH: srcH, needsDownscale: false, outputRatio: srcW / srcH };
+    return {
+      targetW: srcW,
+      targetH: srcH,
+      needsDownscale: false,
+      outputRatio: srcW / srcH,
+    };
   }
 
   const ar = srcW / srcH;
@@ -209,7 +237,12 @@ function computeCanvasDimensionsLocal(
     targetH = Math.round(targetW / ar);
   }
 
-  return { targetW, targetH, needsDownscale: true, outputRatio: targetW / targetH };
+  return {
+    targetW,
+    targetH,
+    needsDownscale: true,
+    outputRatio: targetW / targetH,
+  };
 }
 
 describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
@@ -225,18 +258,73 @@ describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
 
   const cases: MpCase[] = [
     // ── Under budget — must NOT downscale ─────────────────────────────────────
-    { label: "2MP  4:3  (1920×1080)",       w: 1920,  h: 1080,  expectDownscale: false },
-    { label: "8MP  4:3  (3264×2448)",       w: 3264,  h: 2448,  expectDownscale: false },
-    { label: "16MP square (4000×4000)",     w: 4000,  h: 4000,  expectDownscale: false },
+    {
+      label: "2MP  4:3  (1920×1080)",
+      w: 1920,
+      h: 1080,
+      expectDownscale: false,
+    },
+    {
+      label: "8MP  4:3  (3264×2448)",
+      w: 3264,
+      h: 2448,
+      expectDownscale: false,
+    },
+    {
+      label: "16MP square (4000×4000)",
+      w: 4000,
+      h: 4000,
+      expectDownscale: false,
+    },
     // ── Over budget — must downscale with AR preserved ────────────────────────
-    { label: "24MP DSLR 3:2  (6000×4000)", w: 6000,  h: 4000,  expectDownscale: true  },
-    { label: "48MP portrait (6048×8064)",  w: 6048,  h: 8064,  expectDownscale: true  },
-    { label: "48MP landscape (8064×6048)", w: 8064,  h: 6048,  expectDownscale: true  },
-    { label: "100MP square  (10000×10000)",w: 10000, h: 10000, expectDownscale: true  },
-    { label: "200MP landscape (20000×10000)", w: 20000, h: 10000, expectDownscale: true },
-    { label: "200MP ultra-wide (28284×7071)",w: 28284, h: 7071,  expectDownscale: true },
-    { label: "200MP portrait  (10000×20000)",w: 10000, h: 20000, expectDownscale: true },
-    { label: "200MP very-tall (4000×50000)", w: 4000,  h: 50000, expectDownscale: true },
+    {
+      label: "24MP DSLR 3:2  (6000×4000)",
+      w: 6000,
+      h: 4000,
+      expectDownscale: true,
+    },
+    {
+      label: "48MP portrait (6048×8064)",
+      w: 6048,
+      h: 8064,
+      expectDownscale: true,
+    },
+    {
+      label: "48MP landscape (8064×6048)",
+      w: 8064,
+      h: 6048,
+      expectDownscale: true,
+    },
+    {
+      label: "100MP square  (10000×10000)",
+      w: 10000,
+      h: 10000,
+      expectDownscale: true,
+    },
+    {
+      label: "200MP landscape (20000×10000)",
+      w: 20000,
+      h: 10000,
+      expectDownscale: true,
+    },
+    {
+      label: "200MP ultra-wide (28284×7071)",
+      w: 28284,
+      h: 7071,
+      expectDownscale: true,
+    },
+    {
+      label: "200MP portrait  (10000×20000)",
+      w: 10000,
+      h: 20000,
+      expectDownscale: true,
+    },
+    {
+      label: "200MP very-tall (4000×50000)",
+      w: 4000,
+      h: 50000,
+      expectDownscale: true,
+    },
   ];
 
   for (const c of cases) {
@@ -282,7 +370,7 @@ describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
     expect(res.targetW).toBeLessThanOrEqual(1920);
     expect(res.targetH).toBeLessThanOrEqual(1920);
     expect(res.targetW * res.targetH).toBeLessThanOrEqual(SAFE_PIXELS);
-    const arDiff = Math.abs(res.outputRatio - (20000 / 10000)) / (20000 / 10000);
+    const arDiff = Math.abs(res.outputRatio - 20000 / 10000) / (20000 / 10000);
     expect(arDiff).toBeLessThan(AR_TOLERANCE);
   });
 });
@@ -311,38 +399,53 @@ describe("Draw-Failure Pixel-Sampling Guard (isolated)", () => {
   }
 
   test("all-transparent pixels → draw failure", () => {
-    const pixels = new Uint8ClampedArray([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const pixels = new Uint8ClampedArray([
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
     expect(testDrawFailureGuard(pixels)).toBe(true);
   });
 
   test("all-solid-black pixels → draw failure", () => {
-    const pixels = new Uint8ClampedArray([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
+    const pixels = new Uint8ClampedArray([
+      0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255,
+    ]);
     expect(testDrawFailureGuard(pixels)).toBe(true);
   });
 
   test("white pixel (255,255,255,255) → NOT a draw failure", () => {
-    const pixels = new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255,
-                                          255, 255, 255, 255, 255, 255, 255, 255]);
+    const pixels = new Uint8ClampedArray([
+      255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+      255,
+    ]);
     expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 
   test("one non-black pixel among black pixels → NOT a draw failure (partial success)", () => {
-    const pixels = new Uint8ClampedArray([0, 0, 0, 255, 128, 64, 32, 255, 0, 0, 0, 255, 0, 0, 0, 255]);
+    const pixels = new Uint8ClampedArray([
+      0, 0, 0, 255, 128, 64, 32, 255, 0, 0, 0, 255, 0, 0, 0, 255,
+    ]);
     expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 
   test("arbitrary colour (200,100,50,255) → NOT a draw failure", () => {
-    const pixels = new Uint8ClampedArray([200, 100, 50, 255, 200, 100, 50, 255,
-                                          200, 100, 50, 255, 200, 100, 50, 255]);
+    const pixels = new Uint8ClampedArray([
+      200, 100, 50, 255, 200, 100, 50, 255, 200, 100, 50, 255, 200, 100, 50,
+      255,
+    ]);
     expect(testDrawFailureGuard(pixels)).toBe(false);
   });
 });
 
 describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", () => {
   test("[M13/M05] Module worker imports shared EXIF orientation utilities and handles fallback orientation matrix", async () => {
-    const { getOrientationTransform, readJpegExifOrientation } = await import("@/lib/utils/exif-orientation");
+    const { getOrientationTransform, readJpegExifOrientation } =
+      await import("@/lib/utils/exif-orientation");
 
-    const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "test.jpg", { type: "image/jpeg" });
+    const dummyFile = new File(
+      [new Uint8Array([0xff, 0xd8, 0xff, 0xe1])],
+      "test.jpg",
+      { type: "image/jpeg" },
+    );
     const orientation = await readJpegExifOrientation(dummyFile);
     expect(orientation).toBe(1);
 
@@ -358,7 +461,10 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
   });
 
   // Helper setup for Canvas & ImageBitmap mocks
-  function setupCanvasHarness(options: { nativeOrientation: boolean; exifOrientation: number }) {
+  function setupCanvasHarness(options: {
+    nativeOrientation: boolean;
+    exifOrientation: number;
+  }) {
     const saveSpy = mock();
     const restoreSpy = mock();
     const transformSpy = mock();
@@ -375,7 +481,10 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
       transform: transformSpy,
       drawImage: drawImageSpy,
       getImageData: () => ({
-        data: new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]),
+        data: new Uint8ClampedArray([
+          255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+          255, 255,
+        ]),
       }),
       globalAlpha: 1.0,
     };
@@ -389,8 +498,14 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
     };
 
     // Spies on exif-orientation module
-    const supportsSpy = spyOn(exifModule, "supportsImageOrientation").mockResolvedValue(options.nativeOrientation);
-    const readExifSpy = spyOn(exifModule, "readJpegExifOrientation").mockResolvedValue(options.exifOrientation);
+    const supportsSpy = spyOn(
+      exifModule,
+      "supportsImageOrientation",
+    ).mockResolvedValue(options.nativeOrientation);
+    const readExifSpy = spyOn(
+      exifModule,
+      "readJpegExifOrientation",
+    ).mockResolvedValue(options.exifOrientation);
 
     // Mock globalThis.document & createImageBitmap
     const origDocument = globalThis.document;
@@ -439,10 +554,20 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
   }
 
   test("[M05] watermark.ts fallback path: invokes ctx.save(), transform(), drawImage(), ctx.restore() when native orientation unsupported", async () => {
-    const harness = setupCanvasHarness({ nativeOrientation: false, exifOrientation: 6 });
+    const harness = setupCanvasHarness({
+      nativeOrientation: false,
+      exifOrientation: 6,
+    });
     try {
-      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "portrait.jpg", { type: "image/jpeg" });
-      const result = await applyWatermark(dummyFile, "http://example.com/watermark.png");
+      const dummyFile = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe1])],
+        "portrait.jpg",
+        { type: "image/jpeg" },
+      );
+      const result = await applyWatermark(
+        dummyFile,
+        "http://example.com/watermark.png",
+      );
 
       expect(result).toBeInstanceOf(File);
       // Fallback path MUST execute save -> transform -> drawImage -> restore in that order
@@ -456,10 +581,20 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
   });
 
   test("[M05] watermark.ts native path: bypasses ctx.save()/transform when native orientation supported", async () => {
-    const harness = setupCanvasHarness({ nativeOrientation: true, exifOrientation: 6 });
+    const harness = setupCanvasHarness({
+      nativeOrientation: true,
+      exifOrientation: 6,
+    });
     try {
-      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "portrait.jpg", { type: "image/jpeg" });
-      const result = await applyWatermark(dummyFile, "http://example.com/watermark.png");
+      const dummyFile = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe1])],
+        "portrait.jpg",
+        { type: "image/jpeg" },
+      );
+      const result = await applyWatermark(
+        dummyFile,
+        "http://example.com/watermark.png",
+      );
 
       expect(result).toBeInstanceOf(File);
       // Native path MUST NOT invoke save/transform fallback
@@ -472,9 +607,16 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
   });
 
   test("[M05] compress-image.ts fallback path: invokes ctx.save(), transform(), drawImage(), ctx.restore() when native orientation unsupported", async () => {
-    const harness = setupCanvasHarness({ nativeOrientation: false, exifOrientation: 8 });
+    const harness = setupCanvasHarness({
+      nativeOrientation: false,
+      exifOrientation: 8,
+    });
     try {
-      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "landscape.jpg", { type: "image/jpeg" });
+      const dummyFile = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe1])],
+        "landscape.jpg",
+        { type: "image/jpeg" },
+      );
       const result = await compressImage(dummyFile);
 
       expect(result).toBeInstanceOf(File);
@@ -489,9 +631,16 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
   });
 
   test("[M05] compress-image.ts native path: bypasses ctx.save()/transform when native orientation supported", async () => {
-    const harness = setupCanvasHarness({ nativeOrientation: true, exifOrientation: 8 });
+    const harness = setupCanvasHarness({
+      nativeOrientation: true,
+      exifOrientation: 8,
+    });
     try {
-      const dummyFile = new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe1])], "landscape.jpg", { type: "image/jpeg" });
+      const dummyFile = new File(
+        [new Uint8Array([0xff, 0xd8, 0xff, 0xe1])],
+        "landscape.jpg",
+        { type: "image/jpeg" },
+      );
       const result = await compressImage(dummyFile);
 
       expect(result).toBeInstanceOf(File);
@@ -504,5 +653,3 @@ describe("Module Worker & Image Processing EXIF Fallback Wiring Integration", ()
     }
   });
 });
-
-

@@ -44,7 +44,7 @@ async function triggerDownload(url: string, name: string) {
     console.error("Direct fetch failed, falling back to proxy download:", error);
     
     // Fallback: use our server-side proxy route to avoid CORS issues and force download
-    const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "photo.jpg")}`;
+    const proxyUrl = `/next-api/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "photo.jpg")}`;
     
     const a = document.createElement("a");
     a.href = proxyUrl;

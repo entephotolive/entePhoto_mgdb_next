@@ -5,9 +5,12 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/app/api/api-client";
-import { PhotoLightbox, type LightboxPhoto } from "@/components/ui/photo-lightbox";
- 
+import { api } from "@/app/next-api/api-client";
+import {
+  PhotoLightbox,
+  type LightboxPhoto,
+} from "@/components/ui/photo-lightbox";
+
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
 const LIVE_POLL_INTERVAL_MS = 3000;
 
@@ -22,16 +25,18 @@ function getAttendeeId(): string | null {
   try {
     const fromSession = sessionStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
     if (fromSession) return fromSession;
-    
+
     const fromLocal = localStorage.getItem(SCAN_ATTENDEE_SESSION_KEY);
     if (fromLocal) return fromLocal;
 
     // Check cookie fallback
-    if (typeof document !== 'undefined') {
-      const match = document.cookie.match(new RegExp('(^| )' + SCAN_ATTENDEE_SESSION_KEY + '=([^;]+)'));
+    if (typeof document !== "undefined") {
+      const match = document.cookie.match(
+        new RegExp("(^| )" + SCAN_ATTENDEE_SESSION_KEY + "=([^;]+)"),
+      );
       if (match) return match[2];
     }
-    
+
     return null;
   } catch {
     return null;
@@ -109,7 +114,9 @@ export default function LiveFeedPage() {
 
     const attendeeId = getAttendeeId();
     if (!attendeeId) {
-      console.warn("[live-feed] Missing attendee id. Scan flow must complete before live updates can start.");
+      console.warn(
+        "[live-feed] Missing attendee id. Scan flow must complete before live updates can start.",
+      );
       setLoading(false);
       return;
     }
@@ -130,8 +137,12 @@ export default function LiveFeedPage() {
 
         const raw: any[] = res.data?.photos ?? res.data?.matched_images ?? [];
         const normalized = raw.map(normalizePhoto);
-        setPhotos((prev) => (markNew ? mergeIncomingPhotos(prev, normalized, true) : normalized));
-        console.debug(`[live-feed] Polling: Synced ${normalized.length} photo(s).`);
+        setPhotos((prev) =>
+          markNew ? mergeIncomingPhotos(prev, normalized, true) : normalized,
+        );
+        console.debug(
+          `[live-feed] Polling: Synced ${normalized.length} photo(s).`,
+        );
       } catch (error) {
         console.error("[live-feed] Polling failed.", error);
       } finally {
@@ -158,7 +169,9 @@ export default function LiveFeedPage() {
 
     let wsUrl = "";
     try {
-      const apiBase = new URL(process.env.NEXT_PUBLIC_PYTHON_API_URL || window.location.origin);
+      const apiBase = new URL(
+        process.env.NEXT_PUBLIC_PYTHON_API_URL || window.location.origin,
+      );
       apiBase.protocol = apiBase.protocol === "https:" ? "wss:" : "ws:";
       apiBase.pathname = `/ws/matches/${eid}/${attendeeId}/`;
       wsUrl = apiBase.toString();
@@ -170,7 +183,7 @@ export default function LiveFeedPage() {
 
     async function connect() {
       if (closedByCleanup) return;
-      
+
       console.info(`[live-feed] Attempting WebSocket: ${wsUrl}`);
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
@@ -202,10 +215,12 @@ export default function LiveFeedPage() {
       ws.onclose = (e) => {
         socketRef.current = null;
         if (closedByCleanup) return;
-        
-        console.warn(`[live-feed] WebSocket closed (${e.code}). Falling back to polling.`);
+
+        console.warn(
+          `[live-feed] WebSocket closed (${e.code}). Falling back to polling.`,
+        );
         startPolling();
-        
+
         // Retry connection in 5s
         reconnectTimerId = window.setTimeout(() => {
           console.info("[live-feed] Retrying WebSocket...");
@@ -233,7 +248,9 @@ export default function LiveFeedPage() {
 
       <div className="mx-auto max-w-6xl px-6 pt-32 pb-24">
         <div className="mb-12 text-center">
-          <h1 className="mb-3 text-4xl font-bold md:text-5xl">The Live Moment</h1>
+          <h1 className="mb-3 text-4xl font-bold md:text-5xl">
+            The Live Moment
+          </h1>
           <p className="text-sm text-gray-300 md:text-base">
             Every capture, shared instantly. Join the story in real-time.
           </p>
@@ -264,7 +281,10 @@ export default function LiveFeedPage() {
                 <div
                   key={photo.image_id}
                   onClick={() =>
-                    setLightbox({ url: photo.image_url, name: photo.image_name })
+                    setLightbox({
+                      url: photo.image_url,
+                      name: photo.image_name,
+                    })
                   }
                   className={`group relative cursor-pointer overflow-hidden rounded-xl break-inside-avoid border-2 transition-all duration-700 ${
                     photo.isNew
@@ -309,7 +329,8 @@ export default function LiveFeedPage() {
 
               <p className="mx-auto max-w-md text-sm leading-7 text-gray-300 md:text-base">
                 We couldn&apos;t find any matched photos right now. Once the
-                photographer uploads your photos, they will appear here instantly.
+                photographer uploads your photos, they will appear here
+                instantly.
               </p>
 
               <div className="mt-8 inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-5 py-2 text-sm text-cyan-400 border border-cyan-400/20">

@@ -269,7 +269,7 @@ function LoginFormInner() {
     setError(null);
     setIsPending(true);
     try {
-      window.location.href = "/api/auth/photographer";
+      window.location.href = "/next-api/auth/photographer";
     } catch {
       setError("Failed to initialize Google Sign-In.");
       setIsPending(false);

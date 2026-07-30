@@ -13,7 +13,7 @@ import {
   UploadContext,
   UploadQueueItem,
 } from "@/store/upload-store";
-import { api } from "@/app/api/api-client";
+import { api } from "@/app/next-api/api-client";
 import { isAllowedFile } from "@/lib/utils/upload-constants";
 import {
   computeCanvasDimensions,
@@ -55,7 +55,9 @@ let lastUploadActivityAt = Date.now();
  */
 function yieldToMain(): Promise<void> {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    return new Promise((resolve) => window.requestIdleCallback(() => resolve(), { timeout: 50 }));
+    return new Promise((resolve) =>
+      window.requestIdleCallback(() => resolve(), { timeout: 50 }),
+    );
   }
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -144,7 +146,9 @@ async function compressImageWithWorker(
 
   // Fallback: main-thread path (Safari, or worker returned null for no-op)
   if (process.env.NODE_ENV === "development") {
-    console.debug(`[compress] main-thread fallback — ${file.name} (worker unavailable or no-op)`);
+    console.debug(
+      `[compress] main-thread fallback — ${file.name} (worker unavailable or no-op)`,
+    );
   }
   const compressedFile = await compressImage(file, maxSizePx, quality);
   // For HEIC files compressed on main thread, produce a preview URL from the result
@@ -186,7 +190,11 @@ async function compressImageWithWorker(
  *     but the EXIF rotation transform on HEIC files on those OS versions needs hands-on
  *     testing. Mark as confirmed only after running the Phase 6 device test.
  */
-async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): Promise<File> {
+async function compressImage(
+  file: File,
+  maxSizePx = Infinity,
+  quality = 0.92,
+): Promise<File> {
   if (!isAllowedFile(file)) return file;
 
   // Yield to main thread before starting heavy CPU/GPU decode
@@ -205,7 +213,9 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
     try {
       if (nativeOrientation) {
         // Primary path: browser handles EXIF rotation natively
-        probeBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+        probeBitmap = await createImageBitmap(file, {
+          imageOrientation: "from-image",
+        });
       } else {
         // M05 Fallback path (iOS < 15.4):
         // Decode without orientation, read EXIF tag separately
@@ -228,7 +238,11 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
     // optional maxSizePx cap with a single uniform scale factor.
     // On the fallback path, srcW/srcH are the raw (unrotated) dimensions —
     // getOrientationTransform() will swap them correctly for 90°/270° cases.
-    const { targetW, targetH, resizeOptions } = computeCanvasDimensions(srcW, srcH, maxSizePx);
+    const { targetW, targetH, resizeOptions } = computeCanvasDimensions(
+      srcW,
+      srcH,
+      maxSizePx,
+    );
 
     // Skip client-side re-encoding if file is already under all limits
     // AND no orientation correction is needed
@@ -259,11 +273,17 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
     // ── Canvas setup — orientation-aware ──────────────────────────────────────
     let canvasW: number;
     let canvasH: number;
-    let applyOrientationTransform: ((ctx: CanvasRenderingContext2D) => void) | null = null;
+    let applyOrientationTransform:
+      | ((ctx: CanvasRenderingContext2D) => void)
+      | null = null;
 
     if (!nativeOrientation && exifOrientation !== 1) {
       // M05 Fallback: compute canvas dimensions and transform for this orientation
-      const orientTransform = getOrientationTransform(exifOrientation, drawW, drawH);
+      const orientTransform = getOrientationTransform(
+        exifOrientation,
+        drawW,
+        drawH,
+      );
       canvasW = orientTransform.canvasW;
       canvasH = orientTransform.canvasH;
       applyOrientationTransform = orientTransform.applyTransform;
@@ -283,7 +303,9 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
       // M07: throw a distinguishable error so uploadSingleItem can surface a
       // device-capability-specific message rather than a generic "Upload failed".
       // Retrying this error won't help — it's a device GPU/memory limit.
-      throw Object.assign(new Error("canvas-unavailable"), { isCanvasUnavailable: true });
+      throw Object.assign(new Error("canvas-unavailable"), {
+        isCanvasUnavailable: true,
+      });
     }
 
     // White background for PNG transparency support
@@ -306,7 +328,9 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
 
     try {
       if (isCanvasDrawFailure(ctx, canvasW, canvasH)) {
-        console.warn("[upload.service] drawImage produced a black/transparent canvas – returning original file");
+        console.warn(
+          "[upload.service] drawImage produced a black/transparent canvas – returning original file",
+        );
         return file;
       }
       // ─────────────────────────────────────────────────────────────────────────
@@ -319,7 +343,10 @@ async function compressImage(file: File, maxSizePx = Infinity, quality = 0.92): 
       if (!blob) return file;
 
       const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-      return new File([blob], newName, { type: outputMime, lastModified: file.lastModified });
+      return new File([blob], newName, {
+        type: outputMime,
+        lastModified: file.lastModified,
+      });
     } finally {
       // Release canvas GPU memory on every path (success, draw-failure, toBlob error)
       canvas.width = 0;
@@ -363,11 +390,17 @@ function getUploadConcurrency() {
   if (typeof navigator !== "undefined") {
     const conn = (navigator as any).connection;
     const effectiveType: string = conn?.effectiveType ?? "";
-    if (effectiveType === "slow-2g" || effectiveType === "2g" || effectiveType === "3g") {
+    if (
+      effectiveType === "slow-2g" ||
+      effectiveType === "2g" ||
+      effectiveType === "3g"
+    ) {
       return 1;
     }
   }
-  return isMobileDevice() ? MOBILE_UPLOAD_CONCURRENCY : DESKTOP_UPLOAD_CONCURRENCY;
+  return isMobileDevice()
+    ? MOBILE_UPLOAD_CONCURRENCY
+    : DESKTOP_UPLOAD_CONCURRENCY;
 }
 
 /**
@@ -393,22 +426,26 @@ function getUploadTimeout(): number {
   switch (effectiveType) {
     case "slow-2g":
     case "2g":
-      return 8 * 60 * 1000;  // 8 min
+      return 8 * 60 * 1000; // 8 min
     case "3g":
-      return 5 * 60 * 1000;  // 5 min
+      return 5 * 60 * 1000; // 5 min
     case "4g":
-      return 3 * 60 * 1000;  // 3 min
+      return 3 * 60 * 1000; // 3 min
     default:
-      return 2 * 60 * 1000;  // 2 min (existing default)
+      return 2 * 60 * 1000; // 2 min (existing default)
   }
 }
 
 async function checkDuplicates(eventId: string, filenames: string[]) {
   const duplicateSet = new Set<string>();
 
-  for (let index = 0; index < filenames.length; index += DUPLICATE_CHECK_BATCH_SIZE) {
+  for (
+    let index = 0;
+    index < filenames.length;
+    index += DUPLICATE_CHECK_BATCH_SIZE
+  ) {
     const batch = filenames.slice(index, index + DUPLICATE_CHECK_BATCH_SIZE);
-    
+
     // Fetch via /next-api/check-duplicate to bypass Nginx /api/ proxy rule targeting Python Django
     let dupRes = await fetch("/next-api/check-duplicate", {
       method: "POST",
@@ -425,7 +462,9 @@ async function checkDuplicates(eventId: string, filenames: string[]) {
     }
 
     if (!dupRes.ok) {
-      console.warn(`[upload.service] Duplicate check returned status ${dupRes.status} — bypassing duplicate check`);
+      console.warn(
+        `[upload.service] Duplicate check returned status ${dupRes.status} — bypassing duplicate check`,
+      );
       continue;
     }
 
@@ -450,7 +489,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
 
   // M09: more retry attempts on mobile to survive brief cellular gaps
   const mobile = isMobileDevice();
-  const maxAttempts = mobile ? MOBILE_MAX_UPLOAD_ATTEMPTS : DESKTOP_MAX_UPLOAD_ATTEMPTS;
+  const maxAttempts = mobile
+    ? MOBILE_MAX_UPLOAD_ATTEMPTS
+    : DESKTOP_MAX_UPLOAD_ATTEMPTS;
   let attempt = 0;
   let lastError: any = null;
 
@@ -461,7 +502,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
     // than STALL_BACKSTOP_MS with no progress update, the OS has almost certainly
     // killed the XHR (iOS Safari tab suspension). Self-fail now instead of waiting
     // for a timeout that may never fire.
-    const currentItem = useUploadStore.getState().items.find((i) => i.id === item.id);
+    const currentItem = useUploadStore
+      .getState()
+      .items.find((i) => i.id === item.id);
     if (
       currentItem?.stalledSince !== undefined &&
       Date.now() - currentItem.stalledSince > STALL_BACKSTOP_MS
@@ -491,7 +534,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
 
       // M06: update the preview in the store now that we have a decoded JPEG blob
       if (previewBlobUrl) {
-        useUploadStore.getState()._updateItem(item.id, { preview: previewBlobUrl });
+        useUploadStore
+          .getState()
+          ._updateItem(item.id, { preview: previewBlobUrl });
       }
 
       const formData = new FormData();
@@ -516,9 +561,13 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
         onUploadProgress: (progressEvent) => {
           lastUploadActivityAt = Date.now();
           if (progressEvent.lengthComputable && progressEvent.total) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total,
+            );
             // Update progress and clear stalledSince (we're actively receiving data)
-            useUploadStore.getState()._updateItem(item.id, { progress, stalledSince: undefined });
+            useUploadStore
+              .getState()
+              ._updateItem(item.id, { progress, stalledSince: undefined });
           }
         },
       });
@@ -527,8 +576,9 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
       if (responseData && responseData.images_not_uploaded > 0) {
         const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
         const reasonObj =
-          responseData.reason_why_not_uploaded?.find((r: any) => r.filename === expectedName) ||
-          responseData.reason_why_not_uploaded?.[0];
+          responseData.reason_why_not_uploaded?.find(
+            (r: any) => r.filename === expectedName,
+          ) || responseData.reason_why_not_uploaded?.[0];
         throw new Error(reasonObj?.reason || "Image not uploaded");
       }
 
@@ -540,8 +590,12 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
       return { ok: true as const };
     } catch (error: any) {
       lastError = error;
-      console.error(`Upload Attempt ${attempt}/${maxAttempts} Error for ${item.file.name}:`, error);
-      const isCancelled = error?.name === "CanceledError" || error?.message === "canceled";
+      console.error(
+        `Upload Attempt ${attempt}/${maxAttempts} Error for ${item.file.name}:`,
+        error,
+      );
+      const isCancelled =
+        error?.name === "CanceledError" || error?.message === "canceled";
 
       if (isCancelled) {
         useUploadStore.getState()._updateItem(item.id, {
@@ -559,7 +613,8 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
         useUploadStore.getState()._updateItem(item.id, {
           status: "failed",
           progress: 0,
-          error: "Your device couldn't process this image — try uploading it individually or from a different device.",
+          error:
+            "Your device couldn't process this image — try uploading it individually or from a different device.",
           stalledSince: undefined,
         });
         return { ok: false as const, cancelled: false as const };
@@ -572,7 +627,8 @@ async function uploadSingleItem(item: UploadQueueItem, context: UploadContext) {
         error?.message?.toLowerCase?.().includes("timeout");
       if (isTimeout) {
         lastError = Object.assign(error, {
-          _userMessage: "Upload timed out — check your connection and tap retry.",
+          _userMessage:
+            "Upload timed out — check your connection and tap retry.",
         });
       }
 
@@ -617,7 +673,9 @@ async function runWithConcurrency<T>(
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, () => runWorker()),
+    Array.from({ length: Math.min(concurrency, items.length) }, () =>
+      runWorker(),
+    ),
   );
 }
 
@@ -626,15 +684,21 @@ export async function processUploadQueue(context: UploadContext) {
 
   // Self-healing safety net: If isUploading is true but no progress/activity has occurred
   // for > QUEUE_STALENESS_CEILING_MS (120 s), force-reset isUploading to recover from stuck locks.
-  if (store.isUploading && Date.now() - lastUploadActivityAt > QUEUE_STALENESS_CEILING_MS) {
-    console.warn("[upload.service] isUploading lock exceeded 120s staleness ceiling without progress — force-resetting lock");
+  if (
+    store.isUploading &&
+    Date.now() - lastUploadActivityAt > QUEUE_STALENESS_CEILING_MS
+  ) {
+    console.warn(
+      "[upload.service] isUploading lock exceeded 120s staleness ceiling without progress — force-resetting lock",
+    );
     store._setUploading(false);
   }
 
   if (store.isUploading || store.items.length === 0) return;
 
   const toUpload = store.items.filter(
-    (i) => i.status === "queued" || i.status === "failed" || i.status === "paused",
+    (i) =>
+      i.status === "queued" || i.status === "failed" || i.status === "paused",
   );
   if (toUpload.length === 0) return;
 
@@ -688,8 +752,14 @@ export async function processUploadQueue(context: UploadContext) {
   }
 
   const finalToUpload = toUpload.filter((item) => {
-    const stateItem = useUploadStore.getState().items.find((i) => i.id === item.id);
-    return stateItem && stateItem.status !== "duplicate" && stateItem.status !== "completed";
+    const stateItem = useUploadStore
+      .getState()
+      .items.find((i) => i.id === item.id);
+    return (
+      stateItem &&
+      stateItem.status !== "duplicate" &&
+      stateItem.status !== "completed"
+    );
   });
 
   if (finalToUpload.length === 0) {

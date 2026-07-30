@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getFolderPhotosPage } from "@/app/photographer/(panel)/gallery/[slug]/action";
 import type { PhotoItem } from "@/lib/services/photo.service";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { cn } from "@/lib/utils/cn";
 import {
   detectInAppBrowser,
   openInSystemBrowser,
@@ -55,6 +56,16 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     useCallback((s) => s.items.find((i) => i.id === id), [id]),
   );
 
+  useEffect(() => {
+    if (!item) return;
+    if (item.status === "completed" || item.status === "duplicate") {
+      const timer = setTimeout(() => {
+        useUploadStore.getState().markItemFlashed(item.id);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [item?.id, item?.status]);
+
   if (!item) return null;
 
   const isCompressing =
@@ -66,7 +77,19 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     item.status === "completed" || item.status === "duplicate";
 
   return (
-    <div className="relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all hover:bg-white/[0.08] hover:scale-[1.02]">
+    <div
+      className={cn(
+        "relative group bg-white/5 border border-white/5 rounded-[32px] p-2 overflow-hidden transition-all duration-500 ease-out hover:bg-white/[0.08] hover:scale-[1.02]",
+        isCompletedOrDuplicate && "pointer-events-none z-20 shadow-2xl",
+      )}
+      style={
+        isCompletedOrDuplicate
+          ? {
+              animation: "ultraSmoothFloatUp 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            }
+          : undefined
+      }
+    >
       <div className="aspect-square rounded-[26px] overflow-hidden relative mb-3 bg-black/20">
         {showSkeleton ? (
           <Skeleton className="w-full h-full absolute inset-0 bg-white/5" />
@@ -85,13 +108,13 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
           </div>
         )}
 
-        {/* Success Flash Overlay for completed / duplicate items (~600ms) */}
+        {/* Success Flash Overlay for completed / duplicate items */}
         {isCompletedOrDuplicate && (
-          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center flex-col p-3 backdrop-blur-sm z-10 animate-in fade-in duration-200">
-            <div className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-500/30 flex items-center justify-center mb-1 shrink-0">
-              <Check className="text-emerald-400" size={20} />
+          <div className="absolute inset-0 bg-emerald-500/25 flex items-center justify-center flex-col p-3 backdrop-blur-md z-10 animate-in fade-in duration-200">
+            <div className="w-11 h-11 rounded-full border-2 border-emerald-400 bg-emerald-500/40 flex items-center justify-center mb-1 shrink-0 shadow-lg shadow-emerald-500/30 animate-bounce duration-500">
+              <Check className="text-emerald-300 stroke-[3]" size={22} />
             </div>
-            <p className="text-[11px] font-bold text-emerald-300 text-center uppercase tracking-wider">
+            <p className="text-[11px] font-bold text-emerald-300 text-center uppercase tracking-wider drop-shadow-sm">
               {item.status === "completed" ? "Uploaded ✓" : "Duplicate"}
             </p>
           </div>
@@ -347,15 +370,14 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   } = useGlobalUpload();
 
   const items = useUploadStore((s) => s.items);
+  const flashedItemIds = useUploadStore((s) => s.flashedItemIds);
   const ensurePreview = useUploadStore((s) => s.ensurePreview);
   const revokePreview = useUploadStore((s) => s.revokePreview);
 
-  // Renderable items: active queue items (queued, uploading, paused, failed).
-  // Immediately removes completed/duplicate items (100% done) and prioritizes currently uploading items at the TOP.
+  // Renderable items: active queue items (queued, uploading, paused, failed) OR completed items floating up before removal (700ms).
+  // Prioritizes currently uploading items at the TOP of the visible queue grid.
   const renderableItems = useMemo(() => {
-    const active = items.filter(
-      (item) => item.status !== "completed" && item.status !== "duplicate",
-    );
+    const active = items.filter((item) => !flashedItemIds.includes(item.id));
 
     return active.sort((a, b) => {
       const aUploading = a.status === "uploading" || a.status === "paused";
@@ -365,7 +387,7 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
       if (!aUploading && bUploading) return 1;
       return 0;
     });
-  }, [items]);
+  }, [items, flashedItemIds]);
 
   // Bounded page window of visible items (backfills automatically as completed items leave renderableItems)
   const visibleRenderableItems = useMemo(() => {
@@ -491,7 +513,28 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 pb-48 sm:pb-32">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto px-1 sm:px-0">
+      <style>{`
+        @keyframes ultraSmoothFloatUp {
+          0% {
+            opacity: 1;
+            transform: translateY(0px) scale(1);
+            filter: blur(0px);
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+          }
+          25% {
+            opacity: 1;
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 12px 32px rgba(16, 185, 129, 0.4);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-48px) scale(0.82);
+            filter: blur(6px);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+          }
+        }
+      `}</style>
 
       {/* ── In-App Browser Warning Banner ── */}
       {inAppBrowser.isInAppBrowser && (

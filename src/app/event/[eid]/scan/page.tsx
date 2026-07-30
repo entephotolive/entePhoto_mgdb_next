@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { api } from "@/app/api/api-client";
+import { api } from "@/app/next-api/api-client";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error";
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
@@ -87,7 +87,9 @@ export default function FaceScanPage() {
 
       const attendeeId = apiResponse.data?.attendee_id ?? apiResponse.data?.id;
       if (!attendeeId) {
-        throw new Error("Scan succeeded but attendee id was missing from response.");
+        throw new Error(
+          "Scan succeeded but attendee id was missing from response.",
+        );
       }
 
       sessionStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
@@ -143,10 +145,10 @@ export default function FaceScanPage() {
       />
 
       {/* Responsive Corner Light-Leak Overlay (Exactly matching sample image with clear center) */}
-    <div
-  className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-500"
-  style={{
-    background: `
+      <div
+        className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-500"
+        style={{
+          background: `
       radial-gradient(ellipse 3% 55% at -1% 46%, rgba(64, 138, 92, 100) 0%, transparent 70%),
       radial-gradient(ellipse 28% 9% at 63% -1%, rgba(224, 168, 42, 100) 0%, transparent 70%),
       radial-gradient(ellipse 34% 5% at 96% -1%, rgba(214, 92, 182, 0.48) 0%, transparent 70%),
@@ -157,8 +159,8 @@ export default function FaceScanPage() {
       radial-gradient(circle 4% 30% at -1% 100%, rgba(78, 98, 208, 0.5) 0%, transparent 100%),
       radial-gradient(circle at 48% 44%, transparent 0%, transparent 32%, rgba(0,0,0,0.55) 68%, rgba(0,0,0,0.92) 100%)
     `,
-  }}
-/>
+        }}
+      />
       {/* Glassmorphism Laser Scanner Line (Hidden during scanning) */}
       {!isScanning && (
         <div className="pointer-events-none fixed left-0 right-0 z-30 flex flex-col items-center animate-scan-beam">

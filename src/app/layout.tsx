@@ -62,8 +62,8 @@ export const metadata: Metadata = {
   category: "photography",
 };
 
-const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans" });
-const outfit = Outfit({ subsets: ["latin"], variable: "--font-heading" });
+const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-heading", display: "swap" });
 
 export default function RootLayout({
   children,

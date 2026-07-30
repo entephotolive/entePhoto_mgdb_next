@@ -17,7 +17,7 @@ export function LogoutButton({ redirectPath }: LogoutButtonProps) {
     setIsPending(true);
 
     try {
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch("/next-api/auth/logout", {
         method: "POST",
       });
 
