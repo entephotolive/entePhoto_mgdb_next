@@ -68,11 +68,8 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
 
   if (!item) return null;
 
-  const isCompressing =
-    item.status === "queued" ||
-    (item.status === "uploading" && (item.progress || 0) === 0);
-
-  const showSkeleton = isCompressing;
+  const isCompressing = (item.progress || 0) === 0;
+  const showSkeleton = !item.preview;
   const isCompletedOrDuplicate =
     item.status === "completed" || item.status === "duplicate";
 
