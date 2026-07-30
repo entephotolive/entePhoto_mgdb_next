@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     });
 
     if (searchConditions.length === 0) {
-      return NextResponse.json({ duplicates: [] }, { status: 200 });
+      return NextResponse.json({ isDuplicate: false, duplicates: [], results: {} }, { status: 200 });
     }
 
     const query = {

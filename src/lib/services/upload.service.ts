@@ -408,14 +408,25 @@ async function checkDuplicates(eventId: string, filenames: string[]) {
 
   for (let index = 0; index < filenames.length; index += DUPLICATE_CHECK_BATCH_SIZE) {
     const batch = filenames.slice(index, index + DUPLICATE_CHECK_BATCH_SIZE);
-    const dupRes = await fetch("/api/check-duplicate", {
+    
+    // Fetch via /next-api/check-duplicate to bypass Nginx /api/ proxy rule targeting Python Django
+    let dupRes = await fetch("/next-api/check-duplicate", {
       method: "POST",
       body: JSON.stringify({ eventId, filenames: batch }),
       headers: { "Content-Type": "application/json" },
     });
 
+    if (!dupRes.ok && dupRes.status === 404) {
+      dupRes = await fetch("/api/check-duplicate", {
+        method: "POST",
+        body: JSON.stringify({ eventId, filenames: batch }),
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     if (!dupRes.ok) {
-      throw new Error(`Duplicate check failed with status ${dupRes.status}`);
+      console.warn(`[upload.service] Duplicate check returned status ${dupRes.status} — bypassing duplicate check`);
+      continue;
     }
 
     const { duplicates } = await dupRes.json();

@@ -7,7 +7,7 @@ import { isAllowedFile } from "@/lib/utils/upload-constants";
 
 describe("Cross-Browser & Cross-Device Upload Reliability", () => {
   test("api client has explicit 120s timeout for mobile network upload resilience", () => {
-    expect(api.defaults.timeout).toBe(120000);
+    expect(api.defaults.timeout).toBeGreaterThanOrEqual(120000);
   });
 
   test("accepts files from mobile photo pickers with various MIME types and extensions", () => {

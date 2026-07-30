@@ -5,7 +5,7 @@ const pythonApi = process.env.NEXT_PUBLIC_PYTHON_API_URL;
 export const api = axios.create({
   baseURL: pythonApi,
   withCredentials: true,
-  timeout: 120000, // 2 minutes timeout for large file uploads on mobile connections
+  timeout: 300000, // 5 minutes timeout for large file uploads on mobile connections
 });
 
 // Optional: response interceptor
@@ -14,5 +14,5 @@ api.interceptors.response.use(
   (error) => {
     console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
-  }
+  },
 );
