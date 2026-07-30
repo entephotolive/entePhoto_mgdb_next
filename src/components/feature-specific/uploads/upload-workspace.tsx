@@ -273,8 +273,8 @@ function RecentUploadsGrid({
 
     getFolderPhotosPage("all", eventId, null).then((res) => {
       if (active) {
-        // Only keep the latest 10
-        setPhotos(res.photos.slice(0, 10));
+        // Show up to 24 recent uploads
+        setPhotos(res.photos.slice(0, 24));
       }
     });
 
@@ -375,16 +375,24 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   const revokePreview = useUploadStore((s) => s.revokePreview);
 
   // Renderable items: active queue items (queued, uploading, paused, failed) OR completed items floating up before removal (700ms).
-  // Prioritizes currently uploading items at the TOP of the visible queue grid.
+  // Maintains stable card positions during float-up exit animation without re-sorting completed items to 3rd position.
   const renderableItems = useMemo(() => {
     const active = items.filter((item) => !flashedItemIds.includes(item.id));
 
     return active.sort((a, b) => {
-      const aUploading = a.status === "uploading" || a.status === "paused";
-      const bUploading = b.status === "uploading" || b.status === "paused";
+      const aActive =
+        a.status === "uploading" ||
+        a.status === "paused" ||
+        a.status === "completed" ||
+        a.status === "duplicate";
+      const bActive =
+        b.status === "uploading" ||
+        b.status === "paused" ||
+        b.status === "completed" ||
+        b.status === "duplicate";
 
-      if (aUploading && !bUploading) return -1;
-      if (!aUploading && bUploading) return 1;
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return 1;
       return 0;
     });
   }, [items, flashedItemIds]);

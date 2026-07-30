@@ -252,20 +252,20 @@ export async function listPhotosByFolder(
   });
 
   const eventObjectId = eventId ? toObjectId(eventId) : null;
+  const numEventId = Number(eventId);
+  const isNumEventId = eventId ? !isNaN(numEventId) : false;
+
   const folderObjectId =
     folderId && folderId !== "all" ? toObjectId(folderId) : null;
 
-  const eventMatch =
-    eventId && eventObjectId
-      ? [
-          { event_id: eventObjectId },
-          { eventId: eventObjectId },
-          { event_id: eventId },
-          { eventId: eventId },
-        ]
-      : eventId
-        ? [{ event_id: eventId }, { eventId: eventId }]
-        : [];
+  const eventMatch = eventId
+    ? [
+        { event_id: eventId },
+        { eventId: eventId },
+        ...(eventObjectId ? [{ event_id: eventObjectId }, { eventId: eventObjectId }] : []),
+        ...(isNumEventId ? [{ event_id: numEventId }, { eventId: numEventId }] : []),
+      ]
+    : [];
 
   const folderMatch =
     folderId !== "all"
