@@ -633,13 +633,24 @@ export async function processUploadQueue(context: UploadContext) {
   store.setWidgetVisible(true);
 
   try {
-    const filenames = toUpload.map((i) => i.file.name.replace(/\.[^/.]+$/, "") + ".jpg");
+    const filenames: string[] = [];
+    toUpload.forEach((i) => {
+      filenames.push(i.file.name);
+      const jpgName = i.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+      if (jpgName !== i.file.name) {
+        filenames.push(jpgName);
+      }
+    });
+
     const duplicateSet = await checkDuplicates(context.eventId, filenames);
 
     if (duplicateSet.size > 0) {
       toUpload.forEach((item) => {
         const expectedName = item.file.name.replace(/\.[^/.]+$/, "") + ".jpg";
-        if (duplicateSet.has(expectedName)) {
+        const isDuplicateFound =
+          duplicateSet.has(item.file.name) || duplicateSet.has(expectedName);
+
+        if (isDuplicateFound) {
           if (item.status === "failed") {
             // Retry recovery: If a retried item failed due to a network drop after
             // the server recorded the upload, checkDuplicates confirms the image

@@ -63,17 +63,35 @@ export async function POST(request: Request) {
     const processDoc = (doc: { image_name?: string }) => {
       if (!doc.image_name) return;
       const dbStem = doc.image_name.replace(/\.[^/.]+$/, "").toLowerCase();
-      const requestedName = stemToRequestedName.get(dbStem);
-      if (requestedName) {
-        duplicateSet.add(requestedName);
-      }
+      // Match all requested filenames that share this stem
+      filenames.forEach((requestedName: string) => {
+        if (typeof requestedName !== "string") return;
+        const reqStem = requestedName.replace(/\.[^/.]+$/, "").toLowerCase();
+        if (reqStem === dbStem) {
+          duplicateSet.add(requestedName);
+        }
+      });
     };
 
     duplicatePhotos.forEach(processDoc);
     duplicateImageWithFace.forEach(processDoc);
 
+    const results: Record<string, boolean> = {};
+    filenames.forEach((name: string) => {
+      if (typeof name === "string") {
+        results[name] = duplicateSet.has(name);
+      }
+    });
+
+    const duplicates = Array.from(duplicateSet);
+    const isDuplicate = duplicates.length > 0;
+
     return NextResponse.json(
-      { duplicates: Array.from(duplicateSet) },
+      {
+        isDuplicate,
+        duplicates,
+        results,
+      },
       { status: 200 },
     );
   } catch (error) {
