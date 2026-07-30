@@ -55,18 +55,6 @@ const UploadQueueItemCard = memo(function UploadQueueItemCard({
     useCallback((s) => s.items.find((i) => i.id === id), [id]),
   );
 
-  useEffect(() => {
-    if (!item) return;
-    if (item.status === "completed" || item.status === "duplicate") {
-      console.log(`[UploadQueue] timer started for item ${item.id} (${item.file.name})`);
-      const timer = setTimeout(() => {
-        console.log(`[UploadQueue] timer fired, removing item ${item.id} (${item.file.name})`);
-        useUploadStore.getState().markItemFlashed(item.id);
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [item?.id, item?.status]);
-
   if (!item) return null;
 
   const isCompressing =
@@ -359,14 +347,25 @@ export function UploadWorkspace({ events, userId }: UploadWorkspaceProps) {
   } = useGlobalUpload();
 
   const items = useUploadStore((s) => s.items);
-  const flashedItemIds = useUploadStore((s) => s.flashedItemIds);
   const ensurePreview = useUploadStore((s) => s.ensurePreview);
   const revokePreview = useUploadStore((s) => s.revokePreview);
 
-  // Renderable items: active queue items (queued, uploading, paused, failed) OR completed/duplicate items before the 600ms timer fires
+  // Renderable items: active queue items (queued, uploading, paused, failed).
+  // Immediately removes completed/duplicate items (100% done) and prioritizes currently uploading items at the TOP.
   const renderableItems = useMemo(() => {
-    return items.filter((item) => !flashedItemIds.includes(item.id));
-  }, [items, flashedItemIds]);
+    const active = items.filter(
+      (item) => item.status !== "completed" && item.status !== "duplicate",
+    );
+
+    return active.sort((a, b) => {
+      const aUploading = a.status === "uploading" || a.status === "paused";
+      const bUploading = b.status === "uploading" || b.status === "paused";
+
+      if (aUploading && !bUploading) return -1;
+      if (!aUploading && bUploading) return 1;
+      return 0;
+    });
+  }, [items]);
 
   // Bounded page window of visible items (backfills automatically as completed items leave renderableItems)
   const visibleRenderableItems = useMemo(() => {
