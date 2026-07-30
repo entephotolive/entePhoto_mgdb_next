@@ -12,6 +12,11 @@ import {
   ChevronUp,
   ExternalLink,
   Check,
+  Users,
+  Trash2,
+  Share2,
+  Download,
+  ZoomIn,
 } from "lucide-react";
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useGlobalUpload } from "@/hooks/use-global-upload";
@@ -20,8 +25,21 @@ import { EventListItem } from "@/types";
 import { EventSelectDropdown } from "@/components/shared/event-select-dropdown";
 import { EVENT_UPLOAD_WINDOW_MS, MAX_UPLOAD_SIZE_MB } from "@/lib/utils/upload-constants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getFolderPhotosPage } from "@/app/photographer/(panel)/gallery/[slug]/action";
+import { getFolderPhotosPage, deletePhotoAction } from "@/app/photographer/(panel)/gallery/[slug]/action";
 import type { PhotoItem } from "@/lib/services/photo.service";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -263,6 +281,9 @@ function RecentUploadsGrid({
   completedCount: number;
 }) {
   const [photos, setPhotos] = useState<PhotoItem[] | null>(null);
+  const [lightbox, setLightbox] = useState<PhotoItem | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<PhotoItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
@@ -279,6 +300,48 @@ function RecentUploadsGrid({
       active = false;
     };
   }, [eventId, completedCount]);
+
+  async function handleDeleteConfirm() {
+    if (!photoToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      const res = await deletePhotoAction(photoToDelete.id);
+      if (res.ok) {
+        setPhotos((prev) => (prev ? prev.filter((p) => p.id !== photoToDelete.id) : null));
+        if (lightbox?.id === photoToDelete.id) {
+          setLightbox(null);
+        }
+      } else {
+        alert(res.error || "Failed to delete photo");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("An error occurred while deleting photo");
+    } finally {
+      setIsDeleting(false);
+      setPhotoToDelete(null);
+    }
+  }
+
+  function triggerDownload(url: string, name: string) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name || "photo.jpg";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  function triggerShare(url: string, name: string) {
+    if (navigator.share) {
+      navigator.share({ title: name, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).catch(() => {});
+      alert("Photo link copied to clipboard!");
+    }
+  }
 
   if (photos === null) {
     return (
@@ -312,18 +375,207 @@ function RecentUploadsGrid({
         {photos.map((photo) => (
           <div
             key={photo.id}
-            className="aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416] transition-transform hover:scale-[1.03]"
+            onClick={() => setLightbox(photo)}
+            className="group relative aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416] transition-all cursor-pointer hover:scale-[1.03] hover:border-white/20 hover:shadow-2xl"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={photo.url}
               alt="Recent upload"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
+
+            {/* Hover overlay with zoom icon, face count, and delete button */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-between">
+              <div className="flex justify-between items-center">
+                {/* Face count badge */}
+                <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-full border border-white/10 shadow-md">
+                  <Users size={13} className="text-cyan-400" />
+                  <span>
+                    {photo.faceCount ?? 0} {(photo.faceCount === 1) ? 'Face' : 'Faces'}
+                  </span>
+                </div>
+
+                {/* Quick delete button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhotoToDelete(photo);
+                  }}
+                  className="w-7 h-7 rounded-full bg-rose-500/80 hover:bg-rose-600 active:bg-rose-700 text-white flex items-center justify-center transition-transform hover:scale-110 shadow-md"
+                  title="Delete Photo"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+
+              {/* Zoom hint icon */}
+              <div className="flex items-center justify-center self-center text-white/90 bg-white/10 backdrop-blur-md rounded-full p-2.5 border border-white/20 shadow-lg">
+                <ZoomIn size={18} />
+              </div>
+
+              <div />
+            </div>
           </div>
         ))}
       </div>
+
+      {/* ── Lightbox Modal ── */}
+      <Dialog
+        open={!!lightbox}
+        onOpenChange={(open) => !open && setLightbox(null)}
+      >
+        <DialogContent className="flex flex-col items-center justify-between max-w-[95vw] w-full md:max-w-5xl max-h-[92vh] rounded-[32px] border border-white/10 bg-[#0d0d0f]/90 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] backdrop-blur-3xl outline-none">
+          {lightbox && (
+            <div className="flex flex-col items-center justify-between w-full h-full gap-4">
+              {/* Header */}
+              <div className="flex items-center justify-between w-full pb-3 border-b border-white/10 px-2">
+                <div>
+                  <h3 className="text-lg md:text-xl font-bold text-white tracking-tight">
+                    Captured Moment
+                  </h3>
+                  <p className="text-xs text-slate-400">{eventTitle}</p>
+                </div>
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Close Lightbox"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Center Image Display */}
+              <div className="relative flex w-full flex-1 min-h-0 justify-center items-center rounded-2xl bg-black/50 ring-1 ring-white/10 overflow-hidden p-2">
+                <img
+                  src={lightbox.url}
+                  alt="Recent upload photo"
+                  className="max-h-[62vh] md:max-h-[68vh] w-auto max-w-full object-contain rounded-lg shadow-2xl"
+                />
+              </div>
+
+              {/* Bottom Actions Bar */}
+              <TooltipProvider delayDuration={150}>
+                <div className="flex items-center gap-4 rounded-full border border-white/15 bg-white/10 px-6 py-2.5 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all">
+                  
+                  {/* Face Count Display */}
+                  <div className="flex items-center gap-2 pr-2 text-white/90">
+                    <Users size={18} className="text-cyan-400" />
+                    <span className="text-sm font-semibold">
+                      {lightbox.faceCount ?? 0} {(lightbox.faceCount === 1) ? 'Face' : 'Faces'}
+                    </span>
+                  </div>
+                  
+                  <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => triggerShare(lightbox.url, eventTitle)}
+                        className="rounded-full h-11 w-11 text-zinc-200 hover:bg-white/20 hover:text-white"
+                      >
+                        <Share2 size={20} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
+                    >
+                      <p>Share Link</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        onClick={() => triggerDownload(lightbox.url, `photo-${lightbox.id}.jpg`)}
+                        className="rounded-full h-11 w-11 bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.5)] hover:scale-105 hover:bg-cyan-300"
+                      >
+                        <Download size={20} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
+                    >
+                      <p>Download Photo</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setPhotoToDelete(lightbox)}
+                        className="rounded-full h-11 w-11 bg-rose-500/80 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all hover:scale-105 hover:bg-rose-600"
+                      >
+                        <Trash2 size={20} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
+                    >
+                      <p>Delete Photo</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Dialog
+        open={!!photoToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setPhotoToDelete(null)}
+      >
+        <DialogContent className="bg-[#141416] border-white/10 text-white sm:max-w-[420px] rounded-3xl p-6 shadow-panel">
+          <DialogHeader className="text-center sm:text-left">
+            <div className="mx-auto sm:mx-0 w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-3">
+              <AlertCircle size={24} className="text-rose-400" />
+            </div>
+            <DialogTitle className="text-xl font-bold text-white">
+              Delete Photo?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-slate-400 text-sm leading-relaxed my-2">
+            Are you sure you want to delete this photo from the event? This action cannot be undone.
+          </p>
+          <div className="flex items-center justify-end gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setPhotoToDelete(null)}
+              disabled={isDeleting}
+              className="rounded-xl border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="rounded-xl bg-rose-500 font-semibold text-white hover:bg-rose-600"
+            >
+              {isDeleting ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </div>
+              ) : (
+                "Delete Permanently"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

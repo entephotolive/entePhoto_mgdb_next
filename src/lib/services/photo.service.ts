@@ -302,6 +302,29 @@ export async function listPhotosByFolder(
   const limit = options.limit;
   const fetchLimit = limit ? limit * 2 + 10 : 0;
 
+function resolveDocFaceCount(doc: any): number {
+  if (!doc) return 0;
+  
+  if (typeof doc.face_count === "number") return doc.face_count;
+  if (typeof doc.faceCount === "number") return doc.faceCount;
+  if (typeof doc.num_faces === "number") return doc.num_faces;
+  if (typeof doc.numFaces === "number") return doc.numFaces;
+  if (typeof doc.faces_count === "number") return doc.faces_count;
+  if (typeof doc.facesCount === "number") return doc.facesCount;
+  
+  if (typeof doc.face_count === "string" && !isNaN(Number(doc.face_count))) return Number(doc.face_count);
+  if (typeof doc.faceCount === "string" && !isNaN(Number(doc.faceCount))) return Number(doc.faceCount);
+
+  if (Array.isArray(doc.faces)) return doc.faces.length;
+  if (Array.isArray(doc.face_locations)) return doc.face_locations.length;
+  if (Array.isArray(doc.face_encodings)) return doc.face_encodings.length;
+  if (Array.isArray(doc.bounding_boxes)) return doc.bounding_boxes.length;
+  if (Array.isArray(doc.boxes)) return doc.boxes.length;
+  if (Array.isArray(doc.encodings)) return doc.encodings.length;
+
+  return 0;
+}
+
   const docsByCollection = await Promise.all(
     collections.map((name) => {
       let cursor = db.collection(name).find(query, {
@@ -317,6 +340,16 @@ export async function listPhotosByFolder(
           created_at: 1,
           face_count: 1,
           faceCount: 1,
+          num_faces: 1,
+          numFaces: 1,
+          faces_count: 1,
+          facesCount: 1,
+          faces: 1,
+          face_locations: 1,
+          face_encodings: 1,
+          bounding_boxes: 1,
+          boxes: 1,
+          encodings: 1,
         },
       });
       cursor = cursor.sort({ uploaded_at: -1, createdAt: -1, _id: -1 });
@@ -335,13 +368,14 @@ export async function listPhotosByFolder(
       if (!url) return null;
 
       const createdAt = resolveDocCreatedAt(doc);
+      const faceCount = resolveDocFaceCount(doc);
 
       return {
         id: (doc._id?.toString?.() ?? String(doc.id ?? url)) as string,
         url,
         createdAt: createdAt.toISOString(),
         __createdAtMs: createdAt.getTime(),
-        faceCount: doc.face_count ?? doc.faceCount ?? 0,
+        faceCount,
       };
     })
     .filter(Boolean) as Array<PhotoItem & { __createdAtMs: number }>;
@@ -364,14 +398,25 @@ export async function listPhotosByFolder(
     });
   }
 
-  // De-dupe by URL (face collection may contain the same underlying image).
-  const seen = new Set<string>();
-  const deduplicated: PhotoItem[] = [];
+  // De-dupe by URL, keeping the item with highest faceCount (e.g. from image_with_face collection).
+  const urlToItemMap = new Map<string, PhotoItem & { __createdAtMs: number }>();
   for (const item of merged) {
-    if (seen.has(item.url)) continue;
-    seen.add(item.url);
-    deduplicated.push({ id: item.id, url: item.url, createdAt: item.createdAt });
+    const existing = urlToItemMap.get(item.url);
+    if (!existing) {
+      urlToItemMap.set(item.url, item);
+    } else {
+      if ((item.faceCount ?? 0) > (existing.faceCount ?? 0)) {
+        urlToItemMap.set(item.url, item);
+      }
+    }
   }
+
+  const deduplicated: PhotoItem[] = Array.from(urlToItemMap.values()).map((item) => ({
+    id: item.id,
+    url: item.url,
+    createdAt: item.createdAt,
+    faceCount: item.faceCount ?? 0,
+  }));
 
   let photos = deduplicated;
   let nextCursor: string | null = null;
