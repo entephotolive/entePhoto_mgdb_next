@@ -14,8 +14,6 @@ import {
   Check,
   Users,
   Trash2,
-  Share2,
-  Download,
   ZoomIn,
 } from "lucide-react";
 import React, { useRef, useState, useEffect, useMemo, useCallback, memo } from "react";
@@ -324,45 +322,6 @@ function RecentUploadsGrid({
     }
   }
 
-  function triggerDownload(url: string, name: string) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name || "photo.jpg";
-    a.target = "_blank";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  function triggerShare(url: string, name: string) {
-    if (navigator.share) {
-      navigator.share({ title: name, url }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(url).catch(() => {});
-      alert("Photo link copied to clipboard!");
-    }
-  }
-
-  if (photos === null) {
-    return (
-      <div className="mt-16 border-t border-white/5 pt-12">
-        <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={`ws-skeleton-${i}`}
-              className="aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416]"
-            >
-              <Skeleton className="h-full w-full rounded-[20px] bg-white/5" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (photos.length === 0) return null;
-
   return (
     <div className="mt-16 border-t border-white/5 pt-12">
       <div className="flex items-center justify-between mb-6">
@@ -422,15 +381,15 @@ function RecentUploadsGrid({
         ))}
       </div>
 
-      {/* ── Lightbox Modal ── */}
+      {/* ── Lightbox Modal (matches FolderPhotoGrid structure) ── */}
       <Dialog
         open={!!lightbox}
         onOpenChange={(open) => !open && setLightbox(null)}
       >
-        <DialogContent className="flex flex-col items-center justify-between max-w-[95vw] w-full md:max-w-5xl max-h-[92vh] rounded-[32px] border border-white/10 bg-[#0d0d0f]/90 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] backdrop-blur-3xl outline-none">
+        <DialogContent showCloseButton={false} className="flex flex-col items-center justify-between max-w-[95vw] w-full md:max-w-5xl max-h-[92vh] rounded-[32px] border border-white/10 bg-[#0d0d0f]/90 p-4 md:p-6 shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] backdrop-blur-3xl outline-none">
           {lightbox && (
             <div className="flex flex-col items-center justify-between w-full h-full gap-4">
-              {/* Header */}
+              {/* Header / Title */}
               <div className="flex items-center justify-between w-full pb-3 border-b border-white/10 px-2">
                 <div>
                   <h3 className="text-lg md:text-xl font-bold text-white tracking-tight">
@@ -456,7 +415,7 @@ function RecentUploadsGrid({
                 />
               </div>
 
-              {/* Bottom Actions Bar */}
+              {/* Bottom Actions Bar (Face count + Delete button only) */}
               <TooltipProvider delayDuration={150}>
                 <div className="flex items-center gap-4 rounded-full border border-white/15 bg-white/10 px-6 py-2.5 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all">
                   
@@ -473,44 +432,7 @@ function RecentUploadsGrid({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => triggerShare(lightbox.url, eventTitle)}
-                        className="rounded-full h-11 w-11 text-zinc-200 hover:bg-white/20 hover:text-white"
-                      >
-                        <Share2 size={20} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
-                    >
-                      <p>Share Link</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        onClick={() => triggerDownload(lightbox.url, `photo-${lightbox.id}.jpg`)}
-                        className="rounded-full h-11 w-11 bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.5)] hover:scale-105 hover:bg-cyan-300"
-                      >
-                        <Download size={20} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent
-                      side="top"
-                      className="border border-white/20 bg-black/80 text-white text-xs backdrop-blur-xl"
-                    >
-                      <p>Download Photo</p>
-                    </TooltipContent>
-                  </Tooltip>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="destructive"
+                        variant="danger"
                         size="icon"
                         onClick={() => setPhotoToDelete(lightbox)}
                         className="rounded-full h-11 w-11 bg-rose-500/80 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)] transition-all hover:scale-105 hover:bg-rose-600"

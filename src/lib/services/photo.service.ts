@@ -226,6 +226,15 @@ function resolveDocCreatedAt(doc: any): Date {
   return new Date(0);
 }
 
+function resolveDocFaceCount(doc: any): number {
+  if (!doc) return 0;
+  if (typeof doc.face_count === "number") return doc.face_count;
+  if (typeof doc.faceCount === "number") return doc.faceCount;
+  if (typeof doc.face_count === "string" && !isNaN(Number(doc.face_count))) return Number(doc.face_count);
+  if (typeof doc.faceCount === "string" && !isNaN(Number(doc.faceCount))) return Number(doc.faceCount);
+  return 0;
+}
+
 /** Fetch all photos belonging to a specific folder */
 export async function listPhotosByFolder(
   folderId: string,
@@ -302,29 +311,6 @@ export async function listPhotosByFolder(
   const limit = options.limit;
   const fetchLimit = limit ? limit * 2 + 10 : 0;
 
-function resolveDocFaceCount(doc: any): number {
-  if (!doc) return 0;
-  
-  if (typeof doc.face_count === "number") return doc.face_count;
-  if (typeof doc.faceCount === "number") return doc.faceCount;
-  if (typeof doc.num_faces === "number") return doc.num_faces;
-  if (typeof doc.numFaces === "number") return doc.numFaces;
-  if (typeof doc.faces_count === "number") return doc.faces_count;
-  if (typeof doc.facesCount === "number") return doc.facesCount;
-  
-  if (typeof doc.face_count === "string" && !isNaN(Number(doc.face_count))) return Number(doc.face_count);
-  if (typeof doc.faceCount === "string" && !isNaN(Number(doc.faceCount))) return Number(doc.faceCount);
-
-  if (Array.isArray(doc.faces)) return doc.faces.length;
-  if (Array.isArray(doc.face_locations)) return doc.face_locations.length;
-  if (Array.isArray(doc.face_encodings)) return doc.face_encodings.length;
-  if (Array.isArray(doc.bounding_boxes)) return doc.bounding_boxes.length;
-  if (Array.isArray(doc.boxes)) return doc.boxes.length;
-  if (Array.isArray(doc.encodings)) return doc.encodings.length;
-
-  return 0;
-}
-
   const docsByCollection = await Promise.all(
     collections.map((name) => {
       let cursor = db.collection(name).find(query, {
@@ -340,16 +326,6 @@ function resolveDocFaceCount(doc: any): number {
           created_at: 1,
           face_count: 1,
           faceCount: 1,
-          num_faces: 1,
-          numFaces: 1,
-          faces_count: 1,
-          facesCount: 1,
-          faces: 1,
-          face_locations: 1,
-          face_encodings: 1,
-          bounding_boxes: 1,
-          boxes: 1,
-          encodings: 1,
         },
       });
       cursor = cursor.sort({ uploaded_at: -1, createdAt: -1, _id: -1 });
@@ -449,19 +425,18 @@ export async function getFolderMeta(
     source === "both" ? ["photos", "image_with_face"] : [source];
 
   const eventObjectId = eventId ? toObjectId(eventId) : null;
+  const numEventId = Number(eventId);
+  const isNumEventId = eventId ? !isNaN(numEventId) : false;
   const folderObjectId = folderId !== "all" ? toObjectId(folderId) : null;
 
-  const eventMatch =
-    eventId && eventObjectId
-      ? [
-          { event_id: eventObjectId },
-          { eventId: eventObjectId },
-          { event_id: eventId },
-          { eventId: eventId },
-        ]
-      : eventId
-        ? [{ event_id: eventId }, { eventId: eventId }]
-        : [];
+  const eventMatch = eventId
+    ? [
+        { event_id: eventId },
+        { eventId: eventId },
+        ...(eventObjectId ? [{ event_id: eventObjectId }, { eventId: eventObjectId }] : []),
+        ...(isNumEventId ? [{ event_id: numEventId }, { eventId: numEventId }] : []),
+      ]
+    : [];
 
   if (folderId === "all") {
     if (!eventId || eventMatch.length === 0) {
