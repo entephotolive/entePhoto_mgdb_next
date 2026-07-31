@@ -92,6 +92,16 @@ export default function FaceScanPage() {
         );
       }
 
+      // Persist scan event stats to MongoDB asynchronously
+      const eventIdStr = Array.isArray(eid) ? eid[0] : eid;
+      if (eventIdStr) {
+        fetch("/next-api/scan-event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId: eventIdStr, attendeeId: String(attendeeId) }),
+        }).catch((err) => console.error("Failed to persist scan event:", err));
+      }
+
       sessionStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
       localStorage.setItem(SCAN_ATTENDEE_SESSION_KEY, String(attendeeId));
       document.cookie = `${SCAN_ATTENDEE_SESSION_KEY}=${attendeeId}; path=/; max-age=18000;`;

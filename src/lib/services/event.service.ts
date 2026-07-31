@@ -29,6 +29,7 @@ export async function listEvents(userId: string) {
 
   const photosColl = db.collection("photos");
   const facesColl = db.collection("image_with_face");
+  const scansColl = db.collection("guest_scans");
 
   const eventsWithCounts = await Promise.all(
     events.map(async (event) => {
@@ -44,9 +45,11 @@ export async function listEvents(userId: string) {
         ],
       };
 
-      const [pCount, fCount] = await Promise.all([
+      const [pCount, fCount, totalScans, uniqueAttendees] = await Promise.all([
         photosColl.countDocuments(filter),
         facesColl.countDocuments(filter),
+        scansColl.countDocuments(filter),
+        scansColl.distinct("attendeeId", filter),
       ]);
 
       return {
@@ -55,6 +58,8 @@ export async function listEvents(userId: string) {
         date: event.date.toISOString(),
         location: event.location,
         photoCount: pCount + fCount,
+        totalScans,
+        uniqueScans: uniqueAttendees.length,
         createdBy: {
           id: (event.createdBy as any)?._id?.toString?.() ?? userId,
           name: (event.createdBy as any)?.name ?? "Unknown",
@@ -83,6 +88,9 @@ export async function createEvent(input: unknown) {
     title: event.title,
     date: event.date.toISOString(),
     location: event.location,
+    photoCount: 0,
+    totalScans: 0,
+    uniqueScans: 0,
     createdBy: {
       id: event.createdBy.toString(),
       name: "Assigned User",
@@ -100,7 +108,8 @@ export async function getEventById(eventId: string): Promise<EventListItem | nul
     return null;
   }
 
-  await connectToDatabase();
+  const conn = await connectToDatabase();
+  const db = conn.connection.db;
 
   const event = await EventModel.findById(eventId)
     .populate("createdBy", "name")
@@ -110,11 +119,42 @@ export async function getEventById(eventId: string): Promise<EventListItem | nul
     return null;
   }
 
+  const eventIdStr = event._id.toString();
+  const eventIdObj = event._id;
+
+  const filter = {
+    $or: [
+      { eventId: eventIdStr },
+      { event_id: eventIdStr },
+      { eventId: eventIdObj },
+      { event_id: eventIdObj },
+    ],
+  };
+
+  let photoCount = 0;
+  let totalScans = 0;
+  let uniqueScans = 0;
+
+  if (db) {
+    const [pCount, fCount, tScans, uAttendees] = await Promise.all([
+      db.collection("photos").countDocuments(filter),
+      db.collection("image_with_face").countDocuments(filter),
+      db.collection("guest_scans").countDocuments(filter),
+      db.collection("guest_scans").distinct("attendeeId", filter),
+    ]);
+    photoCount = pCount + fCount;
+    totalScans = tScans;
+    uniqueScans = uAttendees.length;
+  }
+
   return {
-    id: event._id.toString(),
+    id: eventIdStr,
     title: event.title,
     date: event.date.toISOString(),
     location: event.location,
+    photoCount,
+    totalScans,
+    uniqueScans,
     createdBy: {
       id: (event.createdBy as any)?._id?.toString?.() ?? "",
       name: (event.createdBy as any)?.name ?? "Unknown",

@@ -37,6 +37,10 @@ export interface EventListItem {
   location: string;
   /** Total number of photos (photos + face-indexed photos) for this event. */
   photoCount?: number;
+  /** Total number of QR scans for this event. */
+  totalScans?: number;
+  /** Number of unique attendees who scanned QR for this event. */
+  uniqueScans?: number;
   /** Optional ISO-8601 creation timestamp — available from newer queries. */
   createdAt?: string;
   createdBy: {

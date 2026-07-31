@@ -18,6 +18,8 @@ import {
   Copy,
   Check,
   ExternalLink,
+  QrCode,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { EventListItem, PhotographerProfile } from "@/types";
@@ -111,6 +113,14 @@ function EventDetailList({ event }: { event: EventListItem }) {
       <div className="flex items-center gap-3 text-sm text-slate-300">
         <Camera size={15} className="shrink-0 text-slate-500" />
         <span>{event.photoCount?.toLocaleString() ?? 0} Photos</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <QrCode size={15} className="shrink-0 text-cyan-400" />
+        <span>{event.totalScans?.toLocaleString() ?? 0} Total Scans</span>
+      </div>
+      <div className="flex items-center gap-3 text-sm text-slate-300">
+        <Users size={15} className="shrink-0 text-emerald-400" />
+        <span>{event.uniqueScans?.toLocaleString() ?? 0} Unique Attendees</span>
       </div>
     </div>
   );
