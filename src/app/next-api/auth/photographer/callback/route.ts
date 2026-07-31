@@ -6,12 +6,12 @@ import { exchangeCodeForToken, fetchGoogleUserProfile } from "@/lib/utils/google
 import { sendWelcomeEmail, sendAdminNotificationEmail } from "@/lib/services/email.service";
 
 const host = process.env.NEXT_PUBLIC_APP_URL!;
-const REDIRECT_URI = `${host}/api/auth/photographer/callback`;
+const REDIRECT_URI = `${host}/next-api/auth/photographer/callback`;
 const LOGIN_URL = `${host}/photographer/login`;
 const DASHBOARD_URL = `${host}/photographer/dashboard`;
 
 /**
- * GET /api/auth/photographer/callback
+ * GET /next-api/auth/photographer/callback
  *
  * Handles the Google OAuth callback exclusively for photographer users.
  *

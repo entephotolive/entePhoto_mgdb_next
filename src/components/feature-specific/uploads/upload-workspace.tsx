@@ -322,6 +322,26 @@ function RecentUploadsGrid({
     }
   }
 
+  if (photos === null) {
+    return (
+      <div className="mt-16 border-t border-white/5 pt-12">
+        <h3 className="text-xl font-bold text-white mb-6">Recent Uploads</h3>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              key={`ws-skeleton-${i}`}
+              className="aspect-square overflow-hidden rounded-[20px] border border-white/5 bg-[#141416]"
+            >
+              <Skeleton className="h-full w-full rounded-[20px] bg-white/5" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (photos.length === 0) return null;
+
   return (
     <div className="mt-16 border-t border-white/5 pt-12">
       <div className="flex items-center justify-between mb-6">

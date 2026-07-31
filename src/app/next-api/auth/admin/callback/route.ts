@@ -6,12 +6,12 @@ import { adminCookieName } from "@/lib/utils/constants";
 import { exchangeCodeForToken, fetchGoogleUserProfile } from "@/lib/utils/google-oauth";
 
 const host = process.env.NEXT_PUBLIC_APP_URL!;
-const REDIRECT_URI = `${host}/api/auth/admin/callback`;
+const REDIRECT_URI = `${host}/next-api/auth/admin/callback`;
 const LOGIN_URL = `${host}/admin/login`;
 const DASHBOARD_URL = `${host}/admin`;
 
 /**
- * GET /api/auth/admin/callback
+ * GET /next-api/auth/admin/callback
  *
  * Handles the Google OAuth callback exclusively for admin users.
  *
