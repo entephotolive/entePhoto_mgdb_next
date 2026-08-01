@@ -83,7 +83,68 @@ export default function LiveFeedPage() {
   const [photos, setPhotos] = useState<MatchedPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [lightbox, setLightbox] = useState<LightboxPhoto | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState({
+    current: 0,
+    total: 0,
+  });
+  const [showFeedbackCTA, setShowFeedbackCTA] = useState(false);
+
   const socketRef = useRef<WebSocket | null>(null);
+
+  const handleDownloadAll = async () => {
+    if (photos.length === 0 || downloadingAll) return;
+
+    setDownloadingAll(true);
+    setDownloadProgress({ current: 0, total: photos.length });
+
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+      setDownloadProgress({ current: i + 1, total: photos.length });
+
+      try {
+        const response = await fetch(photo.image_url);
+        if (!response.ok) {
+          throw new Error(`HTTP error status: ${response.status}`);
+        }
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = photo.image_name || `photo_${photo.image_id}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        console.error(
+          `[live-feed] Failed to download photo (id: ${photo.image_id}):`,
+          error,
+        );
+      }
+
+      if (i < photos.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+
+    setDownloadingAll(false);
+    setShowFeedbackCTA(true);
+  };
+
+  const handleShareFeedback = () => {
+    const feedbackUrl = process.env.NEXT_PUBLIC_FEEDBACK_URL;
+    if (!feedbackUrl) {
+      console.warn(
+        "[live-feed] NEXT_PUBLIC_FEEDBACK_URL environment variable is missing or undefined.",
+      );
+      return;
+    }
+    window.open(feedbackUrl, "_blank", "noopener,noreferrer");
+  };
+
 
   useEffect(() => {
     if (!photos.some((photo) => photo.isNew)) return;
@@ -254,6 +315,75 @@ export default function LiveFeedPage() {
           <p className="text-sm text-gray-300 md:text-base">
             Every capture, shared instantly. Join the story in real-time.
           </p>
+
+          {!loading && photos.length > 0 && (
+            <div className="mt-6 flex flex-col items-center justify-center gap-3">
+              <button
+                onClick={handleDownloadAll}
+                disabled={downloadingAll}
+                className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-6 py-2.5 text-sm font-semibold text-black transition-all hover:bg-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {downloadingAll ? (
+                  <>
+                    <svg
+                      className="h-4 w-4 animate-spin text-black"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>
+                      Downloading {downloadProgress.current}/
+                      {downloadProgress.total}…
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                      />
+                    </svg>
+                    <span>Download All ({photos.length})</span>
+                  </>
+                )}
+              </button>
+
+              {showFeedbackCTA && (
+                <div className="inline-flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-5 py-2.5 backdrop-blur-md transition-all">
+                  <span className="text-sm text-gray-200">
+                    Downloads complete! Enjoying your photos?
+                  </span>
+                  <button
+                    onClick={handleShareFeedback}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-cyan-400/20 px-3.5 py-1 text-xs font-semibold text-cyan-300 transition-colors hover:bg-cyan-400/30 hover:text-white border border-cyan-400/30"
+                  >
+                    Share your feedback ✨
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Loading skeleton */}

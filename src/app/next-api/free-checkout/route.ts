@@ -6,8 +6,8 @@ import { CouponModel } from "@/models/Coupon";
 import { createFolder } from "@/lib/services/folder.service";
 
 const BASE_PRICES: Record<string, number> = {
-  self: 2499,
-  managed: 3499,
+  self: 999,
+  managed: 4999,
 };
 
 export async function POST(request: Request) {
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const basePrice = BASE_PRICES[serviceType as string] || 2499;
+    const basePrice = BASE_PRICES[serviceType as string] || 999;
     let discountAmount = 0;
 
     if (coupon.discountType === "percentage") {

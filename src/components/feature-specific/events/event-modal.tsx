@@ -35,7 +35,7 @@ const SERVICES = [
     id: "self" as const,
     title: "Self Service",
     description: "Client uploads and manages photos themselves",
-    price: 2499,
+    price: 999,
     features: [
       "AI-Powered Face Search Integration",
       "Direct client portal & guest upload links",
@@ -47,7 +47,7 @@ const SERVICES = [
     id: "managed" as const,
     title: "Managed Service",
     description: "EntePhoto operator handles uploads and management",
-    price: 3499,
+    price: 4999,
     features: [
       "Everything in Self Service, plus:",
       "Assigned EntePhoto operator support",

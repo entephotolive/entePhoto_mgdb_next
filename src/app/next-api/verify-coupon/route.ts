@@ -3,8 +3,8 @@ import { connectToDatabase } from "@/lib/db/mongodb";
 import { CouponModel } from "@/models/Coupon";
 
 const BASE_PRICES: Record<string, number> = {
-  self: 2499,
-  managed: 3499,
+  self: 999,
+  managed: 4999,
 };
 
 export async function POST(request: Request) {
