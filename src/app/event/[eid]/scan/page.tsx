@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/app/next-api/api-client";
+import {
+  Camera,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 
 type ScanStatus = "idle" | "scanning" | "success" | "error";
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
@@ -98,7 +105,10 @@ export default function FaceScanPage() {
         fetch("/next-api/scan-event", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ eventId: eventIdStr, attendeeId: String(attendeeId) }),
+          body: JSON.stringify({
+            eventId: eventIdStr,
+            attendeeId: String(attendeeId),
+          }),
         }).catch((err) => console.error("Failed to persist scan event:", err));
       }
 
@@ -126,192 +136,176 @@ export default function FaceScanPage() {
   const isScanning = status === "scanning";
 
   return (
-    <div className="relative min-h-screen text-white bg-black overflow-hidden select-none">
-      {/* Laser scan beam CSS animation */}
+    <div className="relative min-h-[100dvh] w-full text-white bg-slate-950 overflow-hidden select-none flex flex-col justify-between">
+      {/* Animations and reduced-motion considerations */}
       <style jsx global>{`
-        @keyframes scanBeam {
-          0% {
-            top: 12vh;
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
           }
-          50% {
-            top: 78vh;
-          }
-          100% {
-            top: 12vh;
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
-        .animate-scan-beam {
-          animation: scanBeam 3.5s ease-in-out infinite;
+        @keyframes handBounce {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.35s ease-out forwards;
+        }
+        .animate-hand-bounce {
+          animation: handBounce 1.4s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-hand-bounce {
+            animation: none;
+          }
+          .animate-fade-in {
+            animation: none;
+          }
         }
       `}</style>
 
-      {/* Full-screen background camera view — 100% fluent & crisp */}
+      {/* Full-screen background video feed */}
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className="fixed inset-0 h-full w-full object-cover scale-x-[-1] opacity-100"
+        className="fixed inset-0 h-full w-full object-cover scale-x-[-1] opacity-100 z-0"
       />
 
-      {/* Responsive Corner Light-Leak Overlay (Exactly matching sample image with clear center) */}
+      {/* Soft minimal background vignette tint */}
       <div
-        className="pointer-events-none fixed inset-0 z-10 transition-opacity duration-500"
+        className="pointer-events-none fixed inset-0 z-10"
         style={{
-          background: `
-      radial-gradient(ellipse 3% 55% at -1% 46%, rgba(64, 138, 92, 100) 0%, transparent 70%),
-      radial-gradient(ellipse 28% 9% at 63% -1%, rgba(224, 168, 42, 100) 0%, transparent 70%),
-      radial-gradient(ellipse 34% 5% at 96% -1%, rgba(214, 92, 182, 0.48) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 50% at 1% 97%, rgba(255, 255, 255, 0.5) 0%, transparent 70%),
-      radial-gradient(ellipse 36% 55% at 2% 46%, rgba(64, 138, 92, 0.55) 0%, transparent 70%),
-      radial-gradient(ellipse 28% 22% at 63% 2%, rgba(224, 168, 42, 0.42) 0%, transparent 70%),
-      radial-gradient(ellipse 34% 30% at 96% 6%, rgba(214, 92, 182, 0.48) 0%, transparent 70%),
-      radial-gradient(circle 4% 30% at -1% 100%, rgba(78, 98, 208, 0.5) 0%, transparent 100%),
-      radial-gradient(circle at 48% 44%, transparent 0%, transparent 32%, rgba(0,0,0,0.55) 68%, rgba(0,0,0,0.92) 100%)
-    `,
+          background:
+            "radial-gradient(circle at center, transparent 40%, rgba(15, 23, 42, 0.45) 85%)",
         }}
       />
-      {/* Glassmorphism Laser Scanner Line (Hidden during scanning) */}
-      {!isScanning && (
-        <div className="pointer-events-none fixed left-0 right-0 z-30 flex flex-col items-center animate-scan-beam">
-          {/* Beam glow trail */}
-          <div
-            className={`h-10 w-full bg-gradient-to-b ${
-              status === "success"
-                ? "from-transparent via-emerald-500/5 to-emerald-400/25"
-                : status === "error"
-                  ? "from-transparent via-red-500/5 to-red-400/25"
-                  : "from-transparent via-cyan-500/5 to-cyan-400/25"
-            }`}
-          />
 
-          {/* Ultra-thin glassmorphism laser line */}
-          <div
-            className={`h-[1px] w-full backdrop-blur-md transition-colors duration-500 ${
-              status === "success"
-                ? "bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_15px_#34d399,0_0_30px_#34d399]"
-                : status === "error"
-                  ? "bg-gradient-to-r from-transparent via-red-400 to-transparent shadow-[0_0_15px_#f87171,0_0_30px_#f87171]"
-                  : "bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee,0_0_30px_#22d3ee]"
-            }`}
-          />
-        </div>
-      )}
-
-      {/* Navbar */}
-      <div className="fixed top-4 left-1/2 z-50 flex w-[95%] max-w-6xl -translate-x-1/2 items-center justify-between rounded-2xl border border-white/20 bg-white/10 px-4 py-2 shadow-lg backdrop-blur-xl sm:w-[85%] sm:px-6 sm:py-3 md:w-[70%] lg:w-[55%]">
-        <Link href="/" className="flex items-center gap-2 cursor-pointer">
+      {/* Minimal Header / Navbar */}
+      <header className="fixed top-3 sm:top-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-sm sm:max-w-md flex items-center justify-between rounded-full bg-slate-950/40 backdrop-blur-md border border-white/10 px-4 py-2 text-white shadow-sm">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-full"
+        >
           <img
             src="/LOGO_B.png"
-            className="h-10 w-auto rounded-full object-cover sm:h-10"
-            alt="Ente photo logo"
+            className="h-7 sm:h-8 w-auto rounded-full object-cover shadow-sm transition-transform group-hover:scale-105"
+            alt="Ente Photo"
           />
+          <span className="text-xs sm:text-sm font-medium tracking-tight text-white drop-shadow-sm">
+            Ente Photo
+          </span>
         </Link>
 
-        <div className="flex items-center gap-3 sm:gap-5">
-          <div className="hidden h-6 w-px bg-white/20 sm:block" />
-          <div className="flex items-center gap-2 text-xs text-red-400 sm:text-sm">
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="hidden sm:inline">Live Scanner</span>
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-slate-300">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="text-[11px] sm:text-xs font-medium">
+            Camera Ready
+          </span>
+        </div>
+      </header>
+
+      {/* Simple, Thin Face Frame Overlay */}
+      <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center p-4">
+        <div
+          className="relative flex items-center justify-center transition-all duration-300"
+          style={{
+            width: "min(74vw, 280px)",
+            height: "min(98vw, 370px)",
+            maxHeight: "50vh",
+          }}
+        >
+          <div
+            className={`absolute inset-0 rounded-[50%/40%] border transition-colors duration-300 ${
+              status === "success"
+                ? "border-emerald-400/90 shadow-sm"
+                : status === "error"
+                  ? "border-rose-400/90 shadow-sm"
+                  : status === "scanning"
+                    ? "border-indigo-400/90 animate-pulse"
+                    : "border-white/40"
+            }`}
+          />
         </div>
       </div>
 
-      {/* Main content overlay */}
-      <div className="relative z-40 flex min-h-screen flex-col items-center justify-between py-24 px-4 text-center">
+      {/* Main Content Area */}
+      <div className="relative z-30 flex flex-1 flex-col items-center justify-between pt-20 pb-6 sm:pt-24 px-4 text-center max-w-md mx-auto w-full">
         {/* Top Header */}
-        <div className="mt-8">
-          <h1 className="text-3xl font-semibold sm:text-4xl drop-shadow-md tracking-tight text-white">
-            Identity Discovery
+        <div className="mt-2 sm:mt-4 space-y-1 animate-fade-in">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white drop-shadow-sm">
+            Find Your Photos
           </h1>
-          <p className="mt-2 text-sm text-gray-200 drop-shadow">
-            Biometric authentication active
+          <p className="text-xs sm:text-sm text-slate-200 drop-shadow-sm">
+            Position your face inside the guide
           </p>
         </div>
 
-        {/* Center Status Indicators (Floating Glassmorphism Pills) */}
-        <div className="my-auto flex flex-col items-center justify-center gap-4">
+        {/* Center Status Messaging (Scanning, Success, Error) */}
+        <div className="my-auto py-4 flex flex-col items-center justify-center gap-3 w-full">
           {status === "scanning" && (
-            <div className="flex items-center gap-3 rounded-full border border-cyan-400/30 bg-black/60 px-6 py-3 text-cyan-300 backdrop-blur-xl shadow-[0_0_30px_rgba(34,211,238,0.25)] animate-pulse">
-              <svg
-                className="h-5 w-5 animate-spin text-cyan-400"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8z"
-                />
-              </svg>
-              <span className="text-sm font-semibold tracking-wider">
-                Analyzing Biometric Features...
+            <div className="animate-fade-in flex items-center gap-2.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 px-4 py-2.5 text-slate-100 shadow-md">
+              <Loader2 className="h-4 w-4 text-indigo-400 animate-spin" />
+              <span className="text-xs sm:text-sm font-medium">
+                Hold still, finding you…
               </span>
             </div>
           )}
 
           {status === "success" && (
-            <div className="flex items-center gap-3 rounded-full border border-emerald-400/40 bg-emerald-950/70 px-6 py-3 text-emerald-300 backdrop-blur-xl shadow-[0_0_30px_rgba(52,211,153,0.3)]">
-              <svg
-                className="h-6 w-6 text-emerald-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span className="text-sm font-semibold tracking-wider uppercase">
-                Biometrics Verified • Redirecting...
+            <div className="animate-fade-in flex items-center gap-2.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 px-4 py-2.5 text-emerald-300 shadow-md">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs sm:text-sm font-medium">
+                Got it! Taking you to your photos 🎉
               </span>
             </div>
           )}
 
           {status === "error" && (
-            <div className="flex max-w-md flex-col items-center gap-2 rounded-2xl border border-red-400/40 bg-red-950/80 p-4 text-red-200 backdrop-blur-xl shadow-[0_0_30px_rgba(248,113,113,0.3)]">
-              <svg
-                className="h-8 w-8 text-red-400"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              <span className="text-xs text-red-300 text-center font-medium">
-                {errorMsg}
-              </span>
+            <div className="animate-fade-in flex max-w-xs flex-col items-center gap-1.5 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-rose-500/30 p-3.5 text-rose-200 shadow-md">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-rose-300">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                <span>Hmm, we couldn't find a match — let's try again</span>
+              </div>
+              {errorMsg && (
+                <p className="text-[11px] sm:text-xs text-slate-300 text-center">
+                  {errorMsg}
+                </p>
+              )}
             </div>
           )}
         </div>
 
-        {/* Bottom Controls */}
-        <div className="flex flex-col items-center gap-4 w-full max-w-sm">
-          {/* Hint Pill */}
-          <div className="rounded-full border border-white/20 bg-black/50 px-5 py-2 text-xs text-cyan-300 backdrop-blur-md shadow-lg">
-            {status === "success"
-              ? "Redirecting to your gallery…"
-              : status === "error"
-                ? "Tap below to retry scan"
-                : "Look directly at the camera to discover your photos"}
-          </div>
+        {/* Bottom Controls with Bouncing Hand Cue */}
+        <div className="flex flex-col items-center gap-2.5 w-full max-w-xs sm:max-w-sm pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-in">
+          {/* Bouncing Hand Cue (idle status only) */}
+          {status === "idle" && (
+            <div
+              className="flex flex-col items-center gap-1 animate-hand-bounce transition-opacity duration-300"
+              aria-hidden="true"
+            >
+              <span className="text-2xl select-none">👇</span>
+            </div>
+          )}
+
+          {/* Conversational Status Hint */}
+          <p className="text-xs sm:text-sm font-medium text-slate-200 text-center drop-shadow-sm">
+            {status === "idle" && "Ready when you are — tap Start Scan"}
+            {status === "scanning" && "Searching your photos..."}
+            {status === "success" && "Redirecting to your gallery..."}
+            {status === "error" && "Tap below to try again"}
+          </p>
 
           {/* CTA Scan Button */}
           <button
@@ -324,23 +318,40 @@ export default function FaceScanPage() {
                 : handleScan
             }
             disabled={isScanning || status === "success"}
-            className={`w-full rounded-full py-3.5 font-semibold text-base transition-all duration-300 hover:scale-105 active:scale-95 shadow-xl disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed
-              ${
-                status === "error"
-                  ? "bg-gradient-to-r from-red-500 to-orange-400 text-white shadow-red-500/25"
-                  : "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-cyan-500/30 hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]"
-              }`}
+            className={`w-full min-h-[48px] sm:min-h-[50px] px-6 rounded-2xl font-medium text-sm sm:text-base flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99] shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 disabled:opacity-60 disabled:pointer-events-none ${
+              status === "error"
+                ? "bg-rose-500 hover:bg-rose-600 text-white"
+                : status === "success"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-slate-900 hover:bg-slate-100"
+            }`}
           >
-            {isScanning
-              ? "Scanning…"
-              : status === "success"
-                ? "Matched ✓"
-                : status === "error"
-                  ? "Try Again →"
-                  : "Start Scan →"}
+            {isScanning ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-slate-700" />
+                <span>Finding you…</span>
+              </>
+            ) : status === "success" ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-white" />
+                <span>Got it!</span>
+              </>
+            ) : status === "error" ? (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                <span>Retry Scan</span>
+              </>
+            ) : (
+              <>
+                <Camera className="h-4 w-4 text-slate-700" />
+                <span>Start Scan</span>
+              </>
+            )}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+
