@@ -36,8 +36,8 @@ const MOBILE_UPLOAD_CONCURRENCY = 2;
 const DESKTOP_UPLOAD_CONCURRENCY = 6;
 
 // M09: more retry attempts on mobile (5 vs 3) to outlast brief cellular gaps
-const MOBILE_MAX_UPLOAD_ATTEMPTS = 5;
-const DESKTOP_MAX_UPLOAD_ATTEMPTS = 3;
+const MOBILE_MAX_UPLOAD_ATTEMPTS = 2;
+const DESKTOP_MAX_UPLOAD_ATTEMPTS = 1;
 
 /** Threshold (in bytes) below which we skip client-side re-compression if already safe size */
 const SKIP_COMPRESSION_SIZE_BYTES = 2 * 1024 * 1024; // 3 MB

@@ -93,6 +93,10 @@ export interface ProfileData {
   bio: string;
   avatarUrl: string;
   phoneNumber: string;
+  phoneNumbers?: string[];
+  emails?: string[];
+  instagramUrl?: string;
+  facebookUrl?: string;
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────

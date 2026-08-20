@@ -31,6 +31,10 @@ export default async function ProfilePage() {
     bio: "",
     avatarUrl: "",
     phoneNumber: "",
+    phoneNumbers: [],
+    emails: [],
+    instagramUrl: "",
+    facebookUrl: "",
   };
 
   // Connect to DB and fetch profile, portfolio moments, and payment history in parallel

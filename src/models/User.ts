@@ -31,6 +31,22 @@ const userSchema = new Schema(
       type: String,
       trim: true,
     },
+    phoneNumbers: {
+      type: [String],
+      default: [],
+    },
+    emails: {
+      type: [String],
+      default: [],
+    },
+    instagramUrl: {
+      type: String,
+      trim: true,
+    },
+    facebookUrl: {
+      type: String,
+      trim: true,
+    },
     studioName: { type: String, trim: true },
     studioLocation: { type: String, trim: true },
     specialization: { type: String },

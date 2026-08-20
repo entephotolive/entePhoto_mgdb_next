@@ -375,7 +375,6 @@ describe("Megapixel-Safe Canvas Scaling — computeCanvasDimensions", () => {
   });
 });
 
-import { isAllowedFile } from "@/lib/utils/upload-constants";
 import { fillCanvasWhite, isCanvasDrawFailure } from "@/lib/utils/canvas-utils";
 import * as exifModule from "@/lib/utils/exif-orientation";
 import { applyWatermark } from "@/lib/utils/watermark";
