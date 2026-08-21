@@ -10,6 +10,9 @@ import {
   PhotoLightbox,
   type LightboxPhoto,
 } from "@/components/ui/photo-lightbox";
+import { getStudioByEventId } from "@/app/photographer/(panel)/profile/action";
+import { StudioModal } from "@/components/feature-specific/studio-modal";
+import type { ProfileData } from "@/types";
 
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
 const LIVE_POLL_INTERVAL_MS = 3000;
@@ -89,6 +92,18 @@ export default function LiveFeedPage() {
     total: 0,
   });
   const [showFeedbackCTA, setShowFeedbackCTA] = useState(false);
+
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [studioModalOpen, setStudioModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!eid) return;
+    getStudioByEventId(eid).then((res) => {
+      if (res && typeof res !== "string" && res.profile) {
+        setProfile(res.profile);
+      }
+    });
+  }, [eid]);
 
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -309,6 +324,17 @@ export default function LiveFeedPage() {
 
       <div className="mx-auto max-w-6xl px-6 pt-32 pb-24">
         <div className="mb-12 text-center">
+          <div className="mb-3 flex items-center justify-center">
+            <button
+              onClick={() => setStudioModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-purple-500/40 bg-purple-500/10 px-4 py-1.5 text-xs font-semibold text-purple-300 transition-all hover:bg-purple-500/20 hover:border-purple-500/70 hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer"
+            >
+              <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+              <span>{profile?.studioName || profile?.name || "Grand Events"} Studio</span>
+              <span className="text-[10px] text-purple-400/80">▸</span>
+            </button>
+          </div>
+
           <h1 className="mb-3 text-4xl font-bold md:text-5xl">
             The Live Moment
           </h1>
@@ -474,6 +500,14 @@ export default function LiveFeedPage() {
 
       {/* Lightbox — opened when a photo card is clicked */}
       <PhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
+
+      {/* Studio Info Bottom Sheet Modal */}
+      <StudioModal
+        isOpen={studioModalOpen}
+        onClose={() => setStudioModalOpen(false)}
+        profile={profile}
+        eventId={eid}
+      />
     </Layout>
   );
 }

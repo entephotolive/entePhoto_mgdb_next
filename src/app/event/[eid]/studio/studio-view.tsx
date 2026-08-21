@@ -136,6 +136,7 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
                   src={profile.avatarUrl}
                   alt={studioName}
                   fill
+                  unoptimized
                   className="object-cover"
                   sizes="64px"
                 />
@@ -174,8 +175,10 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
             </div>
           )}
 
+          
+
           {/* ── Contact details panel ─────────────────────────────── */}
-          {(phones.length > 0 || secondaryEmails.length > 0 || hasLocation) && (
+          {(phones.length > 0 || secondaryEmails.length > 0) && (
             <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 space-y-3">
               <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">
                 Contact Info
@@ -208,44 +211,21 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
                   <span className="font-medium">{em}</span>
                 </a>
               ))}
-
-              {/* Studio location */}
-              {hasLocation && (
-                <button
-                  onClick={() => {
-                    const loc = profile.studioLocation;
-                    if (loc.startsWith("http")) {
-                      window.open(loc, "_blank");
-                    } else {
-                      window.open(
-                        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`,
-                        "_blank"
-                      );
-                    }
-                  }}
-                  className="flex items-center gap-2.5 text-sm text-white/80 hover:text-cyan-400 transition-colors group w-full text-left"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/10 text-emerald-400 group-hover:bg-emerald-400/20 transition-colors shrink-0">
-                    <MapPinIcon />
-                  </span>
-                  <span className="font-medium truncate">{profile.studioLocation}</span>
-                </button>
-              )}
             </div>
           )}
 
           {/* ── Social + action buttons ───────────────────────────── */}
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             {/* Instagram */}
             {hasInsta && (
               <a
                 href={profile.instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-600 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]"
+                className="h-11 inline-flex items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white bg-gradient-to-r from-pink-500 via-fuchsia-500 to-purple-600 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_20px_rgba(236,72,153,0.4)]"
               >
                 <InstagramIcon />
-                Instagram
+                <span>Instagram</span>
                 <ExternalLinkIcon />
               </a>
             )}
@@ -256,17 +236,17 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
                 href={profile.facebookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold text-white bg-[#1877F2] hover:bg-[#1565C0] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(24,119,242,0.5)]"
+                className="h-11 inline-flex items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white bg-[#1877F2] hover:bg-[#1565C0] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(24,119,242,0.4)]"
               >
                 <FacebookIcon />
-                Facebook
+                <span>Facebook</span>
                 <ExternalLinkIcon />
               </a>
             )}
 
-            {/* Location — always show as CTA if no panel above */}
-            {hasLocation && phones.length === 0 && secondaryEmails.length === 0 && (
-              <Button
+            {/* Visit location button */}
+            {hasLocation && (
+              <button
                 onClick={() => {
                   const loc = profile.studioLocation;
                   if (loc.startsWith("http")) {
@@ -278,14 +258,14 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
                     );
                   }
                 }}
-                className="gap-2 bg-gradient-to-r from-cyan-400 to-purple-500 px-6 py-5 text-black transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_25px_rgba(34,211,238,0.6)]"
+                className="h-11 inline-flex items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-black bg-gradient-to-r from-cyan-400 to-purple-400 transition-all duration-300 hover:scale-105 hover:brightness-110 hover:shadow-[0_0_20px_rgba(34,211,238,0.5)]"
               >
                 <MapPinIcon />
-                Visit our location
-              </Button>
+                <span>Visit our location</span>
+              </button>
             )}
 
-            {/* Book Consultation — only present if phone number exists */}
+            {/* Book Consultation (WhatsApp) */}
             {phones.length > 0 && (() => {
               const rawPhone = phones[0].replace(/\D/g, "");
               const waPhone = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
@@ -295,14 +275,31 @@ export function StudioView({ profile, portfolio }: StudioViewProps) {
                   href={`https://wa.me/${waPhone}?text=${waMsg}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-semibold text-black bg-emerald-400 hover:bg-emerald-300 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]"
+                  className="h-11 inline-flex items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-black bg-emerald-400 hover:bg-emerald-300 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(52,211,153,0.4)]"
                 >
                   <WhatsAppIcon />
-                  Book Consultation
+                  <span>Book Consultation</span>
                   <ExternalLinkIcon />
                 </a>
               );
             })()}
+          </div>
+          {/* Stats section */}
+          <div className="mt-8 flex gap-8">
+            <div>
+              <h3 className="text-lg font-semibold">500+</h3>
+              <p className="text-xs text-white/60">Ceremonies</p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-pink-400">1M+</h3>
+              <p className="text-xs text-white/60">Memories Captured</p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold">100%</h3>
+              <p className="text-xs text-white/60">Elite Rating</p>
+            </div>
           </div>
         </div>
 
