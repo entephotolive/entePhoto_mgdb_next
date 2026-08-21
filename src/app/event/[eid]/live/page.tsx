@@ -13,6 +13,7 @@ import {
 import { getStudioByEventId } from "@/app/photographer/(panel)/profile/action";
 import { StudioModal } from "@/components/feature-specific/studio-modal";
 import type { ProfileData } from "@/types";
+import { Camera } from "lucide-react";
 
 const SCAN_ATTENDEE_SESSION_KEY = "scan_attendee_id";
 const LIVE_POLL_INTERVAL_MS = 3000;
@@ -94,15 +95,21 @@ export default function LiveFeedPage() {
   const [showFeedbackCTA, setShowFeedbackCTA] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [studioModalOpen, setStudioModalOpen] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const [studioModalOpen, setStudioModalOpen] = useState(true);
 
   useEffect(() => {
     if (!eid) return;
-    getStudioByEventId(eid).then((res) => {
-      if (res && typeof res !== "string" && res.profile) {
-        setProfile(res.profile);
-      }
-    });
+    setIsProfileLoading(true);
+    getStudioByEventId(eid)
+      .then((res) => {
+        if (res && typeof res !== "string" && res.profile) {
+          setProfile(res.profile);
+        }
+      })
+      .finally(() => {
+        setIsProfileLoading(false);
+      });
   }, [eid]);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -323,93 +330,13 @@ export default function LiveFeedPage() {
       <Navbar />
 
       <div className="mx-auto max-w-6xl px-6 pt-32 pb-24">
-        <div className="mb-12 text-center">
-          <div className="mb-3 flex items-center justify-center">
-            <button
-              onClick={() => setStudioModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-purple-500/40 bg-purple-500/10 px-4 py-1.5 text-xs font-semibold text-purple-300 transition-all hover:bg-purple-500/20 hover:border-purple-500/70 hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] cursor-pointer"
-            >
-              <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
-              <span>{profile?.studioName || profile?.name || "Grand Events"} Studio</span>
-              <span className="text-[10px] text-purple-400/80">▸</span>
-            </button>
-          </div>
-
+        <div className="mb-10 text-center">
           <h1 className="mb-3 text-4xl font-bold md:text-5xl">
             The Live Moment
           </h1>
           <p className="text-sm text-gray-300 md:text-base">
             Every capture, shared instantly. Join the story in real-time.
           </p>
-
-          {!loading && photos.length > 0 && (
-            <div className="mt-6 flex flex-col items-center justify-center gap-3">
-              <button
-                onClick={handleDownloadAll}
-                disabled={downloadingAll}
-                className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-6 py-2.5 text-sm font-semibold text-black transition-all hover:bg-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {downloadingAll ? (
-                  <>
-                    <svg
-                      className="h-4 w-4 animate-spin text-black"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    <span>
-                      Downloading {downloadProgress.current}/
-                      {downloadProgress.total}…
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                      />
-                    </svg>
-                    <span>Download All ({photos.length})</span>
-                  </>
-                )}
-              </button>
-
-              {showFeedbackCTA && (
-                <div className="inline-flex items-center gap-3 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-5 py-2.5 backdrop-blur-md transition-all">
-                  <span className="text-sm text-gray-200">
-                    Downloads complete! Enjoying your photos?
-                  </span>
-                  <button
-                    onClick={handleShareFeedback}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-cyan-400/20 px-3.5 py-1 text-xs font-semibold text-cyan-300 transition-colors hover:bg-cyan-400/30 hover:text-white border border-cyan-400/30"
-                  >
-                    Share your feedback ✨
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Loading skeleton */}
@@ -428,9 +355,84 @@ export default function LiveFeedPage() {
         {/* Photos grid */}
         {!loading && photos.length > 0 && (
           <div className="mb-16">
-            <h2 className="mb-6 text-2xl font-semibold text-cyan-400">
-              Your Matched Photos
-            </h2>
+            {/* Header Row: Title on Left, Download All on Right */}
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-semibold text-cyan-400">
+                  Your Matched Photos
+                </h2>
+                <span className="rounded-full bg-cyan-400/10 border border-cyan-400/20 px-3 py-0.5 text-xs font-semibold text-cyan-300">
+                  {photos.length}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {showFeedbackCTA && (
+                  <div className="inline-flex items-center gap-2.5 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 backdrop-blur-md">
+                    <span className="text-xs text-gray-200">
+                      Enjoying your photos?
+                    </span>
+                    <button
+                      onClick={handleShareFeedback}
+                      className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 px-3 py-0.5 text-xs font-semibold text-cyan-300 transition-colors hover:bg-cyan-400/30 hover:text-white border border-cyan-400/30"
+                    >
+                      Feedback ✨
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-black transition-all hover:bg-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {downloadingAll ? (
+                    <>
+                      <svg
+                        className="h-4 w-4 animate-spin text-black"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span>
+                        Downloading {downloadProgress.current}/
+                        {downloadProgress.total}…
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
+                      </svg>
+                      <span>Download All ({photos.length})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
 
             <div className="columns-2 gap-5 space-y-5 md:columns-3 lg:columns-4">
               {photos.map((photo) => (
@@ -501,12 +503,40 @@ export default function LiveFeedPage() {
       {/* Lightbox — opened when a photo card is clicked */}
       <PhotoLightbox photo={lightbox} onClose={() => setLightbox(null)} />
 
+      {/* Floating Fixed Camera Button for Studio Info */}
+      <div className="fixed bottom-6 right-6 z-50 group">
+        {/* Ambient neon gradient glow aura */}
+        <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-500 to-cyan-400 opacity-70 blur-md transition-all duration-500 group-hover:opacity-100 group-hover:blur-lg group-hover:scale-110 animate-pulse" />
+
+        <button
+          onClick={() => setStudioModalOpen(true)}
+          aria-label="Studio Profile"
+          title={profile?.studioName || profile?.name || "Studio Profile"}
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-slate-950/80 text-white backdrop-blur-xl border border-purple-500/40 transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer shadow-2xl group-hover:border-cyan-400/80 group-hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+        >
+          {/* Camera icon with micro-interaction */}
+          <Camera className="h-6 w-6 text-purple-300 transition-all duration-300 group-hover:text-cyan-300 group-hover:scale-110 group-hover:-rotate-12" />
+
+          {/* Pulsing status dot */}
+          
+        </button>
+
+        {/* Floating Tooltip on Hover */}
+        <div className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 mr-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0 whitespace-nowrap">
+          <div className="rounded-xl border border-purple-500/30 bg-slate-950/90 px-3.5 py-1.5 text-xs font-medium text-purple-200 shadow-xl backdrop-blur-md flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+            <span>{profile?.studioName || profile?.name || "Grand Events"} Studio</span>
+          </div>
+        </div>
+      </div>
+
       {/* Studio Info Bottom Sheet Modal */}
       <StudioModal
         isOpen={studioModalOpen}
         onClose={() => setStudioModalOpen(false)}
         profile={profile}
         eventId={eid}
+        isLoading={isProfileLoading}
       />
     </Layout>
   );

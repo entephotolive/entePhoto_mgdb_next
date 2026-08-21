@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { X, ChevronDown, MapPin, Phone, MessageCircle, Link2 } from "lucide-react";
+import { X, ChevronDown, MapPin, Phone, MessageCircle, Link2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ProfileData } from "@/types";
 
@@ -20,9 +20,10 @@ interface StudioModalProps {
   onClose: () => void;
   profile: ProfileData | null;
   eventId: string;
+  isLoading?: boolean;
 }
 
-export function StudioModal({ isOpen, onClose, profile, eventId }: StudioModalProps) {
+export function StudioModal({ isOpen, onClose, profile, eventId, isLoading }: StudioModalProps) {
   // Prevent background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -35,7 +36,7 @@ export function StudioModal({ isOpen, onClose, profile, eventId }: StudioModalPr
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  const showSkeleton = isLoading !== undefined ? isLoading : !profile;
 
   const studioName = profile?.studioName || profile?.name || "Grand Events";
   const specialization = profile?.specialization || "Wedding Company";
@@ -76,164 +77,192 @@ export function StudioModal({ isOpen, onClose, profile, eventId }: StudioModalPr
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
-        {/* Backdrop Overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-black/75 backdrop-blur-md"
-        />
-
-        {/* Bottom Sheet / Modal Container */}
-        <motion.div
-          initial={{ y: "100%", opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: "100%", opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 220 }}
-          className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-white/10 bg-[#0c0d1b] p-6 shadow-2xl backdrop-blur-2xl max-h-[90vh] overflow-y-auto"
-        >
-          {/* Grabber handle bar */}
-          <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/20" />
-
-          {/* Close button */}
-          <button
+      {isOpen && (
+        <div key="studio-modal-wrapper" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
+          {/* Backdrop Overlay */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
             onClick={onClose}
-            className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+            className="fixed inset-0 bg-black/75 backdrop-blur-md"
+          />
 
-          {/* ── Studio Header Row ── */}
-          <div className="flex items-center gap-4 pt-1">
-            {/* Avatar / Logo with glowing purple ring */}
-            <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full p-1 bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-pink-500 shadow-[0_0_25px_rgba(168,85,247,0.5)]">
-              <div className="relative h-full w-full overflow-hidden rounded-full bg-black">
-                {profile?.avatarUrl ? (
-                  <Image
-                    src={profile.avatarUrl}
-                    alt={studioName}
-                    fill
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-900 to-black font-bold text-white text-xl">
-                    {studioName.substring(0, 2).toUpperCase()}
+          {/* Bottom Sheet / Modal Container */}
+          <motion.div
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="relative z-10 w-full max-w-lg rounded-t-3xl sm:rounded-3xl border border-white/10 bg-[#0c0d1b] p-6 shadow-2xl backdrop-blur-2xl max-h-[90vh] overflow-y-auto"
+          >
+            {/* Grabber handle bar */}
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-white/20" />
+
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+
+            {showSkeleton ? (
+              /* ── Loading Skeleton View ── */
+              <div className="animate-pulse space-y-5 pt-1">
+                {/* Studio Header Skeleton */}
+                <div className="flex items-center gap-4">
+                  {/* Glowing Spinner Avatar Skeleton */}
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full p-1 bg-gradient-to-tr from-purple-900/60 via-purple-600/30 to-pink-900/60 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.3)]">
+                    <div className="flex h-full w-full items-center justify-center rounded-full bg-black/70">
+                      <Loader2 className="h-7 w-7 animate-spin text-purple-400" />
+                    </div>
                   </div>
-                )}
+
+                  {/* Studio Info Text Skeleton */}
+                  <div className="flex-1 space-y-2.5 min-w-0">
+                    <div className="h-6 w-3/4 rounded-lg bg-white/15 animate-pulse" />
+                    <div className="h-4 w-1/2 rounded-md bg-white/10 animate-pulse" />
+                    <div className="h-3 w-5/6 rounded-md bg-white/5 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Thin Divider */}
+                <div className="my-5 h-px w-full bg-white/10" />
+
+                {/* Contact List Skeleton */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-9 w-9 rounded-full bg-purple-500/20 border border-purple-500/20" />
+                    <div className="h-4 w-40 rounded-md bg-white/10 animate-pulse" />
+                  </div>
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-9 w-9 rounded-full bg-purple-500/20 border border-purple-500/20" />
+                    <div className="h-4 w-44 rounded-md bg-white/10 animate-pulse" />
+                  </div>
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-9 w-9 rounded-full bg-purple-500/20 border border-purple-500/20" />
+                    <div className="h-4 w-36 rounded-md bg-white/10 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Thin Divider */}
+                <div className="my-5 h-px w-full bg-white/10" />
+
+                {/* Button Skeleton */}
+                <div className="h-12 w-full rounded-2xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center gap-2">
+                  <div className="h-4 w-24 rounded-md bg-cyan-400/20 animate-pulse" />
+                </div>
               </div>
-            </div>
+            ) : (
+              /* ── Loaded Content View ── */
+              <>
+                {/* ── Studio Header Row ── */}
+                <div className="flex items-center gap-4 pt-1">
+                  {/* Avatar / Logo with glowing purple ring */}
+                  <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full p-1 bg-gradient-to-tr from-purple-600 via-fuchsia-500 to-pink-500 shadow-[0_0_25px_rgba(168,85,247,0.5)]">
+                    <div className="relative h-full w-full overflow-hidden rounded-full bg-black">
+                      {profile?.avatarUrl ? (
+                        <Image
+                          src={profile.avatarUrl}
+                          alt={studioName}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-900 to-black font-bold text-white text-xl">
+                          {studioName.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-            {/* Studio info text */}
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
-                {studioName}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-300 font-medium mt-0.5 truncate">
-                {specialization}
-              </p>
-              <p className="text-[11px] sm:text-xs text-gray-400 mt-1.5 font-normal leading-relaxed break-words">
-                {specList}
-              </p>
-            </div>
-          </div>
+                  {/* Studio info text */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+                      {studioName}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-300 font-medium mt-0.5 truncate">
+                      {specialization}
+                    </p>
+                    <p className="text-[11px] sm:text-xs text-gray-400 mt-1.5 font-normal leading-relaxed break-words">
+                      {specList}
+                    </p>
+                  </div>
+                </div>
 
-          {/* Thin Divider */}
-          <div className="my-5 h-px w-full bg-white/10" />
+                {/* Thin Divider */}
+                <div className="my-5 h-px w-full bg-white/10" />
 
-          {/* ── Contact Details List ── */}
-          <div className="space-y-3.5 text-xs sm:text-sm">
-            {/* Location */}
-            {location && (
-              <div className="flex items-center gap-3.5 text-gray-200">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                  <MapPin size={16} />
-                </span>
-                <span className="truncate">{location}</span>
-              </div>
+                {/* ── Contact Details List ── */}
+                <div className="space-y-3.5 text-xs sm:text-sm">
+                  
+                  {/* Phone 1 */}
+                  {phones[0] && (
+                    <a
+                      href={`tel:${phones[0]}`}
+                      className="flex items-center gap-3.5 text-gray-200 hover:text-cyan-300 transition-colors"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                        <Phone size={16} />
+                      </span>
+                      <span>{phones[0]}</span>
+                    </a>
+                  )}
+
+                  {/* Phone 2 / WhatsApp */}
+                  {phones[1] && (
+                    <a
+                      href={`https://wa.me/${phones[1].replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3.5 text-gray-200 hover:text-emerald-300 transition-colors"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                        <MessageCircle size={16} />
+                      </span>
+                      <span>{phones[1]}</span>
+                    </a>
+                  )}
+
+                  {/* Instagram Handle */}
+                  {profile?.instagramUrl && (
+                    <a
+                      href={profile.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3.5 text-gray-200 hover:text-pink-300 transition-colors"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
+                        <InstagramIcon size={16} />
+                      </span>
+                      <span className="truncate">{instaHandle}</span>
+                    </a>
+                  )}
+
+                </div>
+
+                {/* Thin Divider */}
+                <div className="my-5 h-px w-full bg-white/10" />
+
+                {/* ── Show More Button ── */}
+                <Link
+                  href={`/event/${eventId}/studio`}
+                  onClick={onClose}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/50 bg-cyan-400/5 py-3.5 text-sm font-semibold text-cyan-300 shadow-glow transition-all hover:bg-cyan-400/15 hover:border-cyan-400 hover:text-white"
+                >
+                  <span>Show More</span>
+                  <ChevronRight size={18} />
+                </Link>
+              </>
             )}
-
-            {/* Phone 1 */}
-            {phones[0] && (
-              <a
-                href={`tel:${phones[0]}`}
-                className="flex items-center gap-3.5 text-gray-200 hover:text-cyan-300 transition-colors"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                  <Phone size={16} />
-                </span>
-                <span>{phones[0]}</span>
-              </a>
-            )}
-
-            {/* Phone 2 / WhatsApp */}
-            {phones[1] && (
-              <a
-                href={`https://wa.me/${phones[1].replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3.5 text-gray-200 hover:text-emerald-300 transition-colors"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                  <MessageCircle size={16} />
-                </span>
-                <span>{phones[1]}</span>
-              </a>
-            )}
-
-            {/* Instagram Handle */}
-            {profile?.instagramUrl && (
-              <a
-                href={profile.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3.5 text-gray-200 hover:text-pink-300 transition-colors"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                  <InstagramIcon size={16} />
-                </span>
-                <span className="truncate">{instaHandle}</span>
-              </a>
-            )}
-
-            {/* Instagram Full URL / Link */}
-            {profile?.instagramUrl && (
-              <a
-                href={profile.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3.5 text-gray-200 hover:text-cyan-300 transition-colors"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-300">
-                  <Link2 size={16} />
-                </span>
-                <span className="truncate">{instaFullUrl}</span>
-              </a>
-            )}
-          </div>
-
-          {/* Thin Divider */}
-          <div className="my-5 h-px w-full bg-white/10" />
-
-          {/* ── Show More Button ── */}
-          <Link
-            href={`/event/${eventId}/studio`}
-            onClick={onClose}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-400/50 bg-cyan-400/5 py-3.5 text-sm font-semibold text-cyan-300 shadow-glow transition-all hover:bg-cyan-400/15 hover:border-cyan-400 hover:text-white"
-          >
-            <span>Show More</span>
-            <ChevronDown size={18} />
-          </Link>
-
-          {/* ── Footer ── */}
-          <p className="mt-4 text-center text-xs font-medium text-cyan-400/80">
-            Powered by <span className="font-semibold text-cyan-400">EntePhoto</span>
-          </p>
-        </motion.div>
-      </div>
+           
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }
