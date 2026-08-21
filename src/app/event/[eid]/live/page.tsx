@@ -356,25 +356,20 @@ export default function LiveFeedPage() {
         {!loading && photos.length > 0 && (
           <div className="mb-16">
             {/* Header Row: Title on Left, Download All on Right */}
-            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-semibold text-cyan-400">
-                  Your Matched Photos
-                </h2>
-                <span className="rounded-full bg-cyan-400/10 border border-cyan-400/20 px-3 py-0.5 text-xs font-semibold text-cyan-300">
-                  {photos.length}
-                </span>
-              </div>
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-cyan-400 tracking-tight">
+                Your Matched Photos
+              </h2>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 {showFeedbackCTA && (
-                  <div className="inline-flex items-center gap-2.5 rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 backdrop-blur-md">
+                  <div className="hidden md:inline-flex items-center gap-2.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3.5 py-1.5 backdrop-blur-md">
                     <span className="text-xs text-gray-200">
                       Enjoying your photos?
                     </span>
                     <button
                       onClick={handleShareFeedback}
-                      className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 px-3 py-0.5 text-xs font-semibold text-cyan-300 transition-colors hover:bg-cyan-400/30 hover:text-white border border-cyan-400/30"
+                      className="inline-flex items-center gap-1 rounded-full bg-cyan-400/20 px-2.5 py-0.5 text-xs font-semibold text-cyan-300 transition-colors hover:bg-cyan-400/30 hover:text-white border border-cyan-400/30"
                     >
                       Feedback ✨
                     </button>
@@ -384,12 +379,12 @@ export default function LiveFeedPage() {
                 <button
                   onClick={handleDownloadAll}
                   disabled={downloadingAll}
-                  className="inline-flex items-center gap-2 rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-black transition-all hover:bg-cyan-400 hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-400 bg-cyan-500/10 px-4 py-2 text-xs sm:text-sm font-medium text-cyan-300 transition-all hover:bg-cyan-400/20 hover:border-cyan-300 hover:text-white hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] disabled:opacity-50 disabled:cursor-not-allowed shrink-0 whitespace-nowrap"
                 >
                   {downloadingAll ? (
                     <>
                       <svg
-                        className="h-4 w-4 animate-spin text-black"
+                        className="h-4 w-4 animate-spin text-cyan-400"
                         fill="none"
                         viewBox="0 0 24 24"
                       >
@@ -415,7 +410,7 @@ export default function LiveFeedPage() {
                   ) : (
                     <>
                       <svg
-                        className="h-4 w-4"
+                        className="h-4 w-4 text-cyan-400"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
