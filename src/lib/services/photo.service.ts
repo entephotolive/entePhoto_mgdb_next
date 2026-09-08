@@ -394,15 +394,14 @@ export async function listPhotosByFolder(
     faceCount: item.faceCount ?? 0,
   }));
 
+  // Use an explicit limit when supplied, otherwise default to PAGE_SIZE.
+  // nextCursor is null on the last page so callers know when to stop.
+  const PAGE_SIZE = limit ?? 40;
   let photos = deduplicated;
   let nextCursor: string | null = null;
 
-  if (limit && deduplicated.length > limit) {
-    photos = deduplicated.slice(0, limit);
-    const lastItem = photos[photos.length - 1];
-    nextCursor = encodeCursor(lastItem);
-  } else if (!limit && deduplicated.length > 40) {
-    photos = deduplicated.slice(0, 40);
+  if (deduplicated.length > PAGE_SIZE) {
+    photos = deduplicated.slice(0, PAGE_SIZE);
     const lastItem = photos[photos.length - 1];
     nextCursor = encodeCursor(lastItem);
   }

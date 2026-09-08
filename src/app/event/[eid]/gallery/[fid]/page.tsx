@@ -58,10 +58,11 @@ export default async function PublicFolderDetailPage({
 
   const [meta, photosRes] = await Promise.all([
     getFolderMeta(fid, eid).catch(() => null),
-    listPhotosByFolder(fid, eid).catch(() => ({ photos: [], nextCursor: null })),
+    listPhotosByFolder(fid, eid, { limit: 40 }).catch(() => ({ photos: [], nextCursor: null })),
   ]);
 
   const photos = photosRes?.photos ?? [];
+  const nextCursor = photosRes?.nextCursor ?? null;
 
   if (!meta) {
     notFound();
@@ -97,7 +98,12 @@ export default async function PublicFolderDetailPage({
         <div className="h-px bg-white/10 w-full mb-12" />
 
         {/* Regular folder — no matched photos, just the folder's own photos */}
-        <PublicPhotoGrid photos={photos} />
+        <PublicPhotoGrid
+          initialPhotos={photos}
+          initialCursor={nextCursor}
+          folderId={fid}
+          eventId={eid}
+        />
       </div>
     </Layout>
   );
